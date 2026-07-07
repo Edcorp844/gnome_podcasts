@@ -57,7 +57,7 @@ impl Component for ShowPage {
                         gtk::Box {
                             set_orientation: gtk::Orientation::Vertical,
                             set_margin_all: 32,
-                            set_spacing: 32,
+                            set_spacing: 24,
 
 
 
@@ -213,7 +213,7 @@ impl Component for ShowPage {
 
                             #[local_ref]
                             episodes_container -> gtk::ListBox {
-                                set_margin_all: 20,
+                                add_css_class: "boxed-list",
 
                             }
 
@@ -313,6 +313,11 @@ impl Component for ShowPage {
                         match dbqueries::get_pd_episodes(show) {
                             Ok(episodes) => {
                                 println!("Episodes Loaded: {:?}", episodes.len());
+                                let mut guard = self.episodes.guard();
+                                guard.clear();
+                                for episode in episodes {
+                                    guard.push_back(episode);
+                                }
                             }
                             Err(error) => {
                                 eprintln!("Error Loading Episodes: {}", error);
