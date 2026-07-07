@@ -315,8 +315,8 @@ impl Component for ShowPage {
                                 println!("Episodes Loaded: {:?}", episodes.len());
                                 let mut guard = self.episodes.guard();
                                 guard.clear();
-                                for episode in episodes {
-                                    guard.push_back(episode);
+                                for episode in episodes.iter().take(10) {
+                                    guard.push_back(episode.clone());
                                 }
                             }
                             Err(error) => {
