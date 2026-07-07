@@ -64,6 +64,23 @@ impl FactoryComponent for EpisodeListItem {
         }
     }
 
+     fn update(&mut self, message: Self::Input, sender: FactorySender<Self>) {
+        match message {
+            EpisodeListItemInput::ImageDownloaded(fetched_texture) => {
+                self.texture = fetched_texture;
+            }
+           
+        }
+    }
+
+    fn update_cmd(&mut self, message: Self::CommandOutput, sender: FactorySender<Self>) {
+        match message {
+            EpisodeListItemCmdInput::DownloadImage(opt_texture) => {
+                sender.input(EpisodeListItemInput::ImageDownloaded(opt_texture));
+            }
+        }
+    }
+
     view! {
         gtk::Box{
             set_orientation: gtk::Orientation::Horizontal,
@@ -124,7 +141,7 @@ impl FactoryComponent for EpisodeListItem {
                 set_spacing: 8,
                 set_halign: gtk::Align::Start,
                 set_valign: gtk::Align::Start,
-                set_margin_start: 8,
+                set_margin_start: 16,
 
                 gtk::Label{
                     set_label:  &self.episode.epoch().format("%e %b").to_string(),
@@ -142,6 +159,7 @@ impl FactoryComponent for EpisodeListItem {
 
                 gtk::Label{
                     set_label:  self.episode.description().unwrap_or(""),
+                    set_halign: gtk::Align::Start,
                     add_css_class: "dimmed",
                     set_wrap: true
                 },
