@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.22.0
+
+Copyright (C) 2017 - 2026
+
+This file is part of GNOME Podcasts.
+
+GNOME Podcasts is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+GNOME Podcasts is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with GNOME Podcasts.  If not, see <http://www.gnu.org/licenses/>.
+
+Authors:
+Jordan Petridis
+Tobias Bernard
+nee
+
+-->
+<interface>
+  <!-- interface-license-type gplv3 -->
+  <!-- interface-name GNOME Podcasts -->
+  <!-- interface-description A podcast client for the GNOME Desktop -->
+  <!-- interface-copyright 2017 - 2026 -->
+  <!-- interface-authors Jordan Petridis\nTobias Bernard\nnee -->
+
+  <template class="PdShowWidget">
+    <child>
+      <object class="AdwToolbarView" id="view">
+        <child type="top">
+          <object class="AdwHeaderBar">
+            <child type="end">
+              <object class="GtkMenuButton" id="secondary_menu">
+                <property name="icon_name">view-more-symbolic</property>
+                <property name="tooltip-text" translatable="yes">Podcast Menu</property>
+                <property name="primary">True</property>
+              </object>
+            </child>
+            <child type="end">
+              <object class="PdFilterMenu" id="filter_menu"></object>
+            </child>
+          </object>
+        </child>
+        <child type="top">
+          <object class="GtkSearchBar" id="search_bar">
+            <property name="child">
+              <object class="GtkSearchEntry" id="search_entry">
+                <property name="width-request">300</property>
+              </object>
+            </property>
+          </object>
+        </child>
+        <property name="content">
+          <object class="PdBaseView">
+            <property name="vexpand">True</property>
+            <property name="child">
+              <object class="AdwClamp">
+                <child>
+                  <object class="GtkBox" id="sub_container">
+                    <property name="margin_top">32</property>
+                    <property name="margin_bottom">32</property>
+                    <property name="hexpand">True</property>
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">6</property>
+                    <child>
+                      <object class="GtkImage" id="cover">
+                        <property name="pixel_size">256</property>
+                        <property name="halign">center</property>
+                        <property name="icon-name">image-missing-symbolic</property>
+                        <property name="overflow">hidden</property>
+                        <property name="focusable">True</property>
+                        <style>
+                          <class name="rounded-big"/>
+                        </style>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwClamp">
+                        <property name="maximum-size"
+                                  bind-source="PdShowWidget"
+                                  bind-property="description-width"
+                                  bind-flags="sync-create">600</property>
+                        <child>
+                          <object class="AdwClamp">
+                            <property name="maximum_size">600</property>
+                            <child>
+                              <object class="PdReadMoreLabel" id="read_more_label"/>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwBin" id="episodes_container">
+                        <child>
+                          <object class="GtkListBox">
+                            <property name="margin-start">12</property>
+                            <property name="margin-end">12</property>
+                            <property name="margin-top">12</property>
+                            <property name="margin-bottom">12</property>
+                            <property name="valign">start</property>
+                            <property name="selection_mode">none</property>
+                            <property name="activate_on_single_click">True</property>
+                            <accessibility>
+                              <property name="label" translatable="yes">Episodes</property>
+                            </accessibility>
+                            <style>
+                              <class name="content"/>
+                            </style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </property>
+          </object>
+        </property>
+      </object>
+    </child>
+  </template>
+</interface>

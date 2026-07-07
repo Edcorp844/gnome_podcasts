@@ -1,0 +1,904 @@
+# Belarussian translation for podcasts app.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# Yahor Haurylenka k1llo2810@gmail.com, 2022.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: https://gitlab.gnome.org/World/podcasts/issues\n"
+"POT-Creation-Date: 2026-06-20 10:05+0000\n"
+"PO-Revision-Date: 2026-06-21 23:53+0300\n"
+"Last-Translator: Yuras Shumovich <shumovichy@gmail.com>\n"
+"Language-Team: Belarusian <LL@li.org>\n"
+"Language: be\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<12 || n%100>14) ? 1 : 2);\n"
+"X-Generator: Poedit 3.8\n"
+
+#: podcasts-gtk/resources/gtk/discovery_found_podcast.ui:105
+msgid "Episodes: "
+msgstr "Эпізоды: "
+
+#: podcasts-gtk/resources/gtk/discovery_found_podcast.ui:143
+msgid "Last publication"
+msgstr "Апошняя публікацыя"
+
+#: podcasts-gtk/resources/gtk/discovery_found_podcast.ui:164
+msgid "_Subscribe"
+msgstr "_Падпісацца"
+
+#: podcasts-gtk/resources/gtk/discovery_found_podcast.ui:174
+#: podcasts-gtk/src/widgets/discovery_search_results.rs:152
+msgid "Subscribing to feed…"
+msgstr "Падпісацца на канал…"
+
+#: podcasts-gtk/resources/gtk/discovery_page.ui:33
+msgid "Add Podcasts"
+msgstr "Дадаць падкасты"
+
+#. Translators: Noun, Headline for a page on that you search on iTunes/fyyd
+#: podcasts-gtk/resources/gtk/discovery_page.ui:65
+msgid "Search"
+msgstr "Пошук"
+
+#: podcasts-gtk/resources/gtk/discovery_page.ui:78
+msgid "Enter a feed URL or search the selected platforms."
+msgstr "Увядзіце URL-адрас канала або шукайце на выбраных платформах."
+
+#: podcasts-gtk/resources/gtk/discovery_page.ui:100
+msgid "Submit search"
+msgstr "Адправіць пошукавы запыт"
+
+#: podcasts-gtk/resources/gtk/discovery_page.ui:106
+#: podcasts-gtk/src/widgets/discovery_page.rs:113
+msgid "Loading…"
+msgstr "Загрузка…"
+
+#: podcasts-gtk/resources/gtk/discovery_page.ui:119
+msgid "Please enable a Search Platform below, or enter a http(s) feed URL."
+msgstr "Уключыце адну з платформ ніжэй або ўвядзіце http(s) URL-адрас канала."
+
+#. Translators: Headline for a list of services to search new podcasts like iTunes, fyyd, etc., ...
+#: podcasts-gtk/resources/gtk/discovery_page.ui:132
+msgid "Search Platforms"
+msgstr "Платформы для пошуку"
+
+#: podcasts-gtk/resources/gtk/discovery_page.ui:133
+msgid "Search queries will be sent to these platforms."
+msgstr "Пошукавы запыты будуць адпраўляцца на гэтыя платформы."
+
+#: podcasts-gtk/resources/gtk/discovery_search_results.ui:32
+msgid "Search results"
+msgstr "Вынікі пошуку"
+
+#: podcasts-gtk/resources/gtk/discovery_search_results.ui:70
+msgid "No results found."
+msgstr "Нічога не знойдзена."
+
+#. Translators: Show as a noun, meaning a Podcast-Show.
+#: podcasts-gtk/resources/gtk/empty_show.ui:17
+msgid "This show does not have episodes yet"
+msgstr "У гэтай перадачы пакуль няма эпізодаў"
+
+#: podcasts-gtk/resources/gtk/empty_show.ui:28
+msgid "If you think this is an error, please consider writing a bug report."
+msgstr "Калі вы лічыце, што гэта памылка, напішыце паведамленне пра памылку."
+
+#. Translators: Shows as a noun, meaning Podcast-Shows.
+#: podcasts-gtk/resources/gtk/empty_view.ui:31
+msgid "Get Some Shows"
+msgstr "Атрымайце перадачы"
+
+#. Translators: Shows as a noun, meaning Podcast-Shows.
+#: podcasts-gtk/resources/gtk/empty_view.ui:52
+msgid "Add new shows via feed URL"
+msgstr "Дадавайце новыя перадачы праз URL-адрас канала"
+
+#. Translators: Shows as a noun, meaning Podcast-Shows.
+#: podcasts-gtk/resources/gtk/empty_view.ui:76
+msgid "Import shows from another device"
+msgstr "Імпартуйце перадачы з іншай прылады"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:33
+msgid "Episode Details"
+msgstr "Звесткі пра эпізод"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:42
+msgid "Episode Menu"
+msgstr "Меню эпізодаў"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:91
+msgid "Podcast Title"
+msgstr "Назва падкасту"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:114
+msgid "Duration - Date"
+msgstr "Працягласць - Дата"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:148
+msgid "_Stream"
+msgstr "_Трансляцыя"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:166
+msgid "_Play"
+msgstr "_Прайграць"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:185
+msgid "_Pause"
+msgstr "_Паўза"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:203
+msgid "_Download"
+msgstr "_Спампаваць"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:230
+msgid "Cancel"
+msgstr "Скасаваць"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:259
+msgid "Delete"
+msgstr "Выдаліць"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:278
+#: podcasts-gtk/resources/gtk/sheet_description.ui:48
+msgid "Episode Description"
+msgstr "Апісанне эпізоду"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:300
+msgid "Episode Cover"
+msgstr "Вокладка эпізоду"
+
+#. Translators: Show as a noun, meaning a Podcast-Show.
+#: podcasts-gtk/resources/gtk/episode_menu.ui:36
+msgid "Go to Show"
+msgstr "Перайсці да перадачы"
+
+#: podcasts-gtk/resources/gtk/episode_menu.ui:41
+msgid "Copy Episode URL"
+msgstr "Скапіяваць Url эпізоду"
+
+#: podcasts-gtk/resources/gtk/episode_menu.ui:45
+msgid "Mark as Played"
+msgstr "Адзначыць як прайграны"
+
+#: podcasts-gtk/resources/gtk/episode_menu.ui:50
+msgid "Mark as Unplayed"
+msgstr "Адзначыць як непрайграны"
+
+#: podcasts-gtk/resources/gtk/episode_widget.ui:71
+msgid "You’ve already listened to this episode."
+msgstr "Вы ўжо праслухалі гэты эпізод."
+
+#: podcasts-gtk/resources/gtk/episode_widget.ui:159
+msgid "Calculating episode size…"
+msgstr "Разлік памеру эпізоду…"
+
+#: podcasts-gtk/resources/gtk/episode_widget.ui:182
+msgid "Play this episode"
+msgstr "Прайграць гэты эпізод"
+
+#: podcasts-gtk/resources/gtk/episode_widget.ui:197
+msgid "Pause playback"
+msgstr "Прыпыніць прайграванне"
+
+#: podcasts-gtk/resources/gtk/episode_widget.ui:211
+msgid "Cancel the download process"
+msgstr "Скасаваць спампоўванне"
+
+#: podcasts-gtk/resources/gtk/episode_widget.ui:225
+msgid "Download this episode"
+msgstr "Спампаваць гэты эпізод"
+
+#: podcasts-gtk/resources/gtk/episode_widget.ui:240
+msgid "Episode without audio"
+msgstr "Эпізод без аўдыя"
+
+#: podcasts-gtk/resources/gtk/player_big.ui:43
+msgid "Rewind 10 seconds"
+msgstr "Перамотка на 10 секунд назад"
+
+#: podcasts-gtk/resources/gtk/player_big.ui:62
+#: podcasts-gtk/resources/gtk/player_small.ui:105
+#: podcasts-gtk/resources/gtk/sheet_player.ui:151
+msgid "Play"
+msgstr "Прайграць"
+
+#: podcasts-gtk/resources/gtk/player_big.ui:76
+#: podcasts-gtk/resources/gtk/player_small.ui:115
+#: podcasts-gtk/resources/gtk/sheet_player.ui:170
+msgid "Pause"
+msgstr "Паўза"
+
+#: podcasts-gtk/resources/gtk/player_big.ui:92
+msgid "Fast forward 10 seconds"
+msgstr "Перамотка на 10 секунд уперад"
+
+#: podcasts-gtk/resources/gtk/player_big.ui:112
+#: podcasts-gtk/resources/gtk/player_small.ui:50
+msgid "Go to the description for this episode."
+msgstr "Перайсці да апісання эпізоду."
+
+#: podcasts-gtk/resources/gtk/player_big.ui:207
+msgid "Go to the Chapters list."
+msgstr "Перайсці да спіса раздзелаў."
+
+#: podcasts-gtk/resources/gtk/player_rate.ui:31
+msgid "2.00×"
+msgstr "2.00×"
+
+#: podcasts-gtk/resources/gtk/player_rate.ui:36
+msgid "1.75×"
+msgstr "1.75×"
+
+#: podcasts-gtk/resources/gtk/player_rate.ui:41
+msgid "1.50×"
+msgstr "1.50×"
+
+#: podcasts-gtk/resources/gtk/player_rate.ui:46
+msgid "1.25×"
+msgstr "1.25×"
+
+#: podcasts-gtk/resources/gtk/player_rate.ui:51
+#: podcasts-gtk/resources/gtk/player_rate.ui:77
+msgid "1.00×"
+msgstr "1.00×"
+
+#: podcasts-gtk/resources/gtk/player_rate.ui:56
+msgid "0.90×"
+msgstr "0.90×"
+
+#: podcasts-gtk/resources/gtk/player_rate.ui:61
+msgid "0.75×"
+msgstr "0.75×"
+
+#: podcasts-gtk/resources/gtk/player_rate.ui:72
+msgid "Change the playback speed"
+msgstr "Змена хуткасці прайгравання"
+
+#: podcasts-gtk/resources/gtk/secondary_menu.ui:7
+msgid "_Mark All Episodes as Played"
+msgstr "_Адзначыць усе эпізоды як прайграныя"
+
+#: podcasts-gtk/resources/gtk/secondary_menu.ui:11
+msgid "_Website"
+msgstr "_Вэб-сайт"
+
+#: podcasts-gtk/resources/gtk/secondary_menu.ui:15
+msgid "_Unsubscribe"
+msgstr "_Адпісацца"
+
+#: podcasts-gtk/resources/gtk/sheet_base.ui:75
+msgid "Player"
+msgstr "Прайгравальнік"
+
+#: podcasts-gtk/resources/gtk/sheet_base.ui:82
+msgid "Description"
+msgstr "Апісанне"
+
+#: podcasts-gtk/resources/gtk/sheet_base.ui:89
+#: podcasts-gtk/src/widgets/chapters.rs:193
+msgid "Chapters"
+msgstr "Разделы"
+
+#: podcasts-gtk/resources/gtk/sheet_player.ui:128
+msgid "Rewind"
+msgstr "Назад"
+
+#: podcasts-gtk/resources/gtk/sheet_player.ui:194
+msgid "Forward"
+msgstr "Наперад"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:7
+msgctxt "shortcut window"
+msgid "Navigation"
+msgstr "Навігацыя"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:10
+msgctxt "shortcut window"
+msgid "Go to Home Page"
+msgstr "Перайсці на старонку «Хатняя»"
+
+#. Translators: Shows as a Noun
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:17
+msgctxt "shortcut window"
+msgid "Go to Shows Page"
+msgstr "Перайсці на старонку «Перадачы»"
+
+#. Translators: 'Discovery' is a page where you can add new podcasts
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:24
+msgctxt "shortcut window"
+msgid "Go To Discovery Page"
+msgstr "Перайсці на старонку «Агляд»"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:33
+msgctxt "shortcut window"
+msgid "Player"
+msgstr "Прайгравальнік"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:36
+msgctxt "shortcut window"
+msgid "Toggle Pause"
+msgstr "Паўза/прайграванне"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:42
+msgctxt "shortcut window"
+msgid "Seek Forwards"
+msgstr "Пераматаць уперад"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:48
+msgctxt "shortcut window"
+msgid "Seek Backwards"
+msgstr "Пераматаць назад"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:54
+msgctxt "shortcut window"
+msgid "Raise Playback Speed"
+msgstr "Павялічыць хуткасць прайгравання"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:60
+msgctxt "shortcut window"
+msgid "Lower Playback Speed"
+msgstr "Паменшышь хуткасць прайгравання"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:69
+msgctxt "shortcut window"
+msgid "General"
+msgstr "Агульныя"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:72
+msgctxt "shortcut window"
+msgid "Check for new episodes"
+msgstr "Праверыць наяўнасць новых эпізодаў"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:78
+msgctxt "shortcut window"
+msgid "Quit the application"
+msgstr "Выйсці з праграмы"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:84
+msgctxt "shortcut window"
+msgid "Import Subscriptions"
+msgstr "Імпартаваць падпіскі"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:90
+msgctxt "shortcut window"
+msgid "Export Subscriptions"
+msgstr "Экспартаваць падпіскі"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:96
+msgctxt "shortcut window"
+msgid "Search"
+msgstr "Пошук"
+
+#: podcasts-gtk/resources/gtk/show_menu.ui:35
+msgid "Open Website"
+msgstr "Адкрыць сайт"
+
+#: podcasts-gtk/resources/gtk/show_menu.ui:39
+msgid "Mark All as Played"
+msgstr "Адзначыць усе як прайграныя"
+
+#: podcasts-gtk/resources/gtk/show_menu.ui:46
+msgid "Unsubscribe"
+msgstr "Адпісацца"
+
+#: podcasts-gtk/resources/gtk/show_widget.ui:42
+msgid "Podcast Menu"
+msgstr "Меню падкастаў"
+
+#: podcasts-gtk/resources/gtk/show_widget.ui:112
+msgid "Episodes"
+msgstr "Эпізоды"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:32
+#: podcasts-gtk/resources/gtk/window.ui:21
+msgid "Sync Preferences"
+msgstr "Налады сінхранізацыі"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:40
+msgid "Logout"
+msgstr "Выйсці"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:66
+msgid "Nextcloud Sync Connection"
+msgstr "Злучэнне Nextcloud Sync"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:67
+msgid "Current connection for play position and subscription synchronization."
+msgstr "Бягучае злучэнне для сінхранізацыі пазіцыі прайгравання і падпіскі."
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:73
+msgid "Last Sync"
+msgstr "Апошняя сінхранізацыя"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:85
+msgid "Active"
+msgstr "Актыўна"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:86
+msgid "Should data be synchronized"
+msgstr "Якія даныя сінхранізаваць"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:92
+msgid "Server"
+msgstr "Сервер"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:100
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:160
+msgid "Username"
+msgstr "Імя карыстальніка"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:109
+msgid "Sync Now"
+msgstr "Сінхранізаваць"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:122
+msgid "Nextcloud Login"
+msgstr "Уваход у Nextcloud"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:123
+msgid ""
+"Synchronize subscriptions and listening status with a Nextcloud server that "
+"has GPodder Sync installed."
+msgstr ""
+"Сінхранізуйце падпіскі і стан праслухоўвання з серверам Nextcloud, на якім "
+"усталяваны GPodder Sync."
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:128
+msgid "Login via"
+msgstr "Уваход праз"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:135
+msgid "Browser"
+msgstr "Браўзер"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:141
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:168
+msgid "Password"
+msgstr "Пароль"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:152
+msgid "Server (cloud.example.com)"
+msgstr "Сервер (cloud.example.com)"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:177
+msgid "Login"
+msgstr "Уваход"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:187
+msgid "Login via Browser"
+msgstr "Уваход праз браўзер"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:205
+msgid "Loading..."
+msgstr "Загрузка..."
+
+#: podcasts-gtk/resources/gtk/window.ui:6
+msgid "_Check for New Episodes"
+msgstr "_Праверыць наяўнасць новых эпізодаў"
+
+#. Translators: Show as a noun, meaning Podcast-Shows.
+#: podcasts-gtk/resources/gtk/window.ui:12
+msgid "_Import Shows"
+msgstr "_Імпартаваць перадачы"
+
+#. Translators: Show as a noun, meaning Podcast-Shows.
+#: podcasts-gtk/resources/gtk/window.ui:17
+msgid "_Export Shows"
+msgstr "_Экспартаваць перадачы"
+
+#: podcasts-gtk/resources/gtk/window.ui:28
+msgid "_Keyboard Shortcuts"
+msgstr "_Спалучэнні клавіш"
+
+#: podcasts-gtk/resources/gtk/window.ui:32
+msgid "_About Podcasts"
+msgstr "Пр_а Падкасты"
+
+#. Weird magic I copy-pasted that sets the Application Name in the Shell.
+#: podcasts-gtk/resources/gtk/window.ui:40
+#: podcasts-gtk/resources/gtk/window.ui:110
+#: podcasts-gtk/resources/org.gnome.Podcasts.desktop.in.in:2
+#: podcasts-gtk/resources/org.gnome.Podcasts.metainfo.xml.in.in:4
+#: podcasts-gtk/src/app.rs:653 podcasts-gtk/src/player_mpris.rs:50
+#: podcasts-gtk/src/widgets/aboutdialog.rs:56
+msgid "Podcasts"
+msgstr "Падкасты"
+
+#: podcasts-gtk/resources/gtk/window.ui:123
+msgid "Add a New Feed"
+msgstr "Дадаць новы канал"
+
+#: podcasts-gtk/resources/gtk/window.ui:131
+msgid "Main Menu"
+msgstr "Галоўнае меню"
+
+#. Translators: Show as a noun, meaning a Podcast-Show.
+#: podcasts-gtk/resources/gtk/window.ui:173
+msgid "Show"
+msgstr "Перадача"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.desktop.in.in:3
+msgid "Listen to your favorite podcasts, right from your desktop."
+msgstr "Слухайце ўлюбёныя падкасты проста са свайго працоўнага стала."
+
+#. Translators: Search terms to find this application. Do NOT translate or localize the semicolons! The list MUST also end with a semicolon!
+#: podcasts-gtk/resources/org.gnome.Podcasts.desktop.in.in:12
+msgid "Podcast;RSS;"
+msgstr "Podcast;Падкаст;RSS;"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.gschema.xml.in:15
+msgid "Height of the last open main window"
+msgstr "Вышыня апошняга адкрытага галоўнага акна"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.gschema.xml.in:19
+msgid "Width of the last open main window"
+msgstr "Шырыня апошняга адкрытага галоўнага акна"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.gschema.xml.in:23
+msgid "Maximized state of the last open main window"
+msgstr "Разгорнуты стан апошняга адкрытага галоўнага акна"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.gschema.xml.in:28
+msgid "Whether to periodically refresh content"
+msgstr "Ці трэба перыядычна абнаўляць змесціва"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.gschema.xml.in:33
+msgid "How many periods of time to wait between automatic refreshes"
+msgstr "Колькі перыядаў часу трэба чакаць паміж аўтаматычнымі абнаўленнямі"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.gschema.xml.in:37
+msgid "What period of time to wait between automatic refreshes"
+msgstr "Які перыяд часу павінен прайсці паміж аўтаматычнымі абнаўленнямі"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.gschema.xml.in:41
+msgid "Whether to refresh content after startup"
+msgstr "Ці абнаўляць змесціва пасля запуску"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.gschema.xml.in:47
+msgid "How many periods of time to wait between automatic cleanups"
+msgstr "Колькі перыядаў часу павінна прайсці паміж аўтаматычнымі ачысткамі"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.gschema.xml.in:51
+msgid "What period of time to wait between automatic cleanups"
+msgstr "Колькі перыядаў часу павінна прайсці паміж аўтаматычнымі ачысткамі"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.metainfo.xml.in.in:8
+msgid "Listen to your favorite shows"
+msgstr "Слухайце свае ўлюбёныя перадачы"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.metainfo.xml.in.in:10
+msgid ""
+"Play, update, and manage your podcasts from a lightweight interface that "
+"seamlessly integrates with GNOME. Podcasts can play various audio formats "
+"and remember where you stopped listening. You can subscribe to shows via RSS/"
+"Atom, iTunes, and Soundcloud links. Subscriptions from other apps can be "
+"imported via OPML files."
+msgstr ""
+"Прайгравайце, абнаўляйце і кіруйце сваімі падкастамі праз лёгкі інтэрфейс, "
+"які цалкам інтэгруецца ў GNOME. Праграма можа прайграваць розныя "
+"аўдыяфарматы і запамінаць, дзе вы спынілі праслухоўванне. Вы можаце "
+"падпісацца на перадачы праз спасылкі RSS/Atom,iTunes і Soundcloud. Падпіскі "
+"з іншых сэрвісаў могуць быць імпартаваны праз файлы OPML."
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.metainfo.xml.in.in:18
+msgid "The home view displaying the newest episodes of your podcasts"
+msgstr "На хатняй старонцы паказваюцца самыя новыя эпізоды вашых падкастаў"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.metainfo.xml.in.in:22
+msgid "The shows view displaying the covers of your podcasts"
+msgstr "На старонцы «Перадачы» паказваюцца вокладкі выбраных вамі падкастаў"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.metainfo.xml.in.in:26
+msgid ""
+"The show widget displaying the cover and the latest episodes of a specific "
+"podcast"
+msgstr ""
+"У раздзеле «Перадачы» паказваюцца вокладкі і апошнія эпізоды асобных "
+"падкастаў"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.metainfo.xml.in.in:30
+msgid "The chapters available in an episode"
+msgstr "Разделы эпізодаў"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.metainfo.xml.in.in:34
+msgid "The view where one can add a new podcast"
+msgstr "Старонка, на якой можна дадаць новы падкаст"
+
+#. developer_name tag deprecated with Appstream 1.0
+#: podcasts-gtk/resources/org.gnome.Podcasts.metainfo.xml.in.in:241
+msgid "The Podcasts developers"
+msgstr "Распрацоўшчыкі Podcasts"
+
+#: podcasts-gtk/src/app.rs:424
+msgid "Copied URL to clipboard!"
+msgstr "URL скапіяваны ў буфер абмену!"
+
+#: podcasts-gtk/src/episode_description_parser.rs:320
+#, rust-format
+msgid "Jump to {hours}:{minutes}:{seconds}"
+msgstr "Перайсці на {hours}:{minutes}:{seconds}"
+
+#: podcasts-gtk/src/episode_description_parser.rs:338
+#, rust-format
+msgid "Jump to {minutes}:{seconds}"
+msgstr "Перайсці на {minutes}:{seconds}"
+
+#: podcasts-gtk/src/manager.rs:107
+#, rust-format
+msgid "Download failed: {}"
+msgstr "Не ўдалося спампаваць: {}"
+
+#: podcasts-gtk/src/player.rs:385
+msgid "The media player was unable to execute an action."
+msgstr "Медыяплэер не змог выканаць дзеянне."
+
+#: podcasts-gtk/src/utils.rs:300
+#, rust-format
+msgid "Failed to subscribe to feed: {}"
+msgstr "Не ўдалося падпісацца на канал: {}"
+
+#: podcasts-gtk/src/utils.rs:395 podcasts-gtk/src/utils.rs:447
+msgid "OPML file"
+msgstr "OPML-файл"
+
+#: podcasts-gtk/src/utils.rs:406
+msgid "Select the file from which to you want to import shows."
+msgstr "Выберыце файл, з якога вы хочаце імпартаваць перадачы."
+
+#: podcasts-gtk/src/utils.rs:408
+msgid "_Import"
+msgstr "_Імпартаваць"
+
+#: podcasts-gtk/src/utils.rs:437
+#, rust-format
+msgid "Failed to parse the imported file {}"
+msgstr "Не ўдалося разабраць імпартаваны файл {}"
+
+#. Translators: Show as a noun, meaning Podcast-Shows.
+#: podcasts-gtk/src/utils.rs:458
+msgid "Export shows to…"
+msgstr "Экспарт перадач ў…"
+
+#: podcasts-gtk/src/utils.rs:459
+msgid "_Export"
+msgstr "_Экспартаваць"
+
+#. Translators: This is the string of the suggested name for the exported opml file
+#: podcasts-gtk/src/utils.rs:463
+msgid "gnome-podcasts-exported-shows"
+msgstr "gnome-podcasts-exported-shows"
+
+#: podcasts-gtk/src/utils.rs:473
+msgid "GNOME Podcasts Subscriptions"
+msgstr "Падпіскі на падкасты GNOME"
+
+#: podcasts-gtk/src/utils.rs:477
+msgid "Failed to export podcasts"
+msgstr "Не ўдалося экспартаваць падкасты"
+
+#: podcasts-gtk/src/utils.rs:488
+msgid "Just now"
+msgstr "толькі што"
+
+#: podcasts-gtk/src/utils.rs:492
+#, rust-format
+msgid "{} minute ago"
+msgid_plural "{} minutes ago"
+msgstr[0] "{} хвіліну таму"
+msgstr[1] "{} хвіліны таму"
+msgstr[2] "{} хвілін таму"
+
+#: podcasts-gtk/src/utils.rs:498
+#, rust-format
+msgid "{} hour ago"
+msgid_plural "{} hours ago"
+msgstr[0] "{} гадзіну таму"
+msgstr[1] "{} гадзіны таму"
+msgstr[2] "{} гадзін таму"
+
+#: podcasts-gtk/src/utils.rs:502
+#, rust-format
+msgid "{} day ago"
+msgid_plural "{} days ago"
+msgstr[0] "{} дзень таму"
+msgstr[1] "{} дні таму"
+msgstr[2] "{} дзён таму"
+
+#: podcasts-gtk/src/utils.rs:506
+#, rust-format
+msgid "{} month ago"
+msgid_plural "{} months ago"
+msgstr[0] "{} месяц таму"
+msgstr[1] "{} месяцы таму"
+msgstr[2] "{} месяцаў таму"
+
+#: podcasts-gtk/src/utils.rs:510
+#, rust-format
+msgid "{} year ago"
+msgid_plural "{} years ago"
+msgstr[0] "{} год таму"
+msgstr[1] "{} гады таму"
+msgstr[2] "{} гадоў таму"
+
+#: podcasts-gtk/src/widgets/aboutdialog.rs:52
+msgid "Podcast Client for the GNOME Desktop."
+msgstr "Кліент падкастаў для працоўнага стала GNOME."
+
+#: podcasts-gtk/src/widgets/aboutdialog.rs:62
+msgid "translator-credits"
+msgstr "Yahor Haurylenka <k1llo2810@gmail.com>, 2022"
+
+#: podcasts-gtk/src/widgets/chapters.rs:129
+msgid "Currently playing chapter"
+msgstr "Раздзел, які прайграецца"
+
+#: podcasts-gtk/src/widgets/content_stack.rs:67
+msgid "Fetching feeds…"
+msgstr "Атрыманне новых эпізодаў…"
+
+#: podcasts-gtk/src/widgets/content_stack.rs:74
+msgid "New"
+msgstr "Новыя"
+
+#. Translators: Shows as a noun, meaning Podcast-Shows.
+#: podcasts-gtk/src/widgets/content_stack.rs:75
+#: podcasts-gtk/src/widgets/shows_view.rs:127
+msgid "Shows"
+msgstr "Перадачы"
+
+#: podcasts-gtk/src/widgets/download_progress_bar.rs:67
+msgid "Download progress"
+msgstr "Ход выканання спампоўвання"
+
+#: podcasts-gtk/src/widgets/episode.rs:355
+#, rust-format
+msgid "{} min"
+msgstr "{} хв"
+
+#. Translators: This will show as something like: "1.25×"
+#. inside a menu-button that shows/sets playback speed.
+#: podcasts-gtk/src/widgets/player_rate.rs:79
+#, rust-format
+msgid "{:.2}×"
+msgstr "{:.2}×"
+
+#: podcasts-gtk/src/widgets/read_more_label.rs:33
+msgid "Visually expands this description"
+msgstr "Разгортвае гэта апісанне"
+
+#: podcasts-gtk/src/widgets/read_more_label.rs:35
+msgid "Read More"
+msgstr "Чытаць далей"
+
+#: podcasts-gtk/src/widgets/show_menu.rs:148
+msgid "Marked all episodes as listened"
+msgstr "Усе эпізоды адзначаны як праслуханыя"
+
+#: podcasts-gtk/src/widgets/show_menu.rs:149
+#: podcasts-gtk/src/widgets/show_menu.rs:177
+msgid "Undo"
+msgstr "Скасаваць"
+
+#: podcasts-gtk/src/widgets/show_menu.rs:172
+#, rust-format
+msgid "Unsubscribed from {}"
+msgstr "Вы адпісаліся ад {}"
+
+#: podcasts-gtk/src/widgets/show_menu.rs:203
+#, rust-format
+msgid "Failed to store Unsubscribe Action for Synchronization in database. {}"
+msgstr ""
+"Не ўдалося захаваць ў базе даных дзеянне «Адпісацца» для сінхранізацыі. {}"
+
+#: podcasts-gtk/src/widgets/shows_view.rs:144
+msgid "No Results Found"
+msgstr "Нічога не знойдзена"
+
+#: podcasts-gtk/src/widgets/shows_view.rs:146
+msgid "Try a different search or filters"
+msgstr "Паспрабуйце змяніць пошукавы запыт або фільтры"
+
+#: podcasts-gtk/src/widgets/sync_preferences.rs:126
+msgid "Logging in..."
+msgstr "Уваход…"
+
+#: podcasts-gtk/src/widgets/sync_preferences.rs:180
+#: podcasts-gtk/src/widgets/sync_preferences.rs:262
+msgid "Waiting for browser login..."
+msgstr "Чаканне ўваходу праз браўзер..."
+
+#: podcasts-gtk/src/widgets/sync_preferences.rs:227
+#: podcasts-gtk/src/widgets/sync_preferences.rs:309
+msgid "Logging out..."
+msgstr "Выхад…"
+
+#: podcasts-gtk/src/widgets/sync_preferences.rs:344
+msgid "Synchronizing now..."
+msgstr "Сінхранізацыя…"
+
+#: podcasts-gtk/src/widgets/sync_preferences.rs:348
+msgid "Refreshing feeds..."
+msgstr "Абнаўленне стужкі…"
+
+#: podcasts-gtk/src/widgets/sync_preferences.rs:397
+msgid "Running first sync. This can take a few minutes."
+msgstr "Запуск першай сінхранізацыі Яна можа заняць некалькі хвілін."
+
+#. Translators: reads as: "Last sync: Never"
+#: podcasts-gtk/src/widgets/sync_preferences.rs:439
+msgid "Never"
+msgstr "Ніколі"
+
+#~ msgid "Today"
+#~ msgstr "Сёння"
+
+#~ msgid "Yesterday"
+#~ msgstr "Учора"
+
+#~ msgid "This Week"
+#~ msgstr "На гэтым тыдні"
+
+#~ msgid "This Month"
+#~ msgstr "У гэтым месяцы"
+
+#~ msgid "Older"
+#~ msgstr "Раней"
+
+#~ msgid "0"
+#~ msgstr "0"
+
+#~ msgid "Now Playing"
+#~ msgstr "Прайграецца"
+
+#~ msgid "Close"
+#~ msgstr "Закрыць"
+
+#~ msgid "Enter Feed Address"
+#~ msgstr "Увядзіце адрас канала"
+
+#~ msgid "Popover menu (ESC to close)"
+#~ msgstr "Усплывальнае меню ( ESC, каб закрыць)"
+
+#~ msgid "Add"
+#~ msgstr "Дадаць"
+
+#~ msgid "Back"
+#~ msgstr "Назад"
+
+#~ msgid "Show Title"
+#~ msgstr "Паказаць загаловак"
+
+#~ msgid "Jordan Petridis"
+#~ msgstr "Джордан Петрыдзіс (Jordan Petridis)"
+
+#~ msgid "Julian Hofer"
+#~ msgstr "Джуліян Хофер (Julian Hofer)"
+
+#~ msgid "Get some shows"
+#~ msgstr "Атрымайце некалькі шоу"
+
+#~ msgid "Enter feed address to add"
+#~ msgstr "Увядзіце адрас канала для дадавання"
+
+#~ msgid "Selected file could not be accessed."
+#~ msgstr "Не ўдалося атрымаць доступ да выбранага файла."
+
+#~ msgid "Learn more about GNOME Podcasts"
+#~ msgstr "Даведайцеся больш пра падкасты GNOME"
+
+#~ msgid "Top position of the last open main window"
+#~ msgstr "Верхняя пазіцыя апошняга адкрытага галоўнага акна"
+
+#~ msgid "Left position of the last open main window"
+#~ msgstr "Левая пазіцыя апошняга адкрытага галоўнага акна"
+
+#~ msgid "Enable or disable dark theme"
+#~ msgstr "Уключыць ці адключыць цёмную тэму"
+
+#~ msgid "An in-app action notification"
+#~ msgstr "Апавяшчэнне пра дзеянне ў дадатку"

@@ -1,0 +1,24 @@
+target/
+**/*.rs.bk
+.vscode
+.foundry
+resources.gresource
+_build/
+build/
+vendor/
+.criterion/
+org.gnome.*.json~
+podcasts-gtk/po/gnome-podcasts.pot
+
+# scripts/test.sh
+target_*/
+
+# flatpak-builder stuff
+.flatpak/
+.flatpak-builder/
+app/
+repo/
+
+# Files configured by meson
+podcasts-gtk/src/config.rs
+podcasts-gtk/src/static_resource.rs

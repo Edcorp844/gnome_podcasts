@@ -1,0 +1,53 @@
+# List of source files containing translatable strings.
+# Please keep this file sorted alphabetically.
+# ui files
+podcasts-gtk/resources/gtk/discovery_found_podcast.ui
+podcasts-gtk/resources/gtk/discovery_page.ui
+podcasts-gtk/resources/gtk/discovery_search_results.ui
+podcasts-gtk/resources/gtk/empty_show.ui
+podcasts-gtk/resources/gtk/empty_view.ui
+podcasts-gtk/resources/gtk/episode_description.ui
+podcasts-gtk/resources/gtk/episode_menu.ui
+podcasts-gtk/resources/gtk/episode_widget.ui
+podcasts-gtk/resources/gtk/home_view.ui
+podcasts-gtk/resources/gtk/player_big.ui
+podcasts-gtk/resources/gtk/player_small.ui
+podcasts-gtk/resources/gtk/player_rate.ui
+podcasts-gtk/resources/gtk/player_wrapper.ui
+podcasts-gtk/resources/gtk/secondary_menu.ui
+podcasts-gtk/resources/gtk/sheet_base.ui
+podcasts-gtk/resources/gtk/sheet_description.ui
+podcasts-gtk/resources/gtk/sheet_player.ui
+podcasts-gtk/resources/gtk/shortcuts-dialog.ui
+podcasts-gtk/resources/gtk/show_menu.ui
+podcasts-gtk/resources/gtk/show_widget.ui
+podcasts-gtk/resources/gtk/sync_preferences.ui
+podcasts-gtk/resources/gtk/window.ui
+
+# resources
+podcasts-gtk/resources/org.gnome.Podcasts.desktop.in.in
+podcasts-gtk/resources/org.gnome.Podcasts.gschema.xml.in
+podcasts-gtk/resources/org.gnome.Podcasts.metainfo.xml.in.in
+
+# rust files
+podcasts-gtk/src/app.rs
+podcasts-gtk/src/episode_description_parser.rs
+podcasts-gtk/src/manager.rs
+podcasts-gtk/src/player.rs
+podcasts-gtk/src/player_mpris.rs
+podcasts-gtk/src/utils.rs
+podcasts-gtk/src/widgets/aboutdialog.rs
+podcasts-gtk/src/widgets/chapters.rs
+podcasts-gtk/src/widgets/content_stack.rs
+podcasts-gtk/src/widgets/discovery_page.rs
+podcasts-gtk/src/widgets/discovery_search_results.rs
+podcasts-gtk/src/widgets/download_progress_bar.rs
+podcasts-gtk/src/widgets/episode.rs
+podcasts-gtk/src/widgets/player_big.rs
+podcasts-gtk/src/widgets/player_small.rs
+podcasts-gtk/src/widgets/player_rate.rs
+podcasts-gtk/src/widgets/player_wrapper.rs
+podcasts-gtk/src/widgets/read_more_label.rs
+podcasts-gtk/src/widgets/show_menu.rs
+podcasts-gtk/src/widgets/shows_view.rs
+podcasts-gtk/src/widgets/sync_preferences.rs

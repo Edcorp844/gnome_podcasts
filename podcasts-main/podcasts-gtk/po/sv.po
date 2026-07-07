@@ -1,0 +1,868 @@
+# Swedish translation for podcasts.
+# Copyright © 2018-2026 podcasts's COPYRIGHT HOLDER
+# This file is distributed under the same license as the podcasts package.
+# Anders Jonsson <anders.jonsson@norsjovallen.se>, 2018, 2019, 2020, 2021, 2023, 2024, 2025, 2026.
+# Luna Jernberg <droidbittin@gmail.com>, 2021.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: podcasts main\n"
+"Report-Msgid-Bugs-To: https://gitlab.gnome.org/World/podcasts/issues\n"
+"POT-Creation-Date: 2025-12-28 11:27+0000\n"
+"PO-Revision-Date: 2026-02-08 11:48+0100\n"
+"Last-Translator: Anders Jonsson <anders.jonsson@norsjovallen.se>\n"
+"Language-Team: Swedish <tp-sv@listor.tp-sv.se>\n"
+"Language: sv\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 3.8\n"
+
+#: podcasts-gtk/resources/gtk/discovery_found_podcast.ui:105
+msgid "Episodes: "
+msgstr "Avsnitt: "
+
+#: podcasts-gtk/resources/gtk/discovery_found_podcast.ui:143
+msgid "Last publication"
+msgstr "Senaste publicering"
+
+#: podcasts-gtk/resources/gtk/discovery_found_podcast.ui:164
+msgid "_Subscribe"
+msgstr "_Prenumerera"
+
+#: podcasts-gtk/resources/gtk/discovery_found_podcast.ui:174
+#: podcasts-gtk/src/widgets/discovery_search_results.rs:152
+msgid "Subscribing to feed…"
+msgstr "Prenumererar på flöde…"
+
+#: podcasts-gtk/resources/gtk/discovery_page.ui:33
+msgid "Add Podcasts"
+msgstr "Lägg till poddsändningar"
+
+#: podcasts-gtk/resources/gtk/discovery_page.ui:64
+msgid "Search"
+msgstr "Sök"
+
+#: podcasts-gtk/resources/gtk/discovery_page.ui:77
+msgid "Enter a feed URL or search the selected platforms."
+msgstr "Ange en flödes-URL eller sök de valda plattformarna."
+
+#: podcasts-gtk/resources/gtk/discovery_page.ui:100
+msgid "Submit search"
+msgstr "Skicka sökning"
+
+#: podcasts-gtk/resources/gtk/discovery_page.ui:106
+#: podcasts-gtk/src/widgets/discovery_page.rs:113
+msgid "Loading…"
+msgstr "Läser in…"
+
+#: podcasts-gtk/resources/gtk/discovery_page.ui:119
+msgid "Please enable a Search Platform below, or enter a http(s) feed URL."
+msgstr "Aktivera en sökplattform nedan, eller ange en http(s)-flödes-URL."
+
+#: podcasts-gtk/resources/gtk/discovery_page.ui:131
+msgid "Search Platforms"
+msgstr "Sökplattformar"
+
+#: podcasts-gtk/resources/gtk/discovery_page.ui:132
+msgid "Search queries will be sent to these platforms."
+msgstr "Sökfrågor kommer skickas till dessa plattformar."
+
+#: podcasts-gtk/resources/gtk/discovery_search_results.ui:32
+msgid "Search results"
+msgstr "Sökresultat"
+
+#: podcasts-gtk/resources/gtk/discovery_search_results.ui:70
+msgid "No results found."
+msgstr "Inga resultat hittades."
+
+#. Translators: Show as a noun, meaning a Podcast-Show.
+#: podcasts-gtk/resources/gtk/empty_show.ui:17
+msgid "This show does not have episodes yet"
+msgstr "Denna show har inga avsnitt ännu"
+
+#: podcasts-gtk/resources/gtk/empty_show.ui:28
+msgid "If you think this is an error, please consider writing a bug report."
+msgstr "Överväg att skriva en felrapport om du tror att detta är ett fel."
+
+#. Translators: Shows as a noun, meaning Podcast-Shows.
+#: podcasts-gtk/resources/gtk/empty_view.ui:31
+msgid "Get Some Shows"
+msgstr "Få tag på några shower"
+
+#. Translators: Shows as a noun, meaning Podcast-Shows.
+#: podcasts-gtk/resources/gtk/empty_view.ui:52
+msgid "Add new shows via feed URL"
+msgstr "Lägg till nya shower via flödes-URL"
+
+#. Translators: Shows as a noun, meaning Podcast-Shows.
+#: podcasts-gtk/resources/gtk/empty_view.ui:76
+msgid "Import shows from another device"
+msgstr "Importera shower från en annan enhet"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:33
+msgid "Episode Details"
+msgstr "Avsnittsdetaljer"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:42
+msgid "Episode Menu"
+msgstr "Avsnittsmeny"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:91
+msgid "Podcast Title"
+msgstr "Titel på poddsändning"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:114
+msgid "Duration - Date"
+msgstr "Längd - Datum"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:148
+msgid "_Stream"
+msgstr "_Strömma"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:166
+msgid "_Play"
+msgstr "S_pela"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:185
+msgid "_Pause"
+msgstr "_Pausa"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:203
+msgid "_Download"
+msgstr "_Hämta"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:230
+msgid "Cancel"
+msgstr "Avbryt"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:259
+msgid "Delete"
+msgstr "Ta bort"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:278
+#: podcasts-gtk/resources/gtk/sheet_description.ui:48
+msgid "Episode Description"
+msgstr "Avsnittsbeskrivning"
+
+#: podcasts-gtk/resources/gtk/episode_description.ui:300
+msgid "Episode Cover"
+msgstr "Avsnittsomslag"
+
+#. Translators: Show as a noun, meaning a Podcast-Show.
+#: podcasts-gtk/resources/gtk/episode_menu.ui:36
+msgid "Go to Show"
+msgstr "Gå till show"
+
+#: podcasts-gtk/resources/gtk/episode_menu.ui:41
+msgid "Copy Episode URL"
+msgstr "Kopiera avsnitts-URL"
+
+#: podcasts-gtk/resources/gtk/episode_menu.ui:45
+msgid "Mark as Played"
+msgstr "Markera som spelat"
+
+#: podcasts-gtk/resources/gtk/episode_menu.ui:50
+msgid "Mark as Unplayed"
+msgstr "Markera som ospelat"
+
+#: podcasts-gtk/resources/gtk/episode_widget.ui:71
+msgid "You’ve already listened to this episode."
+msgstr "Du har redan lyssnat på detta avsnitt."
+
+#: podcasts-gtk/resources/gtk/episode_widget.ui:159
+msgid "Calculating episode size…"
+msgstr "Beräknar avsnittsstorlek…"
+
+#: podcasts-gtk/resources/gtk/episode_widget.ui:182
+msgid "Play this episode"
+msgstr "Spela detta avsnitt"
+
+#: podcasts-gtk/resources/gtk/episode_widget.ui:197
+msgid "Pause playback"
+msgstr "Pausa uppspelning"
+
+#: podcasts-gtk/resources/gtk/episode_widget.ui:211
+msgid "Cancel the download process"
+msgstr "Avbryt hämtningsprocessen"
+
+#: podcasts-gtk/resources/gtk/episode_widget.ui:225
+msgid "Download this episode"
+msgstr "Hämta detta avsnitt"
+
+#: podcasts-gtk/resources/gtk/episode_widget.ui:240
+msgid "Episode without audio"
+msgstr "Avsnitt utan ljud"
+
+#: podcasts-gtk/resources/gtk/home_view.ui:57
+#: podcasts-gtk/resources/gtk/home_view.ui:70
+msgid "Today"
+msgstr "I dag"
+
+#: podcasts-gtk/resources/gtk/home_view.ui:88
+#: podcasts-gtk/resources/gtk/home_view.ui:101
+msgid "Yesterday"
+msgstr "I går"
+
+#: podcasts-gtk/resources/gtk/home_view.ui:119
+#: podcasts-gtk/resources/gtk/home_view.ui:132
+msgid "This Week"
+msgstr "Denna vecka"
+
+#: podcasts-gtk/resources/gtk/home_view.ui:150
+#: podcasts-gtk/resources/gtk/home_view.ui:163
+msgid "This Month"
+msgstr "Denna månad"
+
+#: podcasts-gtk/resources/gtk/home_view.ui:182
+#: podcasts-gtk/resources/gtk/home_view.ui:195
+msgid "Older"
+msgstr "Äldre"
+
+#: podcasts-gtk/resources/gtk/player_rate.ui:29
+msgid "Change the playback speed"
+msgstr "Ändra uppspelningshastigheten"
+
+#: podcasts-gtk/resources/gtk/player_rate.ui:34
+#: podcasts-gtk/resources/gtk/player_rate.ui:62
+msgid "1.00×"
+msgstr "1,00×"
+
+#: podcasts-gtk/resources/gtk/player_rate.ui:42
+msgid "2.00×"
+msgstr "2,00×"
+
+#: podcasts-gtk/resources/gtk/player_rate.ui:47
+msgid "1.75×"
+msgstr "1,75×"
+
+#: podcasts-gtk/resources/gtk/player_rate.ui:52
+msgid "1.50×"
+msgstr "1,50×"
+
+#: podcasts-gtk/resources/gtk/player_rate.ui:57
+msgid "1.25×"
+msgstr "1,25×"
+
+#: podcasts-gtk/resources/gtk/player_rate.ui:67
+msgid "0.90×"
+msgstr "0,90×"
+
+#: podcasts-gtk/resources/gtk/player_rate.ui:72
+msgid "0.75×"
+msgstr "0,75×"
+
+#: podcasts-gtk/resources/gtk/player_toolbar.ui:50
+msgid "Rewind 10 seconds"
+msgstr "Spola tillbaka 10 sekunder"
+
+#: podcasts-gtk/resources/gtk/player_toolbar.ui:67
+#: podcasts-gtk/resources/gtk/player_toolbar.ui:292
+#: podcasts-gtk/resources/gtk/sheet_player.ui:149
+msgid "Play"
+msgstr "Spela"
+
+#: podcasts-gtk/resources/gtk/player_toolbar.ui:80
+#: podcasts-gtk/resources/gtk/player_toolbar.ui:301
+#: podcasts-gtk/resources/gtk/sheet_player.ui:167
+msgid "Pause"
+msgstr "Pausa"
+
+#: podcasts-gtk/resources/gtk/player_toolbar.ui:95
+msgid "Fast forward 10 seconds"
+msgstr "Spola framåt 10 sekunder"
+
+#: podcasts-gtk/resources/gtk/player_toolbar.ui:113
+#: podcasts-gtk/resources/gtk/player_toolbar.ui:237
+msgid "Go to the description for this episode."
+msgstr "Gå till beskrivningen för detta avsnitt."
+
+#: podcasts-gtk/resources/gtk/player_toolbar.ui:208
+msgid "Go to the Chapters list."
+msgstr "Gå till kapitellistan."
+
+#: podcasts-gtk/resources/gtk/secondary_menu.ui:7
+msgid "_Mark All Episodes as Played"
+msgstr "_Markera alla avsnitt som spelade"
+
+#: podcasts-gtk/resources/gtk/secondary_menu.ui:11
+msgid "_Website"
+msgstr "_Webbplats"
+
+#: podcasts-gtk/resources/gtk/secondary_menu.ui:15
+msgid "_Unsubscribe"
+msgstr "Säg _upp prenumeration"
+
+#: podcasts-gtk/resources/gtk/sheet_base.ui:75
+msgid "Player"
+msgstr "Spelare"
+
+#: podcasts-gtk/resources/gtk/sheet_base.ui:82
+msgid "Description"
+msgstr "Beskrivning"
+
+#: podcasts-gtk/resources/gtk/sheet_base.ui:89
+#: podcasts-gtk/src/widgets/chapters.rs:194
+msgid "Chapters"
+msgstr "Kapitel"
+
+#: podcasts-gtk/resources/gtk/sheet_player.ui:128
+msgid "Rewind"
+msgstr "Spola tillbaka"
+
+#: podcasts-gtk/resources/gtk/sheet_player.ui:190
+msgid "Forward"
+msgstr "Spola framåt"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:7
+msgctxt "shortcut window"
+msgid "Navigation"
+msgstr "Navigering"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:10
+msgctxt "shortcut window"
+msgid "Go to Home Page"
+msgstr "Gå till startsida"
+
+#. Translators: Shows as a Noun
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:17
+msgctxt "shortcut window"
+msgid "Go to Shows Page"
+msgstr "Gå till showsida"
+
+#. Translators: 'Discovery' is a page where you can add new podcasts
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:24
+msgctxt "shortcut window"
+msgid "Go To Discovery Page"
+msgstr "Gå till upptäcktssida"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:33
+msgctxt "shortcut window"
+msgid "Player"
+msgstr "Spelare"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:36
+msgctxt "shortcut window"
+msgid "Toggle Pause"
+msgstr "Pausa/fortsätt"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:42
+msgctxt "shortcut window"
+msgid "Seek Forwards"
+msgstr "Spola framåt"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:48
+msgctxt "shortcut window"
+msgid "Seek Backwards"
+msgstr "Spola bakåt"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:54
+msgctxt "shortcut window"
+msgid "Raise Playback Speed"
+msgstr "Höj uppspelningshastighet"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:60
+msgctxt "shortcut window"
+msgid "Lower Playback Speed"
+msgstr "Sänk uppspelningshastighet"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:69
+msgctxt "shortcut window"
+msgid "General"
+msgstr "Allmänt"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:72
+msgctxt "shortcut window"
+msgid "Check for new episodes"
+msgstr "Sök efter nya avsnitt"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:78
+msgctxt "shortcut window"
+msgid "Quit the application"
+msgstr "Avsluta programmet"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:84
+msgctxt "shortcut window"
+msgid "Import Subscriptions"
+msgstr "Importera prenumerationer"
+
+#: podcasts-gtk/resources/gtk/shortcuts-dialog.ui:90
+msgctxt "shortcut window"
+msgid "Export Subscriptions"
+msgstr "Exportera prenumerationer"
+
+#: podcasts-gtk/resources/gtk/show_menu.ui:35
+msgid "Open Website"
+msgstr "Öppna webbplats"
+
+#: podcasts-gtk/resources/gtk/show_menu.ui:39
+msgid "Mark All as Played"
+msgstr "Markera alla som spelade"
+
+#: podcasts-gtk/resources/gtk/show_menu.ui:45
+msgid "Unsubscribe"
+msgstr "Säg upp prenumeration"
+
+#: podcasts-gtk/resources/gtk/show_widget.ui:40
+msgid "Podcast Menu"
+msgstr "Poddsändningsmeny"
+
+#: podcasts-gtk/resources/gtk/show_widget.ui:100
+msgid "Episodes"
+msgstr "Avsnitt"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:32
+#: podcasts-gtk/resources/gtk/window.ui:21
+msgid "Sync Preferences"
+msgstr "Inställningar för synkronisering"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:40
+msgid "Logout"
+msgstr "Logga ut"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:66
+msgid "Nextcloud Sync Connection"
+msgstr "Nextcloud-synkroniseringsanslutning"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:67
+msgid "Current connection for play position and subscription synchronization."
+msgstr ""
+"Aktuell anslutning för synkronisering av spelningsposition och "
+"prenumerationer."
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:73
+msgid "Last Sync"
+msgstr "Senaste synkronisering"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:85
+msgid "Active"
+msgstr "Aktiv"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:86
+msgid "Should data be synchronized"
+msgstr "Ska data synkroniseras"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:92
+msgid "Server"
+msgstr "Server"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:100
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:160
+msgid "Username"
+msgstr "Användarnamn"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:109
+msgid "Sync Now"
+msgstr "Synkronisera nu"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:122
+msgid "Nextcloud Login"
+msgstr "Nextcloud-inloggning"
+
+# https://apps.nextcloud.com/apps/gpoddersync
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:123
+msgid ""
+"Synchronize subscriptions and listening status with a Nextcloud server that "
+"has GPodder Sync installed."
+msgstr ""
+"Synkronisera prenumerationer och lyssningsstatus med en Nextcloud-server som "
+"har GPodder Sync installerat."
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:128
+msgid "Login via"
+msgstr "Logga in via"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:135
+msgid "Browser"
+msgstr "Webbläsare"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:141
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:168
+msgid "Password"
+msgstr "Lösenord"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:152
+msgid "Server (cloud.example.com)"
+msgstr "Server (moln.example.com)"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:177
+msgid "Login"
+msgstr "Logga in"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:187
+msgid "Login via Browser"
+msgstr "Logga in via webbläsare"
+
+#: podcasts-gtk/resources/gtk/sync_preferences.ui:205
+msgid "Loading..."
+msgstr "Läser in…"
+
+#: podcasts-gtk/resources/gtk/window.ui:6
+msgid "_Check for New Episodes"
+msgstr "Sö_k efter nya avsnitt"
+
+#. Translators: Show as a noun, meaning Podcast-Shows.
+#: podcasts-gtk/resources/gtk/window.ui:12
+msgid "_Import Shows"
+msgstr "_Importera shower"
+
+#. Translators: Show as a noun, meaning Podcast-Shows.
+#: podcasts-gtk/resources/gtk/window.ui:17
+msgid "_Export Shows"
+msgstr "_Exportera shower"
+
+#: podcasts-gtk/resources/gtk/window.ui:27
+msgid "_Keyboard Shortcuts"
+msgstr "_Tangentbordsgenvägar"
+
+#: podcasts-gtk/resources/gtk/window.ui:31
+msgid "_About Podcasts"
+msgstr "_Om Poddsändningar"
+
+#. Weird magic I copy-pasted that sets the Application Name in the Shell.
+#: podcasts-gtk/resources/gtk/window.ui:39
+#: podcasts-gtk/resources/gtk/window.ui:106
+#: podcasts-gtk/resources/org.gnome.Podcasts.desktop.in.in:2
+#: podcasts-gtk/resources/org.gnome.Podcasts.metainfo.xml.in.in:4
+#: podcasts-gtk/src/app.rs:629 podcasts-gtk/src/widgets/aboutdialog.rs:56
+#: podcasts-gtk/src/widgets/player.rs:408
+msgid "Podcasts"
+msgstr "Poddsändningar"
+
+#: podcasts-gtk/resources/gtk/window.ui:119
+msgid "Add a New Feed"
+msgstr "Lägg till ett nytt flöde"
+
+#: podcasts-gtk/resources/gtk/window.ui:127
+msgid "Main Menu"
+msgstr "Huvudmeny"
+
+#. Translators: Show as a noun, meaning a Podcast-Show.
+#: podcasts-gtk/resources/gtk/window.ui:141
+msgid "Show"
+msgstr "Show"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.desktop.in.in:3
+msgid "Listen to your favorite podcasts, right from your desktop."
+msgstr "Lyssna på dina favoritpoddsändningar, direkt från ditt skrivbord."
+
+#. Translators: Search terms to find this application. Do NOT translate or localize the semicolons! The list MUST also end with a semicolon!
+#: podcasts-gtk/resources/org.gnome.Podcasts.desktop.in.in:12
+msgid "Podcast;RSS;"
+msgstr "Poddsändning;Podcast;RSS;"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.gschema.xml.in:15
+msgid "Height of the last open main window"
+msgstr "Höjden för det senast öppna huvudfönstret"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.gschema.xml.in:19
+msgid "Width of the last open main window"
+msgstr "Bredden för det senast öppna huvudfönstret"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.gschema.xml.in:23
+msgid "Maximized state of the last open main window"
+msgstr "Maximeringstillstånd för det senast öppna huvudfönstret"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.gschema.xml.in:28
+msgid "Whether to periodically refresh content"
+msgstr "Huruvida innehåll ska uppdateras periodiskt"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.gschema.xml.in:33
+msgid "How many periods of time to wait between automatic refreshes"
+msgstr "Hur många tidsperioder att vänta mellan automatiska uppdateringar"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.gschema.xml.in:37
+msgid "What period of time to wait between automatic refreshes"
+msgstr "Vilken sorts tidsperiod att vänta mellan automatiska uppdateringar"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.gschema.xml.in:41
+msgid "Whether to refresh content after startup"
+msgstr "Huruvida innehåll ska uppdateras efter uppstart"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.gschema.xml.in:47
+msgid "How many periods of time to wait between automatic cleanups"
+msgstr "Hur många tidsperioder att vänta mellan automatiska upprensningar"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.gschema.xml.in:51
+msgid "What period of time to wait between automatic cleanups"
+msgstr "Vilken sorts tidsperiod att vänta mellan automatiska upprensningar"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.metainfo.xml.in.in:8
+msgid "Listen to your favorite shows"
+msgstr "Lyssna på dina favoritshower"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.metainfo.xml.in.in:10
+msgid ""
+"Play, update, and manage your podcasts from a lightweight interface that "
+"seamlessly integrates with GNOME. Podcasts can play various audio formats "
+"and remember where you stopped listening. You can subscribe to shows via RSS/"
+"Atom, iTunes, and Soundcloud links. Subscriptions from other apps can be "
+"imported via OPML files."
+msgstr ""
+"Spela, uppdatera och hantera dina poddsändningar från ett "
+"lättviktsgränssnitt som sömlöst integrerar med GNOME. Poddsändningar kan "
+"spela upp diverse olika ljudformat och komma ihåg var du slutade lyssna. Du "
+"kan prenumerera på shower via RSS/Atom, iTunes och Soundcloud-länkar. "
+"Prenumerationer från andra program kan importeras via OPML-filer."
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.metainfo.xml.in.in:18
+msgid "The home view displaying the newest episodes of your podcasts"
+msgstr "Hemvyn visande de nyaste avsnitten av dina poddsändningar"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.metainfo.xml.in.in:22
+msgid "The shows view displaying the covers of your podcasts"
+msgstr "Showvyn visande omslagen för dina poddsändningar"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.metainfo.xml.in.in:26
+msgid ""
+"The show widget displaying the cover and the latest episodes of a specific "
+"podcast"
+msgstr ""
+"Showkomponenten visande omslaget och de senaste avsnitten av en specifik "
+"poddsändning"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.metainfo.xml.in.in:30
+msgid "The chapters available in an episode"
+msgstr "De tillgängliga kapitlen i ett avsnitt"
+
+#: podcasts-gtk/resources/org.gnome.Podcasts.metainfo.xml.in.in:34
+msgid "The view where one can add a new podcast"
+msgstr "Vyn där man kan lägga till en ny poddsändning"
+
+#. developer_name tag deprecated with Appstream 1.0
+#: podcasts-gtk/resources/org.gnome.Podcasts.metainfo.xml.in.in:241
+msgid "The Podcasts developers"
+msgstr "Poddsändningar-utvecklarna"
+
+#: podcasts-gtk/src/app.rs:402
+msgid "Copied URL to clipboard!"
+msgstr "Kopierade URL till urklipp!"
+
+#: podcasts-gtk/src/episode_description_parser.rs:320
+msgid "Jump to {hours}:{minutes}:{seconds}"
+msgstr "Hoppa till {hours}:{minutes}:{seconds}"
+
+#: podcasts-gtk/src/episode_description_parser.rs:338
+msgid "Jump to {minutes}:{seconds}"
+msgstr "Hoppa till {minutes}:{seconds}"
+
+#: podcasts-gtk/src/manager.rs:107
+msgid "Download failed: {}"
+msgstr "Hämtning misslyckades: {}"
+
+#: podcasts-gtk/src/utils.rs:299
+msgid "Failed to subscribe to feed: {}"
+msgstr "Misslyckades med att prenumerera på flöde: {}"
+
+#: podcasts-gtk/src/utils.rs:394 podcasts-gtk/src/utils.rs:437
+msgid "OPML file"
+msgstr "OPML-fil"
+
+#: podcasts-gtk/src/utils.rs:405
+msgid "Select the file from which to you want to import shows."
+msgstr "Välj filen från vilken du vill importera shower."
+
+#: podcasts-gtk/src/utils.rs:407
+msgid "_Import"
+msgstr "_Importera"
+
+#: podcasts-gtk/src/utils.rs:426
+msgid "Failed to parse the imported file {}"
+msgstr "Misslyckades med att tolka den importerade filen {}"
+
+#. Translators: Show as a noun, meaning Podcast-Shows.
+#: podcasts-gtk/src/utils.rs:448
+msgid "Export shows to…"
+msgstr "Exportera shower till…"
+
+#: podcasts-gtk/src/utils.rs:449
+msgid "_Export"
+msgstr "_Exportera"
+
+#. Translators: This is the string of the suggested name for the exported opml file
+#: podcasts-gtk/src/utils.rs:453
+msgid "gnome-podcasts-exported-shows"
+msgstr "gnome-poddsändningar-exporterade-shower"
+
+#: podcasts-gtk/src/utils.rs:462
+msgid "GNOME Podcasts Subscriptions"
+msgstr "GNOME Poddsändningar-prenumerationer"
+
+#: podcasts-gtk/src/utils.rs:466
+msgid "Failed to export podcasts"
+msgstr "Misslyckades med att exportera poddsändningar"
+
+#: podcasts-gtk/src/utils.rs:478
+msgid "Just now"
+msgstr "Just nu"
+
+#: podcasts-gtk/src/utils.rs:482
+msgid "{} minute ago"
+msgid_plural "{} minutes ago"
+msgstr[0] "{} minut sedan"
+msgstr[1] "{} minuter sedan"
+
+#: podcasts-gtk/src/utils.rs:488
+msgid "{} hour ago"
+msgid_plural "{} hours ago"
+msgstr[0] "{} timme sedan"
+msgstr[1] "{} timmar sedan"
+
+#: podcasts-gtk/src/utils.rs:492
+msgid "{} day ago"
+msgid_plural "{} days ago"
+msgstr[0] "{} dag sedan"
+msgstr[1] "{} dagar sedan"
+
+#: podcasts-gtk/src/utils.rs:496
+msgid "{} month ago"
+msgid_plural "{} months ago"
+msgstr[0] "{} månad sedan"
+msgstr[1] "{} månader sedan"
+
+#: podcasts-gtk/src/utils.rs:500
+msgid "{} year ago"
+msgid_plural "{} years ago"
+msgstr[0] "{} år sedan"
+msgstr[1] "{} år sedan"
+
+#: podcasts-gtk/src/widgets/aboutdialog.rs:52
+msgid "Podcast Client for the GNOME Desktop."
+msgstr "Poddsändningsklient för GNOME-skrivbordet."
+
+#: podcasts-gtk/src/widgets/aboutdialog.rs:62
+msgid "translator-credits"
+msgstr ""
+"Anders Jonsson <anders.jonsson@norsjovallen.se>\n"
+"Luna Jernberg <droidbittin@gmail.com>\n"
+"\n"
+"Skicka synpunkter på översättningen till\n"
+"<tp-sv@listor.tp-sv.se>."
+
+#: podcasts-gtk/src/widgets/chapters.rs:130
+msgid "Currently playing chapter"
+msgstr "Kapitel som spelas nu"
+
+#: podcasts-gtk/src/widgets/content_stack.rs:61
+msgid "Fetching feeds…"
+msgstr "Hämtar flöden…"
+
+#: podcasts-gtk/src/widgets/content_stack.rs:68
+msgid "New"
+msgstr "Nytt"
+
+#. Translators: Shows as a noun, meaning Podcast-Shows.
+#: podcasts-gtk/src/widgets/content_stack.rs:69
+#: podcasts-gtk/src/widgets/shows_view.rs:117
+msgid "Shows"
+msgstr "Shower"
+
+#: podcasts-gtk/src/widgets/download_progress_bar.rs:67
+msgid "Download progress"
+msgstr "Hämtningsförlopp"
+
+#: podcasts-gtk/src/widgets/episode.rs:355
+msgid "{} min"
+msgstr "{} min"
+
+#: podcasts-gtk/src/widgets/player.rs:1133
+msgid "The media player was unable to execute an action."
+msgstr "Mediaspelaren kunde inte utföra en åtgärd."
+
+#: podcasts-gtk/src/widgets/read_more_label.rs:33
+msgid "Visually expands this description"
+msgstr "Expanderar denna beskrivning visuellt"
+
+#: podcasts-gtk/src/widgets/read_more_label.rs:35
+msgid "Read More"
+msgstr "Läs mer"
+
+#: podcasts-gtk/src/widgets/show_menu.rs:182
+msgid "Marked all episodes as listened"
+msgstr "Markerade alla avsnitt som lyssnade"
+
+#: podcasts-gtk/src/widgets/show_menu.rs:183
+#: podcasts-gtk/src/widgets/show_menu.rs:211
+msgid "Undo"
+msgstr "Ångra"
+
+#: podcasts-gtk/src/widgets/show_menu.rs:206
+msgid "Unsubscribed from {}"
+msgstr "Sade upp prenumeration från {}"
+
+#: podcasts-gtk/src/widgets/show_menu.rs:237
+msgid "Failed to store Unsubscribe Action for Synchronization in database. {}"
+msgstr ""
+"Misslyckades med att lagra åtgärd för uppsägning av prenumeration för "
+"synkronisering i databas. {}"
+
+#: podcasts-gtk/src/widgets/sync_preferences.rs:126
+msgid "Logging in..."
+msgstr "Loggar in…"
+
+#: podcasts-gtk/src/widgets/sync_preferences.rs:180
+#: podcasts-gtk/src/widgets/sync_preferences.rs:262
+msgid "Waiting for browser login..."
+msgstr "Väntar på webbläsarinloggning…"
+
+#: podcasts-gtk/src/widgets/sync_preferences.rs:227
+#: podcasts-gtk/src/widgets/sync_preferences.rs:309
+msgid "Logging out..."
+msgstr "Loggar ut…"
+
+#: podcasts-gtk/src/widgets/sync_preferences.rs:344
+msgid "Synchronizing now..."
+msgstr "Synkroniserar nu…"
+
+#: podcasts-gtk/src/widgets/sync_preferences.rs:348
+msgid "Refreshing feeds..."
+msgstr "Uppdaterar flöden…"
+
+#: podcasts-gtk/src/widgets/sync_preferences.rs:397
+msgid "Running first sync. This can take a few minutes."
+msgstr "Kör första synkronisering. Detta kan ta några minuter."
+
+#. Translators: reads as: "Last sync: Never"
+#: podcasts-gtk/src/widgets/sync_preferences.rs:439
+msgid "Never"
+msgstr "Aldrig"
+
+#~ msgid "Now Playing"
+#~ msgstr "Spelar nu"
+
+#~ msgid "Close"
+#~ msgstr "Stäng"
+
+#~ msgid "Enter Feed Address"
+#~ msgstr "Ange flödesadress"
+
+#~ msgid "Popover menu (ESC to close)"
+#~ msgstr "Kontextfönstermeny (Esc för att stänga)"
+
+#~ msgid "Add"
+#~ msgstr "Lägg till"
+
+#~ msgid "Back"
+#~ msgstr "Bakåt"
+
+#~ msgid "Show Title"
+#~ msgstr "Visa titel"
+
+#~ msgid "Selected file could not be accessed."
+#~ msgstr "Den markerade filen kunde inte kommas åt."
+
+#~ msgid "Top position of the last open main window"
+#~ msgstr "Topposition för det senast öppna huvudfönstret"
+
+#~ msgid "Left position of the last open main window"
+#~ msgstr "Vänsterposition för det senast öppna huvudfönstret"
+
+#~ msgid "Enable or disable dark theme"
+#~ msgstr "Aktivera eller inaktivera mörkt tema"
+
+#~ msgid "An in-app action notification"
+#~ msgstr "En åtgärdsavisering i programmet"
+
+#~ msgid "Learn more about GNOME Podcasts"
+#~ msgstr "Lär dig mer om GNOME Poddsändningar"

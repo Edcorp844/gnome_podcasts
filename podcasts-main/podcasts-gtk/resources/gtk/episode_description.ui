@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+Copyright (C) 2017 - 2018
+
+This file is part of GNOME Podcasts.
+
+GNOME Podcasts is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+GNOME Podcasts is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with GNOME Podcasts.  If not, see <http://www.gnu.org/licenses/>.
+
+Authors:
+Jordan Petridis
+Tobias Bernard
+
+-->
+<interface>
+  <!-- interface-license-type gplv3 -->
+  <!-- interface-name GNOME Podcasts -->
+  <!-- interface-description A podcast client for the GNOME Desktop -->
+  <!-- interface-copyright 2017 - 2018 -->
+  <!-- interface-authors Jordan Petridis\nTobias Bernard -->
+  <template class="PdEpisodeDescription" parent="AdwNavigationPage">
+    <property name="title" translatable="yes">Episode Details</property>
+    <child>
+      <object class="AdwToolbarView">
+        <child type="top">
+          <object class="AdwHeaderBar" id="header">
+            <child type="end">
+              <object class="GtkMenuButton" id="menu_button">
+                <property name="primary">True</property>
+                <property name="icon-name">view-more-symbolic</property>
+                <property name="tooltip-text" translatable="yes">Episode Menu</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkScrolledWindow">
+            <property name="vexpand">True</property>
+            <property name="hexpand">True</property>
+            <child>
+              <object class="AdwClamp" id="clamp">
+                <property name="vexpand">True</property>
+                <property name="maximum-size">700</property>
+                <child>
+                  <object class="GtkBox" id="content">
+                    <property name="vexpand">True</property>
+                    <property name="orientation">vertical</property>
+                    <property name="baseline-position">top</property>
+                    <child>
+                      <object class="GtkBox" id="episode_info">
+                        <property name="valign">start</property>
+                        <property name="margin-top">18</property>
+                        <property name="margin-bottom">18</property>
+                        <property name="hexpand">True</property>
+                        <property name="orientation">vertical</property>
+                        <child>
+                          <object class="GtkBox" id="episode_info_horizontal">
+                            <property name="margin-start">18</property>
+                            <property name="margin-end">14</property>
+                            <child>
+                              <object class="GtkImage" id="cover">
+                                <property name="margin-top">4</property>
+                                <property name="margin-end">12</property>
+                                <property name="hexpand">False</property>
+                                <property name="vexpand">False</property>
+                                <property name="valign">start</property>
+                                <property name="pixel-size">64</property>
+                                <property name="icon-name">image-missing-symbolic</property>
+                                <property name="overflow">hidden</property>
+                                <style>
+                                  <class name="rounded-small"/>
+                                </style>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">vertical</property>
+                                <child>
+                                  <object class="GtkLabel" id="podcast_title">
+                                    <property name="label" translatable="yes">Podcast Title</property>
+                                    <property name="wrap">True</property>
+                                    <property name="wrap-mode">word-char</property>
+                                    <property name="xalign">0</property>
+                                    <style>
+                                      <class name="dim-label"/>
+                                    </style>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel" id="episode_title">
+                                    <property name="label">Episode Title</property>
+                                    <property name="wrap">True</property>
+                                    <property name="wrap-mode">word-char</property>
+                                    <property name="lines">1</property>
+                                    <property name="xalign">0</property>
+                                    <style>
+                                      <class name="heading"/>
+                                    </style>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel" id="episode_duration">
+                                    <property name="label" translatable="yes">Duration - Date</property>
+                                    <property name="xalign">0</property>
+                                    <style>
+                                      <class name="episode_duration"/>
+                                    </style>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <!-- Row for Download-bar + Stream/Play -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="hexpand">True</property>
+                            <style>
+                              <class name="button-row"/>
+                            </style>
+                            <child>
+                              <!-- Download/Stream/Play buttons -->
+                              <object class="GtkBox">
+                                <property name="margin-start">18</property>
+                                <property name="margin-end">18</property>
+                                <property name="halign">start</property>
+                                <property name="spacing">10</property>
+                                <property name="homogeneous">True</property>
+                                <!-- Stream -->
+                                <child>
+                                  <object class="GtkButton" id="stream_button">
+                                    <property name="visible">False</property>
+                                    <property name="width-request">145</property>
+                                    <child>
+                                      <object class="AdwButtonContent">
+                                        <property name="icon-name">media-playback-start-symbolic</property>
+                                        <property name="label" translatable="yes">_Stream</property>
+                                        <property name="use-underline">True</property>
+                                        <property name="can-shrink">True</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                                <!-- Play -->
+                                <child>
+                                  <object class="GtkButton" id="play_button">
+                                    <style>
+                                      <class name="suggested-action"/>
+                                    </style>
+                                    <property name="visible">False</property>
+                                    <property name="width-request">145</property>
+                                    <child>
+                                      <object class="AdwButtonContent">
+                                        <property name="icon-name">media-playback-start-symbolic</property>
+                                        <property name="label" translatable="yes">_Play</property>
+                                        <property name="use-underline">True</property>
+                                        <property name="can-shrink">True</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                                <!-- Pause -->
+                                <child>
+                                  <object class="GtkButton" id="pause_button">
+                                    <style>
+                                      <class name="suggested-action"/>
+                                    </style>
+                                    <property name="visible">False</property>
+                                    <property name="width-request">145</property>
+                                    <property name="action-name">win.toggle-pause</property>
+                                    <child>
+                                      <object class="AdwButtonContent">
+                                        <property name="icon-name">media-playback-pause-symbolic</property>
+                                        <property name="label" translatable="yes">_Pause</property>
+                                        <property name="use-underline">True</property>
+                                        <property name="can-shrink">True</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                                <!-- Download -->
+                                <child>
+                                  <object class="GtkButton" id="download_button">
+                                    <style>
+                                      <class name="suggested-action"/>
+                                    </style>
+                                    <property name="visible">False</property>
+                                    <property name="width-request">145</property>
+                                    <child>
+                                      <object class="AdwButtonContent">
+                                        <property name="icon-name">document-save-symbolic</property>
+                                        <property name="label" translatable="yes">_Download</property>
+                                        <property name="use-underline">True</property>
+                                        <property name="can-shrink">True</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                                <!-- Cancel -->
+                                <child>
+                                  <object class="GtkButton" id="cancel_button">
+                                    <style>
+                                      <class name="cancel-button"/>
+                                    </style>
+                                    <property name="visible">False</property>
+                                    <property name="width-request">145</property>
+                                    <property name="overflow">hidden</property>
+                                    <child>
+                                      <object class="GtkBox">
+                                        <property name="orientation">vertical</property>
+                                        <child>
+                                          <object class="GtkBox">
+                                            <style>
+                                              <class name="cancel-button-text"/>
+                                            </style>
+                                            <property name="halign">center</property>
+                                            <child>
+                                              <object class="GtkLabel">
+                                                <property name="label" translatable="yes">Cancel</property>
+                                                <property name="ellipsize">end</property>
+                                              </object>
+                                            </child>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="PdDownloadProgress" id="progressbar">
+                                            <property name="hexpand">True</property>
+                                            <property name="vexpand">False</property>
+                                            <property name="valign">end</property>
+                                            <property name="height-request">2</property>
+                                            <style>
+                                              <class name="in-button-progress"/>
+                                            </style>
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                                <!-- Delete -->
+                                <child>
+                                  <object class="GtkButton" id="delete_button">
+                                    <property name="visible">False</property>
+                                    <property name="width-request">145</property>
+                                    <child>
+                                      <object class="AdwButtonContent">
+                                        <property name="icon-name">user-trash-symbolic</property>
+                                        <property name="label" translatable="yes">Delete</property>
+                                        <property name="use-underline">True</property>
+                                        <property name="can-shrink">True</property>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="description">
+                        <property name="valign">start</property>
+                        <property name="margin-start">18</property>
+                        <property name="margin-end">18</property>
+                        <property name="margin-bottom">18</property>
+                        <property name="label" translatable="yes">Episode Description</property>
+                        <property name="wrap">True</property>
+                        <property name="wrap-mode">word-char</property>
+                        <property name="xalign">0</property>
+                        <style>
+                          <class name="episode_description_label"/>
+                          <class name="document"/>
+                        </style>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkPicture" id="episode_specific_cover">
+                        <property name="margin-start">18</property>
+                        <property name="margin-end">18</property>
+                        <property name="margin-bottom">18</property>
+                        <property name="hexpand">True</property>
+                        <property name="vexpand">True</property>
+                        <property name="visible">False</property>
+                        <property name="content-fit">scale-down</property>
+                        <property name="valign">start</property>
+                        <property name="halign">fill</property>
+                        <property name="height-request">300</property>
+                        <property name="tooltip-text" translatable="yes">Episode Cover</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <style>
+      <class name="episode_description"/>
+    </style>
+  </template>
+</interface>

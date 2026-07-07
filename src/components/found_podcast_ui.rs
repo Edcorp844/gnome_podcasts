@@ -1,0 +1,216 @@
+use adw::prelude::*;
+use log::{error, info};
+use podcasts_data::{FEED_MANAGER, Source, dbqueries, discovery::FoundPodcast};
+use relm4::prelude::*;
+use std::fs::File;
+pub struct FoundPodcastsCard {
+    podcast: FoundPodcast,
+    texture: Option<adw::gdk::Texture>,
+}
+
+#[derive(Debug)]
+pub enum FoundCardInput {
+    ImageDownloaded(Option<adw::gdk::Texture>),
+    Subscribe,
+}
+
+#[derive(Debug)]
+pub enum FoundCardOutput {
+    Subscribe(String),
+}
+
+#[derive(Debug)]
+pub enum FoundPodcastCardCmdInput {
+    // Input channel target variant triggered when an image download completes
+    DownloadImage(Option<adw::gdk::Texture>),
+    SubscribeFinished,
+}
+
+#[relm4::factory(pub)]
+impl FactoryComponent for FoundPodcastsCard {
+    type Init = FoundPodcast;
+    type Input = FoundCardInput;
+    type Output = FoundCardOutput;
+    type CommandOutput = FoundPodcastCardCmdInput;
+    type ParentWidget = gtk::FlowBox;
+
+    view! {
+
+        gtk::Box {
+            set_orientation: gtk::Orientation::Vertical,
+            set_spacing: 6,
+            set_hexpand: true,
+            set_halign: gtk::Align::Fill,
+            set_width_request: 100,
+
+
+            gtk::Overlay {
+                set_hexpand: true,
+                set_vexpand: true,
+                set_height_request: 200,
+
+                #[wrap(Some)]
+                set_child = &gtk::Box {
+                    set_orientation: gtk::Orientation::Vertical,
+                    set_hexpand: true,
+                    set_vexpand: true,
+                    set_halign: gtk::Align::Fill,
+                    set_valign: gtk::Align::Fill,
+
+                    inline_css: "
+                        background-color: mix(@window_bg_color, @card_fg_color, 0.1);
+                        border-radius: 12px;
+                    ",
+
+                    gtk::Label {
+                        set_label: &self.podcast.title.chars().take(2).collect::<String>().to_uppercase(),
+                        add_css_class: "title-1",
+                        set_hexpand: true,
+                        set_vexpand: true,
+                        set_halign: gtk::Align::Center,
+                        set_valign: gtk::Align::Center,
+                        inline_css: "
+                            color: @dim_label_opacity; 
+                            opacity: 0.4;
+                        ",
+                    }
+                },
+
+                // PRIMARY IMAGE: gtk::Picture gives real aspect-ratio-aware
+                // scaling via content-fit, instead of a fixed pixel box
+                // that ignores the source image's proportions.
+                add_overlay = &gtk::Picture {
+                    #[watch]
+                    set_paintable: self.texture.as_ref().map(|t| t.upcast_ref::<adw::gdk::Paintable>()),
+                    #[watch]
+                    set_visible: self.texture.is_some(),
+
+                    // Fill whatever space the Overlay above ends up with,
+                    // rather than requesting a fixed size.
+                    set_hexpand: true,
+                    set_vexpand: true,
+                    set_halign: gtk::Align::Fill,
+                    set_valign: gtk::Align::Fill,
+                    set_content_fit: gtk::ContentFit::Cover,
+                    set_can_shrink: true,
+
+                    inline_css: "
+                        border-radius: 12px;
+                        overflow: hidden;
+                    ",
+                }
+            },
+
+            // 2. CARD METADATA BLOCK
+            // Horizontal container tracking Rank Index alongside Title/Author info
+            gtk::Box {
+                set_orientation: gtk::Orientation::Horizontal,
+                set_spacing: 8,
+                set_margin_top: 2,
+
+                gtk::Box {
+                    set_orientation: gtk::Orientation::Vertical,
+                    set_spacing: 1,
+                    set_hexpand: true,
+                    set_halign: gtk::Align::Start,
+
+                    gtk::Label {
+                        set_label: &self.podcast.title,
+                        set_halign: gtk::Align::Start,
+                        set_ellipsize: gtk::pango::EllipsizeMode::End,
+                        set_lines: 1,
+
+                        inline_css: "
+                            font-weight: 600;
+                            font-size: 0.92rem;
+                            color: @window_fg_color;
+                        ",
+                    },
+
+                    gtk::Label {
+                        set_label: &self.podcast.author,
+                        set_halign: gtk::Align::Start,
+                        set_ellipsize: gtk::pango::EllipsizeMode::End,
+                        set_lines: 1,
+                        add_css_class: "dim-label",
+
+                        inline_css: "
+                            font-size: 0.85rem;
+                            opacity: 0.7;
+                        ",
+                    }
+                },
+
+                gtk::Separator { set_hexpand: true , add_css_class: "spacer"},
+
+                gtk::Button {
+                    set_icon_name: "list-add-symbolic",
+                    set_tooltip_text: Some("Subscribe"),
+                    add_css_class: "circular",
+                    set_valign: gtk::Align::Center,
+
+                    connect_clicked[sender] => move |_| {
+                        sender.input(FoundCardInput::Subscribe);
+                    }
+                },
+
+
+
+            }
+        }
+    }
+
+    fn init_model(podcast: Self::Init, _index: &DynamicIndex, sender: FactorySender<Self>) -> Self {
+        let url_string = podcast.art.clone();
+
+        sender.oneshot_command(async move {
+            let texture_res = tokio::task::spawn_blocking(move || {
+                let load_image = || -> Option<gtk::gdk::Texture> {
+                    let file = gtk::gio::File::for_uri(&url_string);
+                    let (glib_bytes, _) = file.load_bytes(gtk::gio::Cancellable::NONE).ok()?;
+                    gtk::gdk::Texture::from_bytes(&glib_bytes).ok()
+                };
+
+                load_image()
+            })
+            .await;
+
+            let downloaded_texture = match texture_res {
+                Ok(Some(texture)) => Some(texture),
+                _ => None,
+            };
+
+            FoundPodcastCardCmdInput::DownloadImage(downloaded_texture)
+        });
+
+        Self {
+            podcast,
+            texture: None,
+        }
+    }
+
+    fn update(&mut self, message: Self::Input, sender: FactorySender<Self>) {
+        match message {
+            FoundCardInput::ImageDownloaded(fetched_texture) => {
+                self.texture = fetched_texture;
+            }
+            FoundCardInput::Subscribe => {
+                sender.output(FoundCardOutput::Subscribe(self.podcast.feed.clone()));
+            }
+        }
+    }
+
+    fn update_cmd(&mut self, message: Self::CommandOutput, sender: FactorySender<Self>) {
+        match message {
+            FoundPodcastCardCmdInput::DownloadImage(opt_texture) => {
+                sender.input(FoundCardInput::ImageDownloaded(opt_texture));
+            }
+            FoundPodcastCardCmdInput::SubscribeFinished => {
+                println!("Subscription handling processing completed.");
+                // Update UI state or trigger notification updates here if needed
+            }
+        }
+    }
+}
+
+impl FoundPodcastsCard {}

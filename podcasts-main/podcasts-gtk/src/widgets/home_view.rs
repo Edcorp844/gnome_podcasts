@@ -1,0 +1,479 @@
+// home_view.rs
+//
+// Copyright 2017 Jordan Petridis <jpetridis@gnome.org>
+// Copyright 2020-2026 nee <nee-git@patchouli.garden>
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+use adw::prelude::BinExt;
+use adw::subclass::prelude::*;
+use anyhow::Result;
+use async_channel::Sender;
+use chrono::prelude::*;
+use gettextrs::gettext;
+use glib::clone;
+use glib::subclass::InitializingObject;
+use gtk::gio;
+use gtk::{CompositeTemplate, glib, prelude::*};
+use std::cell::RefCell;
+
+use crate::app::Action;
+use crate::utils::{self, lazy_load};
+use crate::widgets::{BaseView, EpisodeWidget, FilterMenu};
+use podcasts_data::dbqueries;
+use podcasts_data::dbqueries::EpisodeFilter;
+use podcasts_data::{EpisodeId, EpisodeModel, EpisodeWidgetModel, ShowId};
+
+/// The main page
+#[derive(Debug, CompositeTemplate, Default)]
+#[template(resource = "/org/gnome/Podcasts/gtk/home_view.ui")]
+pub struct HomeViewPriv {
+    #[template_child]
+    view: TemplateChild<BaseView>,
+    #[template_child]
+    search_bar: TemplateChild<gtk::SearchBar>,
+    #[template_child]
+    search_entry: TemplateChild<gtk::SearchEntry>,
+
+    #[template_child]
+    episode_list_container: TemplateChild<adw::Bin>,
+
+    episode_list: RefCell<HomeEpisodeList>,
+    // Reference to the menu, owned by window.
+    filter_menu: RefCell<Option<FilterMenu>>,
+}
+
+#[glib::object_subclass]
+impl ObjectSubclass for HomeViewPriv {
+    const NAME: &'static str = "PdHomeView";
+    type Type = HomeView;
+    type ParentType = adw::Bin;
+
+    fn class_init(klass: &mut Self::Class) {
+        BaseView::ensure_type();
+        klass.bind_template();
+    }
+
+    fn instance_init(obj: &InitializingObject<Self>) {
+        obj.init_template();
+    }
+}
+
+impl WidgetImpl for HomeViewPriv {}
+impl ObjectImpl for HomeViewPriv {}
+impl BinImpl for HomeViewPriv {}
+
+glib::wrapper! {
+    pub struct HomeView(ObjectSubclass<HomeViewPriv>)
+        @extends BaseView, gtk::Widget, adw::Bin,
+        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
+}
+
+impl HomeView {
+    pub(crate) fn new(sender: Sender<Action>, filter_menu: FilterMenu) -> Self {
+        let this: Self = glib::Object::new();
+
+        this.imp()
+            .search_bar
+            .set_key_capture_widget(Some(&this.imp().view.get()));
+
+        this.imp().search_entry.connect_search_changed(clone!(
+            #[strong]
+            sender,
+            #[weak]
+            this,
+            move |_| this.reload(sender.clone())
+        ));
+
+        filter_menu.connect_filter_changed(clone!(
+            #[strong]
+            sender,
+            #[weak]
+            this,
+            move |_| this.reload(sender.clone())
+        ));
+        filter_menu
+            .search_button()
+            .bind_property(
+                "active",
+                &this.imp().search_bar.get(),
+                "search-mode-enabled",
+            )
+            .flags(glib::BindingFlags::SYNC_CREATE | glib::BindingFlags::BIDIRECTIONAL)
+            .build();
+
+        this.imp().filter_menu.replace(Some(filter_menu));
+
+        this.reload(sender);
+
+        this
+    }
+
+    /// Replaces the episode_list and loads new episodes for the current filter.
+    /// The old list should stop loading due to it's weak reference.
+    pub(crate) fn reload(&self, sender: Sender<Action>) {
+        let list = HomeEpisodeList::default();
+        self.imp().episode_list_container.set_child(Some(&list));
+        let filter = self.episode_filter().unwrap_or_default();
+        list.load(sender, filter);
+        self.imp().episode_list.replace(list);
+    }
+
+    pub(crate) fn open_search(&self) {
+        self.imp().search_bar.set_search_mode(true);
+    }
+
+    fn episode_filter(&self) -> Option<EpisodeFilter> {
+        let filter = self
+            .imp()
+            .filter_menu
+            .borrow()
+            .as_ref()
+            .map(|f| f.episode_filter());
+        filter.map(|mut f| {
+            let search = self.imp().search_entry.text();
+            if !search.is_empty() {
+                f.search = Some(search.to_string());
+            }
+            f
+        })
+    }
+
+    pub(crate) fn update_episode(&self, ep: &EpisodeWidgetModel) {
+        self.imp().episode_list.borrow().update_episode(ep);
+    }
+}
+
+#[derive(Debug, Clone)]
+enum ListSplit {
+    Today,
+    Yday,
+    Week,
+    Month,
+    Rest,
+}
+
+#[derive(Debug, Clone)]
+struct DateBox(ListSplit, Vec<EpisodeWidgetModel>);
+
+/// Episode list as separate widget, so we can replace it while searching.
+/// In the future this could be replaced by a GtkListView with separators,
+/// but right now that can't reproduce the separate list boxes styling.
+#[derive(Debug, CompositeTemplate, Default)]
+#[template(resource = "/org/gnome/Podcasts/gtk/home_episode_list.ui")]
+pub struct HomeEpisodeListPriv {
+    #[template_child]
+    frame_parent: TemplateChild<gtk::Box>,
+
+    #[template_child]
+    today_box: TemplateChild<gtk::Box>,
+    #[template_child]
+    yday_box: TemplateChild<gtk::Box>,
+    #[template_child]
+    week_box: TemplateChild<gtk::Box>,
+    #[template_child]
+    month_box: TemplateChild<gtk::Box>,
+    #[template_child]
+    rest_box: TemplateChild<gtk::Box>,
+
+    #[template_child]
+    today_list: TemplateChild<gtk::ListBox>,
+    #[template_child]
+    yday_list: TemplateChild<gtk::ListBox>,
+    #[template_child]
+    week_list: TemplateChild<gtk::ListBox>,
+    #[template_child]
+    month_list: TemplateChild<gtk::ListBox>,
+    #[template_child]
+    rest_list: TemplateChild<gtk::ListBox>,
+}
+
+#[glib::object_subclass]
+impl ObjectSubclass for HomeEpisodeListPriv {
+    const NAME: &'static str = "PdHomeEpisodeList";
+    type Type = HomeEpisodeList;
+    type ParentType = adw::Bin;
+
+    fn class_init(klass: &mut Self::Class) {
+        BaseView::ensure_type();
+        klass.bind_template();
+    }
+
+    fn instance_init(obj: &InitializingObject<Self>) {
+        obj.init_template();
+    }
+}
+
+impl WidgetImpl for HomeEpisodeListPriv {}
+impl ObjectImpl for HomeEpisodeListPriv {}
+impl BinImpl for HomeEpisodeListPriv {}
+
+glib::wrapper! {
+    pub struct HomeEpisodeList(ObjectSubclass<HomeEpisodeListPriv>)
+        @extends BaseView, gtk::Widget, adw::Bin,
+        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
+}
+
+impl Default for HomeEpisodeList {
+    fn default() -> Self {
+        let this: Self = glib::Object::new();
+        this
+    }
+}
+
+impl HomeEpisodeList {
+    fn load(&self, sender: Sender<Action>, filter: EpisodeFilter) {
+        crate::MAINCONTEXT.spawn_local_with_priority(
+            glib::source::Priority::DEFAULT_IDLE,
+            glib::clone!(
+                #[weak(rename_to = this)]
+                self,
+                async move {
+                    let results = this.add_to_boxes(sender, filter).await;
+                    for result in results {
+                        if let Err(e) = result {
+                            log::error!("Error: {:?}", e);
+                        }
+                    }
+                }
+            ),
+        );
+    }
+
+    async fn add_to_boxes(
+        &self,
+        sender: Sender<Action>,
+        filter: EpisodeFilter,
+    ) -> Vec<Result<(), glib::JoinError>> {
+        let data = gio::spawn_blocking(move || get_episodes(&filter)).await;
+
+        let mut handles = Vec::with_capacity(5);
+        if let Ok(Ok(data)) = data {
+            let empty = data.iter().find(|d| !d.1.is_empty()).is_none();
+            if empty {
+                let empty_page = adw::StatusPage::builder()
+                    .title(gettext("No Results Found"))
+                    .description(gettext("Try a different search or filters"))
+                    .icon_name("system-search-symbolic")
+                    .valign(gtk::Align::Center)
+                    .vexpand(true)
+                    .build();
+                self.set_child(Some(&empty_page));
+            } else {
+                self.set_child(Some(&self.imp().frame_parent.get()));
+            }
+
+            for datebox in data {
+                if datebox.1.is_empty() {
+                    continue;
+                }
+
+                let handle = self.add_to_box(datebox, &sender);
+                handles.push(handle);
+            }
+        }
+
+        let results = futures_util::future::join_all(handles).await;
+        results.into_iter().flatten().collect()
+    }
+
+    async fn add_to_box(
+        &self,
+        datebox: DateBox,
+        sender: &Sender<Action>,
+    ) -> Vec<Result<(), glib::JoinError>> {
+        use self::ListSplit::*;
+
+        let DateBox(date, model) = datebox;
+
+        let box_ = match &date {
+            Today => &self.imp().today_box,
+            Yday => &self.imp().yday_box,
+            Week => &self.imp().week_box,
+            Month => &self.imp().month_box,
+            Rest => &self.imp().rest_box,
+        };
+
+        let list = match &date {
+            Today => &self.imp().today_list,
+            Yday => &self.imp().yday_list,
+            Week => &self.imp().week_list,
+            Month => &self.imp().month_list,
+            Rest => &self.imp().rest_list,
+        };
+
+        box_.set_visible(true);
+
+        let sender = sender.clone();
+        let constructor = move |ep: EpisodeWidgetModel| HomeEpisode::new(&sender, ep).upcast();
+        let list = list.upcast_ref::<gtk::Widget>().downgrade();
+        lazy_load(model, list, constructor.clone()).await
+    }
+
+    pub(crate) fn update_episode(&self, ep: &EpisodeWidgetModel) {
+        let imp = self.imp();
+        let id = ep.id();
+        let lists = [
+            &imp.today_list,
+            &imp.yday_list,
+            &imp.week_list,
+            &imp.month_list,
+            &imp.rest_list,
+        ];
+        for list in lists {
+            let mut i = 0;
+            while let Some(row) = list.row_at_index(i) {
+                if let Ok(home_episode) = row.downcast::<HomeEpisode>()
+                    && home_episode.id() == id
+                {
+                    home_episode.update(ep);
+                    return;
+                }
+                i += 1;
+            }
+        }
+    }
+}
+
+fn get_episodes(filter: &EpisodeFilter) -> Result<Vec<DateBox>> {
+    let ignore = utils::get_ignored_shows()?;
+    let episodes = dbqueries::get_episodes_widgets_page(ignore.as_slice(), filter, 0, 100)?;
+    Ok(split_model(episodes))
+}
+
+fn split(now: &DateTime<Local>, ep: &DateTime<Local>) -> ListSplit {
+    let days_now = now.num_days_from_ce();
+    let days_ep = ep.num_days_from_ce();
+    let weekday = now.weekday().num_days_from_monday() as i32;
+
+    if days_ep == days_now {
+        ListSplit::Today
+    } else if days_ep == days_now - 1 {
+        ListSplit::Yday
+    } else if days_ep >= days_now - weekday {
+        ListSplit::Week
+    } else if now.month() == ep.month() && now.year() == ep.year() {
+        ListSplit::Month
+    } else {
+        ListSplit::Rest
+    }
+}
+
+fn split_model(model: Vec<EpisodeWidgetModel>) -> Vec<DateBox> {
+    use self::ListSplit::*;
+
+    let now = Local::now();
+
+    let (mut today, mut yday, mut week, mut month, mut rest) =
+        (Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new());
+
+    for ep in model {
+        let epoch_local = DateTime::<Local>::from(ep.epoch().and_utc());
+        match split(&now, &epoch_local) {
+            Today => today.push(ep),
+            Yday => yday.push(ep),
+            Week => week.push(ep),
+            Month => month.push(ep),
+            Rest => rest.push(ep),
+        }
+    }
+
+    vec![
+        DateBox(Today, today),
+        DateBox(Yday, yday),
+        DateBox(Week, week),
+        DateBox(Month, month),
+        DateBox(Rest, rest),
+    ]
+}
+
+#[derive(Debug, CompositeTemplate, Default)]
+#[template(resource = "/org/gnome/Podcasts/gtk/home_episode.ui")]
+pub struct HomeEpisodePriv {
+    #[template_child]
+    cover: TemplateChild<gtk::Image>,
+    #[template_child]
+    episode: TemplateChild<EpisodeWidget>,
+}
+
+impl HomeEpisodePriv {
+    fn init(&self, sender: &Sender<Action>, episode: EpisodeWidgetModel) {
+        let pid = episode.show_id();
+        self.set_cover(pid);
+        self.episode.init(sender, episode, true);
+        // Assure the image is read out along with the Episode title
+        self.cover.set_accessible_role(gtk::AccessibleRole::Label);
+    }
+
+    fn set_cover(&self, show_id: ShowId) {
+        crate::download_covers::load_widget_texture(
+            &self.cover.get(),
+            show_id,
+            crate::Thumb64,
+            true,
+        );
+    }
+}
+
+#[glib::object_subclass]
+impl ObjectSubclass for HomeEpisodePriv {
+    const NAME: &'static str = "PdHomeEpisode";
+    type Type = HomeEpisode;
+    type ParentType = gtk::ListBoxRow;
+
+    fn class_init(klass: &mut Self::Class) {
+        klass.bind_template();
+    }
+
+    fn instance_init(obj: &InitializingObject<Self>) {
+        obj.init_template();
+    }
+}
+
+impl WidgetImpl for HomeEpisodePriv {}
+impl ObjectImpl for HomeEpisodePriv {}
+impl ListBoxRowImpl for HomeEpisodePriv {}
+
+glib::wrapper! {
+    pub struct HomeEpisode(ObjectSubclass<HomeEpisodePriv>)
+        @extends gtk::ListBoxRow, gtk::Widget,
+        @implements gtk::Accessible, gtk::Actionable, gtk::Buildable, gtk::ConstraintTarget;
+}
+
+impl HomeEpisode {
+    pub(crate) fn new(sender: &Sender<Action>, episode: EpisodeWidgetModel) -> Self {
+        let widget = Self::default();
+        widget.set_action_name(Some("app.go-to-episode"));
+        widget.set_action_target_value(Some(&episode.id().0.to_variant()));
+        widget.imp().init(sender, episode);
+        widget
+    }
+
+    pub(crate) fn id(&self) -> EpisodeId {
+        self.imp().episode.id()
+    }
+
+    pub(crate) fn update(&self, ep: &EpisodeWidgetModel) {
+        self.imp().episode.update_episode_state(ep);
+    }
+}
+
+impl Default for HomeEpisode {
+    fn default() -> Self {
+        let widget: Self = glib::Object::new();
+        widget
+    }
+}

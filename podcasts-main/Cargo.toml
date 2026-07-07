@@ -1,0 +1,26 @@
+[workspace]
+resolver = "3"
+members = ["podcasts-data", "podcasts-gtk"]
+
+[workspace.package]
+edition = "2024"
+
+[workspace.dependencies]
+anyhow = "1"
+async-channel = "2"
+chrono = {version = "0.4", features = ["serde", "unstable-locales"] }
+log = "0.4"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"] }
+url = "2"
+reqwest = { version = "0.13", features = ["form"] }
+
+[profile.release]
+debug = true
+lto = "thin"
+
+[profile.dev]
+opt-level = 1
+lto = "thin"
+
+[profile.dev.package."*"]
+opt-level = 3

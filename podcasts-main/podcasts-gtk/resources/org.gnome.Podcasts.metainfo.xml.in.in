@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>@appid@</id>
+  <name>Podcasts</name>
+  <project_license>GPL-3.0</project_license>
+  <metadata_license>CC0-1.0</metadata_license>
+  <content_rating type="oars-1.1" />
+  <summary>Listen to your favorite shows</summary>
+  <description>
+    <p>
+      Play, update, and manage your podcasts from a lightweight interface that seamlessly integrates with GNOME.
+      Podcasts can play various audio formats and remember where you stopped listening.
+      You can subscribe to shows via RSS/Atom, iTunes, and Soundcloud links. Subscriptions from other apps can be imported via OPML files.
+    </p>
+  </description>
+  <screenshots>
+    <screenshot type="default">
+      <caption>The home view displaying the newest episodes of your podcasts</caption>
+      <image>https://static.gnome.org/appdata/circle/org.gnome.Podcasts/25.3/home_view.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The shows view displaying the covers of your podcasts</caption>
+      <image>https://static.gnome.org/appdata/circle/org.gnome.Podcasts/25.3/shows_view.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The show widget displaying the cover and the latest episodes of a specific podcast</caption>
+      <image>https://static.gnome.org/appdata/circle/org.gnome.Podcasts/25.3/show_widget.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The chapters available in an episode</caption>
+      <image>https://static.gnome.org/appdata/circle/org.gnome.Podcasts/25.3/episooe_chapters.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The view where one can add a new podcast</caption>
+      <image>https://static.gnome.org/appdata/circle/org.gnome.Podcasts/25.3/add_podcast.png</image>
+    </screenshot>
+  </screenshots>
+  <branding>
+    <color type="primary" scheme_preference="light">#fb6969</color>
+    <color type="primary" scheme_preference="dark">#7b1824</color>
+  </branding>
+  <releases>
+    <release version="25.3" date="2025-10-17">
+      <description>
+        <p>
+          Episode chapters are here! Additionally this release comes with minor performance improvements, and interface polish including description styling and the new shortcuts dialog.
+        </p>
+      </description>
+    </release>
+    <release version="25.2" date="2025-04-20">
+      <description>
+        <p>Small release with a couple of bugfixes and quality of life improvements!</p>
+        <p>We also changed the version scheme!</p>
+        <ul>
+          <li>We added a description button to the Episode Sheet</li>
+          <li>The position of the episode and length are now reported in MPRIS</li>
+          <li>Timestamp links work again if you are streaming an episode</li>
+          <li>And we also fixed a couple of pesky bugs!</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.7.2" date="2025-01-12">
+      <description>
+        <p>
+          New year, New release 🎉!
+
+          This release brings lots of small improvements to make
+          everything a little bit better!
+
+          The following are now possible:
+        </p>
+        <ul>
+          <li>You can now mark individual episodes as played</li>
+          <li>The Shows will now scale based on the window size</li>
+          <li>You can close the window with the Control + W shortcut</li>
+        </ul>
+        <p>
+          While we also changed some internal things
+        </p>
+        <ul>
+          <li>Rework the download machinery to be faster and more efficient</li>
+          <li>Improved application startup times</li>
+        </ul>
+        <p>
+        And fixes a couple of pesky bugs
+        </p>
+        <ul>
+          <li>Automatically detect the image format for thumbnails</li>
+          <li>Dates are now displayed and calculated using localtime instead of sometimes using UTC</li>
+          <li>Fix accessibility warnings in the Episode Description</li>
+          <li>Correctly trigger a download when thumbnail cover for mpris is missing</li>
+          <li>Correctly calculate the episode download size if its missing from the xml metadata</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.7.1" date="2024-04-19">
+      <description>
+        <p>
+          Fix screenshot links.
+        </p>
+      </description>
+    </release>
+    <release version="0.7.0" date="2024-04-19">
+      <description>
+        <p>
+          Replace add button popover with dedicated page.
+        </p>
+        <p>
+          Add streaming support.
+        </p>
+        <p>
+          Add additional keyboard shortcuts.
+        </p>
+        <p>
+          Several fixes and performance improvements.
+        </p>
+      </description>
+    </release>
+    <release version="0.6.1" date="2023-09-18">
+      <description>
+        <p>
+          This release fixes a couple of accessibility bugs and includes behind-the-scenes
+          improvements.
+        </p>
+      </description>
+    </release>
+    <release version="0.6.0" date="2023-07-04">
+      <description>
+        <p>
+          This version brings the long awaited GTK 4 port, dark mode support, a new Show description
+          widget
+          and a handful of fixes all around.
+        </p>
+      </description>
+    </release>
+    <release version="0.5.1" date="2022-01-03">
+      <description>
+        <p>
+          The 0.5.1 includes a couple of bugfixes and quality of life updates.
+        </p>
+        <ul>
+          <li>Render lists in episode descriptions.</li>
+          <li>Avoid redundant network request for the mpris cover art.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.5.0" date="2021-12-04">
+      <description>
+        <p>
+          The 0.5.0 release brings a bunch of long awaited changes.
+        </p>
+        <ul>
+          <li>View episode descriptions and show notes.</li>
+          <li>Continue playback from where you left off.</li>
+          <li>Inhibit suspend during playback.</li>
+          <li>Soundcloud playlists now be added as feeds.</li>
+          <li>75% and 90% playback rate options.</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.4.9" date="2021-03-11">
+     <description>
+        <p>
+            This release brings support for soundcloud feeds, a hnadful of bugfixes and performance improvements.
+        </p>
+      </description>
+    </release>
+    <release version="0.4.8" date="2020-07-09">
+     <description>
+        <p>
+            Another Incremental relase, bringing more quality of life changes, bugfixes and continuing to improves adaptiveness of the application.
+            Most notable is the addition of a "Now Playing" widget and the new 1.75 and 2.0 playback speed options.
+        </p>
+      </description>
+    </release>
+    <release version="0.4.7" date="2019-10-23">
+     <description>
+        <p>
+          Small release including OPML export functionality, partial support for premium feeds, a couple of bugfixes and overall life improvements.
+        </p>
+      </description>
+    </release>
+    <release version="0.4.6" date="2018-10-07">
+     <description>
+        <p>
+          After a month of work, the new version of Podcasts brings Desktop integration with MPRIS,
+          further UX polish, and a couple bugfixes and improvements.
+          Additionally existing translations were updated and 9 new were added.
+        </p>
+        <ul>
+          <li>Brazilian Portuguese, Swedish, Italian, Friulian, Hungarian, Croatian, Latvian, Czech and Catalan Translations were added.</li>
+          <li>The audio player now can integrate with Desktop Environments (MPRIS2)</li>
+          <li>Further UI and UX polishing and a handful bug fixes</li>
+          <li>Update to account for the GNOME 3.32 HIG changes</li>
+          <li>Openssl 1.1 support</li>
+          <li>Fixed a performance regression when updating RSS Feeds</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.4.5" date="2018-08-31">
+     <description>
+        <p>
+          Podcasts 0.4.5 brings a month of bug fixes, performance improvements and initial translations support.
+        </p>
+        <ul>
+          <li>Finish, Polish, Turkish, Spanish, German, Galician, Indonesian and Korean Translations were added.</li>
+          <li>Views now adapt better to different window sizes, thanks to libhandy HdyColumn</li>
+          <li>The update indacator was moved to an In-App notification</li>
+          <li>Performance improvements when loading Show Cover images.</li>
+          <li>Improved handling of HTTP Redirects</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.4.4" date="2018-07-31">
+      <description>
+        <p>
+          This is the first release available from Flathub!
+        </p>
+      </description>
+    </release>
+  </releases>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <control>touch</control>
+  </supports>
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <launchable type="desktop-id">@appid@.desktop</launchable>
+  <url type="homepage">https://apps.gnome.org/Podcasts/</url>
+  <url type="bugtracker">https://gitlab.gnome.org/World/podcasts/issues/</url>
+  <url type="donation">https://www.gnome.org/donate/</url>
+  <url type="translate">https://gitlab.gnome.org/World/podcasts#translations</url>
+  <url type="vcs-browser">https://gitlab.gnome.org/World/podcasts</url>
+  <url type="contribute">https://welcome.gnome.org/en/app/Podcasts/</url>
+  <translation type="gettext">gnome-podcasts</translation>
+  <project_group>GNOME</project_group>
+  <update_contact>jpetridis@gnome.org</update_contact>
+  <!-- developer_name tag deprecated with Appstream 1.0 -->
+  <developer_name>The Podcasts developers</developer_name>
+  <developer id="org.gnome.podcasts">
+    <name>The Podcasts developers</name>
+  </developer>
+  <custom>
+    <value key="GnomeSoftware::key-colors">[(250, 181, 174)]</value>
+  </custom>
+</component>
