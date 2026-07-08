@@ -1,8 +1,6 @@
 use adw::prelude::*;
 use podcasts_data::{
-    Episode, Show, ShowId,
-    dbqueries::{self, EpisodeFilter},
-    errors::DataError,
+    Episode, Show, ShowId, dbqueries::{self, EpisodeFilter}, discovery::FoundPodcast, errors::DataError,
 };
 use relm4::{Component, ComponentParts, ComponentSender, prelude::*};
 
@@ -10,7 +8,9 @@ use crate::components::episode_list_item::EpisodeListItem;
 
 pub struct ShowPage {
     show: Option<Show>,
+    podcast: Option<FoundPodcast>,
     episodes: FactoryVecDeque<EpisodeListItem>,
+    episode_count: usize,
     show_image_texture: Option<adw::gdk::Texture>,
     load_error: Option<String>,
 }
@@ -19,8 +19,6 @@ pub struct ShowPage {
 pub enum ShowPageInput {
     GetShow(ShowId),
     ShowGotten(Result<Show, DataError>),
-    FetchEpisodes,
-    FetchEpisodesComplete(Result<Vec<Episode>, DataError>),
     ImageDownloaded(Option<adw::gdk::Texture>),
 }
 
@@ -58,8 +56,6 @@ impl Component for ShowPage {
                             set_orientation: gtk::Orientation::Vertical,
                             set_margin_all: 32,
                             set_spacing: 24,
-
-
 
                             gtk::Box {
                                 set_orientation: gtk::Orientation::Horizontal,
@@ -137,7 +133,6 @@ impl Component for ShowPage {
                                         add_css_class: "title-1"
                                     },
 
-
                                     // Description Excerpt Block
                                     gtk::Label {
                                         #[watch]
@@ -152,6 +147,7 @@ impl Component for ShowPage {
 
                                     gtk::Separator { set_vexpand: true, add_css_class: "spacer" },
                                     gtk::Separator { set_vexpand: true, add_css_class: "spacer" },
+
                                     // Interactive Row Buttons Layout
                                     gtk::Box {
                                         set_orientation: gtk::Orientation::Horizontal,
@@ -200,7 +196,6 @@ impl Component for ShowPage {
                                 gtk::Label {
                                     set_label: "Episodes",
                                     add_css_class: "title-2",
-                                    inline_css: "font-weight: 700; font-size: 1.4rem;",
                                     set_valign: gtk::Align::Center,
                                 },
 
@@ -214,9 +209,52 @@ impl Component for ShowPage {
                             #[local_ref]
                             episodes_container -> gtk::ListBox {
                                 add_css_class: "boxed-list",
+                            },
 
+                            gtk::Box {
+                                set_orientation: gtk::Orientation::Horizontal,
+                                set_halign: gtk::Align::Start,
+                                set_valign: gtk::Align::Start,
+
+                                gtk::Button {
+                                    #[watch]
+                                    set_label: &format!("See All ({})", model.episode_count),
+                                    set_css_classes: &vec!["flat", "accent"],
+                                    set_halign: gtk::Align::Start,
+                                    set_valign: gtk::Align::Start
+                                }
+                            },
+
+                            gtk::Box {
+                                set_orientation: gtk::Orientation::Vertical,
+                                set_halign: gtk::Align::Start,
+                                set_valign: gtk::Align::Start,
+                                set_spacing: 16,
+
+                                gtk::Label {
+                                    set_label: "About",
+                                    set_css_classes: &vec!["title-3"],
+                                    set_wrap: true,
+                                    set_halign: gtk::Align::Start,
+                                    set_valign: gtk::Align::Start
+                                },
+
+                                gtk::Label {
+                                    #[watch]
+                                    set_label: model.show.as_ref().map(|s| s.description()).map(|d| d.trim()).unwrap_or("No description available."),
+                                    set_css_classes: &vec!["body"],
+                                    set_wrap: true,
+
+                                    // Constraints to snap the layout to a tight, narrow column
+                                    set_width_chars: 30,
+                                    set_max_width_chars: 30,
+                                    set_hexpand: false,
+
+                                    set_wrap_mode: gtk::pango::WrapMode::WordChar,
+                                    set_halign: gtk::Align::Start,
+                                    set_valign: gtk::Align::Start
+                                },
                             }
-
                         }
                     }
                 }
@@ -232,6 +270,8 @@ impl Component for ShowPage {
         let episodes_parent = gtk::ListBox::builder().build();
         let model = Self {
             episodes: FactoryVecDeque::builder().launch(episodes_parent).detach(),
+            episode_count: 0,
+            podcast: None,
             show: None,
             show_image_texture: None,
             load_error: None,
@@ -310,14 +350,26 @@ impl Component for ShowPage {
                     }
 
                     if let Some(show) = &self.show {
+                        let id = show.id();
+                        match  dbqueries::get_podcast_cover_from_id(id){
+                            Ok(show) =>{
+
+                            }
+                            Err(error)=> {
+                                
+                            }
+                        }
                         match dbqueries::get_pd_episodes(show) {
                             Ok(episodes) => {
                                 println!("Episodes Loaded: {:?}", episodes.len());
+
                                 let mut guard = self.episodes.guard();
                                 guard.clear();
+
                                 for episode in episodes.iter().take(10) {
                                     guard.push_back(episode.clone());
                                 }
+                                self.episode_count = episodes.len();
                             }
                             Err(error) => {
                                 eprintln!("Error Loading Episodes: {}", error);
@@ -326,8 +378,6 @@ impl Component for ShowPage {
                     }
                 }
                 Err(error) => {
-                    // NEW: store the error so the UI banner above actually
-                    // shows it, instead of only this eprintln.
                     eprintln!("Error Loading Show Metadata: {}", error);
                     self.load_error = Some(format!("Failed to load show: {error}"));
                 }
@@ -335,19 +385,6 @@ impl Component for ShowPage {
             ShowPageInput::ImageDownloaded(opt_texture) => {
                 self.show_image_texture = opt_texture;
             }
-            ShowPageInput::FetchEpisodesComplete(data) => match data {
-                Ok(episodes) => {
-                    let mut guard = self.episodes.guard();
-                    guard.clear();
-                    for episode in episodes {
-                        guard.push_back(episode);
-                    }
-                }
-                Err(error) => {
-                    eprintln!("Episodes sync failed: {}", error);
-                }
-            },
-            _ => {}
         }
     }
 

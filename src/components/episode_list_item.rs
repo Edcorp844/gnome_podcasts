@@ -157,11 +157,23 @@ impl FactoryComponent for EpisodeListItem {
                     set_wrap: true
                 },
 
-                gtk::Label{
-                    set_label:  self.episode.description().unwrap_or(""),
+                
+                gtk::Label {
+                    #[watch]
+                    set_use_markup: true,
+                    #[watch]
+                    set_label: &{
+                        if self.episode.description().is_some() && self.episode.description().as_ref().is_some() {
+                            html2pango::markup(self.episode.description().as_ref().unwrap().trim())
+                        } else {
+                            "No description available.".to_string()
+                        }
+                    },
                     set_halign: gtk::Align::Start,
-                    add_css_class: "dimmed",
-                    set_wrap: true
+                    set_wrap: true,
+                    set_lines: 3,
+                    set_ellipsize: gtk::pango::EllipsizeMode::End,
+                    set_css_classes: &vec!["dimmed", "body"]
                 },
 
                 gtk::Separator{
