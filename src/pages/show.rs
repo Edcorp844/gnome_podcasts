@@ -1,10 +1,13 @@
 use adw::prelude::*;
 use podcasts_data::{
-    Episode, Show, ShowId, dbqueries::{self, EpisodeFilter}, discovery::FoundPodcast, errors::DataError,
+    Episode, Show, ShowId,
+    dbqueries::{self, EpisodeFilter},
+    discovery::FoundPodcast,
+    errors::DataError,
 };
 use relm4::{Component, ComponentParts, ComponentSender, prelude::*};
 
-use crate::components::episode_list_item::EpisodeListItem;
+use crate::{components::episode_list_item::EpisodeListItem, util::episode_description_parser};
 
 pub struct ShowPage {
     show: Option<Show>,
@@ -136,7 +139,24 @@ impl Component for ShowPage {
                                     // Description Excerpt Block
                                     gtk::Label {
                                         #[watch]
-                                        set_label: model.show.as_ref().map(|s| s.description()).map(|d| d.trim()).unwrap_or("No description available."),
+                                        set_use_markup: true,
+                                        #[watch]
+                                        set_markup: &{
+                                            if let Some(desc) = model.show.as_ref().map(|s| s.description()) {
+                                                let markup = episode_description_parser::html2pango_markup(desc);
+
+                                                // Check if the generated markup is empty or invalid compared to the original input
+                                                if markup.is_empty() && !desc.is_empty() {
+                                                    html2text::config::plain()
+                                                        .string_from_read(desc.as_bytes(), desc.len())
+                                                        .unwrap_or_else(|_| desc.to_string())
+                                                } else {
+                                                    markup
+                                                }
+                                            } else {
+                                                "".to_string()
+                                            }
+                                        },
                                         set_halign: gtk::Align::Start,
                                         set_wrap: true,
                                         set_max_width_chars: 75,
@@ -241,7 +261,24 @@ impl Component for ShowPage {
 
                                 gtk::Label {
                                     #[watch]
-                                    set_label: model.show.as_ref().map(|s| s.description()).map(|d| d.trim()).unwrap_or("No description available."),
+                                    set_use_markup: true,
+                                    #[watch]
+                                     set_markup: &{
+                                        if let Some(desc) = model.show.as_ref().map(|s| s.description()) {
+                                            let markup = episode_description_parser::html2pango_markup(desc);
+
+                                            // Check if the generated markup is empty or invalid compared to the original input
+                                            if markup.is_empty() && !desc.is_empty() {
+                                                html2text::config::plain()
+                                                    .string_from_read(desc.as_bytes(), desc.len())
+                                                    .unwrap_or_else(|_| desc.to_string())
+                                            } else {
+                                                markup
+                                            }
+                                        } else {
+                                            "".to_string()
+                                        }
+                                    },
                                     set_css_classes: &vec!["body"],
                                     set_wrap: true,
 
@@ -251,6 +288,14 @@ impl Component for ShowPage {
                                     set_hexpand: false,
 
                                     set_wrap_mode: gtk::pango::WrapMode::WordChar,
+                                    set_halign: gtk::Align::Start,
+                                    set_valign: gtk::Align::Start
+                                },
+
+                                gtk::Label {
+                                    set_label: model.show.as_ref().map(|s| s.link()).unwrap_or(""),
+                                    set_css_classes: &vec!["accent"],
+                                    set_wrap: true,
                                     set_halign: gtk::Align::Start,
                                     set_valign: gtk::Align::Start
                                 },
@@ -351,13 +396,9 @@ impl Component for ShowPage {
 
                     if let Some(show) = &self.show {
                         let id = show.id();
-                        match  dbqueries::get_podcast_cover_from_id(id){
-                            Ok(show) =>{
-
-                            }
-                            Err(error)=> {
-                                
-                            }
+                        match dbqueries::get_podcast_cover_from_id(id) {
+                            Ok(show) => {}
+                            Err(error) => {}
                         }
                         match dbqueries::get_pd_episodes(show) {
                             Ok(episodes) => {

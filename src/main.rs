@@ -9,6 +9,7 @@ mod app_render_ext;
 mod chapter_parser;
 mod components;
 mod pages;
+mod util;
 mod workers;
 
 // === THE FIX: Define the missing local Tokio runtime ===
