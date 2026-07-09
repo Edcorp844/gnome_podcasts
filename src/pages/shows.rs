@@ -1,6 +1,6 @@
 use adw::prelude::*;
 use podcasts_data::{
-    Show, ShowId,
+    EpisodeId, Show, ShowId,
     dbqueries::{self, ShowFilter},
     errors::DataError,
 };
@@ -8,7 +8,7 @@ use relm4::{Component, ComponentParts, ComponentSender, prelude::*};
 
 use crate::{
     components::show_card::{ShowCard, ShowCardOutput},
-    pages::show::ShowPage,
+    pages::show::{ShowPage, ShowPageOutput},
 };
 
 pub struct ShowsPage {
@@ -22,10 +22,14 @@ pub enum ShowsPageInput {
     FetchShows,
     ShowsLoaded(Result<Vec<Show>, DataError>),
     GotoShow(ShowId),
+    //StreamEpisode(EpisodeId),
 }
 
 #[derive(Debug)]
-pub enum ShowsPageOutput {}
+pub enum ShowsPageOutput {
+    StreamEpisode(EpisodeId),
+    NotifyError(String),
+}
 
 #[derive(Debug)]
 pub enum ShowsPageCommand {
@@ -75,7 +79,7 @@ impl Component for ShowsPage {
                 .forward(sender.input_sender(), |msg| match msg {
                     ShowCardOutput::GotoShow(show) => ShowsPageInput::GotoShow(show),
                 }),
-                open_show_pages: Vec::new(),
+            open_show_pages: Vec::new(),
             is_loading: true,
         };
 
@@ -124,7 +128,15 @@ impl Component for ShowsPage {
             }
 
             ShowsPageInput::GotoShow(id) => {
-                let show_page = ShowPage::builder().launch(id.clone()).detach();
+                let show_page =
+                    ShowPage::builder()
+                        .launch(id.clone())
+                        .forward(sender.output_sender(), |msg| match msg {
+                            ShowPageOutput::NotifyError(error) => {
+                                ShowsPageOutput::NotifyError(error)
+                            }
+                            ShowPageOutput::StreamEpisode(id) => ShowsPageOutput::StreamEpisode(id),
+                        });
 
                 widgets.nav_view.push(show_page.widget());
                 self.open_show_pages.push(show_page);

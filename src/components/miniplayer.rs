@@ -1,21 +1,35 @@
 use adw::prelude::*;
+use gst::format;
+use gst_play::PlayState;
+use podcasts_data::Episode;
+use podcasts_data::EpisodeId;
+use podcasts_data::EpisodeModel;
+use podcasts_data::dbqueries;
 use relm4::prelude::*;
 
 use crate::components::volume_scale::VolumeControlInit;
 use crate::components::volume_scale::VolumeControlModel;
 use crate::components::volume_scale::VolumeControlOutput;
 
-
-
 pub struct MiniPlayerModel {
     pub volume_slider: Controller<VolumeControlModel>,
     texture: Option<adw::gdk::Texture>,
+    current_state: PlayState,
+    current_Episode: Option<Episode>,
 }
 
 #[derive(Debug)]
 pub enum MiniplayerModelInput {
     HandleVolumeChange(f64),
     ImageDownloaded(Option<adw::gdk::Texture>),
+    ChangePlayBackState(PlayState),
+    SetCurrentEpisode(EpisodeId),
+}
+
+#[derive(Debug)]
+pub enum MiniplayerModelOutput {
+    TogglePlay,
+    NotifyError(String),
 }
 
 #[derive(Debug)]
@@ -27,7 +41,7 @@ pub enum MiniPlayerModelCmdInput {
 impl Component for MiniPlayerModel {
     type Init = ();
     type Input = MiniplayerModelInput;
-    type Output = ();
+    type Output = MiniplayerModelOutput;
     type CommandOutput = MiniPlayerModelCmdInput;
 
     fn init(
@@ -45,46 +59,11 @@ impl Component for MiniPlayerModel {
                 }
             });
 
-        let url_string = "https://is1-ssl.mzstatic.com/image/thumb/Podcasts125/v4/3e/8d/84/3e8d8499-7b3b-5be9-e808-e7e533904632/mza_12520670224895083138.jpg/540x540bb.webp";
-
-        sender.oneshot_command(async move {
-            let texture_res = tokio::task::spawn_blocking(move || {
-                let load_image = || -> Option<gtk::gdk::Texture> {
-                    // 1. No .ok()? needed here because for_uri returns a raw File directly
-                    let file = gtk::gio::File::for_uri(&url_string);
-
-                    // 2. load_bytes still returns a Result, so keep .ok()? here
-                    let (glib_bytes, _) = file.load_bytes(gtk::gio::Cancellable::NONE).ok()?;
-
-                    const THUMB_SIZE: i32 = 50;
-                    let stream = gtk::gio::MemoryInputStream::from_bytes(&glib_bytes);
-                    let pixbuf = gtk::gdk_pixbuf::Pixbuf::from_stream_at_scale(
-                        &stream,
-                        THUMB_SIZE,
-                        THUMB_SIZE,
-                        true, // preserve aspect ratio (source is already square, so this lands on exactly 50x50)
-                        gtk::gio::Cancellable::NONE,
-                    )
-                    .ok()?;
-
-                    Some(gtk::gdk::Texture::for_pixbuf(&pixbuf))
-                };
-
-                load_image()
-            })
-            .await;
-
-            let downloaded_texture = match texture_res {
-                Ok(Some(texture)) => Some(texture),
-                _ => None,
-            };
-
-            MiniPlayerModelCmdInput::DownloadImage(downloaded_texture)
-        });
-
         let model = Self {
             volume_slider,
             texture: None,
+            current_state: PlayState::Stopped,
+            current_Episode: None,
         };
 
         let widgets = view_output!();
@@ -95,6 +74,62 @@ impl Component for MiniPlayerModel {
         match message {
             MiniplayerModelInput::ImageDownloaded(fetched_texture) => {
                 self.texture = fetched_texture;
+            }
+            MiniplayerModelInput::ChangePlayBackState(state) => {
+                self.current_state = state;
+            }
+            MiniplayerModelInput::SetCurrentEpisode(id) => {
+                match dbqueries::get_episode_from_id(id) {
+                    Ok(episode) => {
+                        let image_uri_opt = episode.image_uri().map(|s| s.to_string());
+                        self.current_Episode = Some(episode);
+                        
+                        if let Some(image_uri) = image_uri_opt {
+                            sender.oneshot_command(async move {
+                                let texture_res = tokio::task::spawn_blocking(move || {
+                                    let load_image = || -> Option<gtk::gdk::Texture> {
+                                        let file = gtk::gio::File::for_uri(&image_uri);
+                                        let (glib_bytes, _) =
+                                            file.load_bytes(gtk::gio::Cancellable::NONE).ok()?;
+
+                                        const THUMB_SIZE: i32 = 50;
+                                        let stream =
+                                            gtk::gio::MemoryInputStream::from_bytes(&glib_bytes);
+                                        let pixbuf = gtk::gdk_pixbuf::Pixbuf::from_stream_at_scale(
+                                            &stream,
+                                            THUMB_SIZE,
+                                            THUMB_SIZE,
+                                            true,
+                                            gtk::gio::Cancellable::NONE,
+                                        )
+                                        .ok()?;
+
+                                        Some(gtk::gdk::Texture::for_pixbuf(&pixbuf))
+                                    };
+
+                                    load_image()
+                                })
+                                .await;
+
+                                let downloaded_texture = match texture_res {
+                                    Ok(Some(texture)) => Some(texture),
+                                    _ => None,
+                                };
+
+                                MiniPlayerModelCmdInput::DownloadImage(downloaded_texture)
+                            });
+                        } else {
+                            self.texture = None;
+                        }
+                    }
+                    Err(error) => {
+                        // Forward the database infrastructure errors up to the application logger
+                        let _ = sender.output(MiniplayerModelOutput::NotifyError(format!(
+                            "Failed to resolve episode metadata: {:?}",
+                            error
+                        )));
+                    }
+                }
             }
             _ => {}
         }
@@ -138,20 +173,44 @@ impl Component for MiniPlayerModel {
                         set_tooltip_text: Some("Rewind 10 seconds"),
                         set_valign: gtk::Align::Center,
                         set_css_classes: &["circular", "flat"],
+
+                        #[watch]
+                        set_sensitive: model.current_state != gst_play::PlayState::Stopped,
                     },
 
-                    gtk::Button {
-                        set_tooltip_text: Some("Play"),
-                        add_css_class: "circular",
-                        set_size_request: (50, 50),
-                        set_margin_start: 6,
-                        set_margin_end: 6,
-
-                        #[wrap(Some)]
-                        set_child = &gtk::Image {
-                            set_icon_name: Some("media-playback-start-symbolic"),
-                            set_icon_size: gtk::IconSize::Large,
+                     match model.current_state {
+                        gst_play::PlayState::Buffering => adw::Spinner{
+                            set_size_request: (24, 24),
+                            set_margin_start: 6,
+                            set_margin_end: 6,
+                            set_halign: gtk::Align::Center,
+                            set_valign: gtk::Align::Center,
                         }
+                        _=> gtk::Button {
+                            set_tooltip_text: Some("Play"),
+                            add_css_class: "circular",
+                            set_size_request: (50, 50),
+                            set_margin_start: 6,
+                            set_margin_end: 6,
+
+                            #[watch]
+                            set_sensitive: model.current_state != gst_play::PlayState::Stopped,
+
+                            #[wrap(Some)]
+                            set_child = &gtk::Image {
+                                #[watch]
+                                set_icon_name: if model.current_state == gst_play::PlayState::Playing {
+                                    Some("media-playback-pause-symbolic")
+                                } else {
+                                    Some("media-playback-start-symbolic")
+                                },
+                                set_icon_size: gtk::IconSize::Large,
+                            },
+
+                            connect_clicked[sender] => move |_| {
+                                let _ = sender.output(MiniplayerModelOutput::TogglePlay);
+                            }
+                        },
                     },
 
                     gtk::Button {
@@ -159,7 +218,12 @@ impl Component for MiniPlayerModel {
                         set_tooltip_text: Some("Fast forward 10 seconds"),
                         set_valign: gtk::Align::Center,
                         set_css_classes: &["circular", "flat"],
+
+                        #[watch]
+                        set_sensitive: model.current_state != gst_play::PlayState::Stopped,
                     },
+
+
 
                     gtk::Separator { set_hexpand: true, add_css_class: "spacer" },
                 },
@@ -176,9 +240,6 @@ impl Component for MiniPlayerModel {
                     gtk::Separator { set_hexpand: true, add_css_class: "spacer" },
 
                     gtk::Box {
-                        // These are floors, not caps — the CSS min/max below
-                        // is what actually locks the size regardless of the
-                        // source image's real (540x540) dimensions.
                         set_width_request: 50,
                         set_height_request: 50,
                         set_valign: gtk::Align::Center,
@@ -200,11 +261,6 @@ impl Component for MiniPlayerModel {
                             set_paintable: model.texture.as_ref().map(|t| t.upcast_ref::<adw::gdk::Paintable>()),
                             #[watch]
                             set_visible: model.texture.is_some(),
-
-                            // No hexpand/vexpand here — we don't want this
-                            // widget asking the HeaderBar for more room.
-                            // ContentFit::Cover still crops-to-fill within
-                            // whatever fixed box it's given below.
                             set_hexpand: false,
                             set_vexpand: false,
                             set_halign: gtk::Align::Fill,
@@ -228,8 +284,15 @@ impl Component for MiniPlayerModel {
                         set_halign: gtk::Align::Start,
                         set_spacing: 4,
 
+
                         gtk::Label {
-                            set_label: "S.393 why Many Struggle To Believe",
+                            #[watch]
+                            set_label:match &model.current_Episode {
+                                Some(episode) => episode.title(),
+                                None => "No Track Selected",
+                            },
+                            set_ellipsize: gtk::pango::EllipsizeMode::End,
+                            set_lines: 1,
                             set_halign: gtk::Align::Start,
                             set_valign: gtk::Align::Center,
                         },

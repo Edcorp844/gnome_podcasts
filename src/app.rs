@@ -1,16 +1,21 @@
+use crate::action::Action;
 use crate::app_navigation_ext::NavigationPage;
 use crate::app_navigation_ext::PageController;
 use crate::components::miniplayer::MiniPlayerModel;
 
+use crate::components::miniplayer::MiniplayerModelInput;
+use crate::components::miniplayer::MiniplayerModelOutput;
 use crate::pages::home::HomPageOutPut;
 use crate::pages::home::HomePage;
 use crate::pages::new::NewPage;
 use crate::pages::shows::ShowsPage;
+use crate::pages::shows::ShowsPageOutput;
 use crate::workers::action_worker::service::ActionWorker;
 use crate::workers::action_worker::service::ActionWorkerInput;
 use crate::workers::action_worker::service::ActionWorkerOutput;
 
 use adw::gio;
+use gst_play::PlayState;
 use relm4::ComponentParts;
 use relm4::adw::prelude::*;
 use relm4::prelude::*;
@@ -40,11 +45,15 @@ pub struct AppModel {
 #[derive(Debug)]
 pub enum AppModelInput {
     ToggleSidebar,
+    TogglePlayBack,
     SelectPage(NavigationPage),
     SetSidebarCollapsed(bool),
     HandleVolumeChange(f64),
+    StreamEpisode(EpisodeId),
     NotifyError(String),
     Subscribe(String),
+    ChangePlayBackState(PlayState),
+    SetCurrentEpisode(EpisodeId),
     None,
 }
 
@@ -186,6 +195,16 @@ impl Component for AppModel {
                             .clone()
                             .input(AppModelInput::NotifyError(error));
                     }
+                    ActionWorkerOutput::StateChanged(state) => {
+                        action_sender
+                            .clone()
+                            .input(AppModelInput::ChangePlayBackState(state));
+                    }
+                    ActionWorkerOutput::SetCurrentEpisode(id) => {
+                        action_sender
+                            .clone()
+                            .input(AppModelInput::SetCurrentEpisode(id));
+                    }
                     _ => {}
                 });
 
@@ -203,7 +222,13 @@ impl Component for AppModel {
 
         initial_cache.insert(key.clone(), PageController::Home(homepage));
 
-        let miniplayer = MiniPlayerModel::builder().launch(()).detach();
+        let miniplayer =
+            MiniPlayerModel::builder()
+                .launch(())
+                .forward(sender.input_sender(), |msg| match msg {
+                    MiniplayerModelOutput::TogglePlay => AppModelInput::TogglePlayBack,
+                    MiniplayerModelOutput::NotifyError(error) => AppModelInput::NotifyError(error),
+                });
 
         let model = AppModel {
             is_sidebar_visible: true,
@@ -276,11 +301,22 @@ impl Component for AppModel {
                                 .insert(key.clone(), PageController::New(instantiated_page));
                         }
                         NavigationPage::Shows => {
-                            let instantiated_page = ShowsPage::builder().launch(()).detach();
+                            let instantiated_page = ShowsPage::builder().launch(()).forward(
+                                sender.input_sender(),
+                                |msg| match msg {
+                                    ShowsPageOutput::NotifyError(error) => {
+                                        AppModelInput::NotifyError(error)
+                                    }
+                                    ShowsPageOutput::StreamEpisode(id) => {
+                                        AppModelInput::StreamEpisode(id)
+                                    }
+                                },
+                            );
 
                             self.pages_cache
                                 .insert(key.clone(), PageController::Shows(instantiated_page));
                         }
+
                         _ => {}
                     }
                 }
@@ -305,6 +341,24 @@ impl Component for AppModel {
                 self.worker_controller
                     .emit(ActionWorkerInput::Subscirbe(feed));
             }
+            AppModelInput::StreamEpisode(id) => {
+                println!("Streaming: {:?}", id);
+                self.worker_controller
+                    .emit(ActionWorkerInput::Execute(Action::StreamEpisode(id)));
+            }
+            AppModelInput::ChangePlayBackState(state) => {
+                self.miniplayer
+                    .emit(MiniplayerModelInput::ChangePlayBackState(state));
+            }
+            AppModelInput::SetCurrentEpisode(id) => {
+                self.miniplayer
+                    .emit(MiniplayerModelInput::SetCurrentEpisode(id));
+            }
+            AppModelInput::TogglePlayBack => {
+                self.worker_controller
+                    .emit(ActionWorkerInput::TogglePlayBack);
+            }
+
             AppModelInput::None => {}
         }
     }

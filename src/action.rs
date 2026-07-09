@@ -37,4 +37,6 @@ pub enum Action {
     RaiseWindow,
     InhibitSuspend,
     UninhibitSuspend,
+    Pause,
+    Play
 }

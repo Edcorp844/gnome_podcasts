@@ -60,6 +60,8 @@ impl FactoryComponent for FoundPodcastsCard {
                     inline_css: "
                         background-color: mix(@window_bg_color, @card_fg_color, 0.1);
                         border-radius: 12px;
+                        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+                        border: 1px solid alpha(@borders, 0.8);
                     ",
 
                     gtk::Label {
@@ -145,7 +147,7 @@ impl FactoryComponent for FoundPodcastsCard {
 
                 gtk::Button {
                     set_icon_name: "list-add-symbolic",
-                    set_tooltip_text: Some("Subscribe"),
+                    set_tooltip_text: Some("Follow"),
                     add_css_class: "circular",
                     set_valign: gtk::Align::Center,
 
@@ -195,7 +197,7 @@ impl FactoryComponent for FoundPodcastsCard {
                 self.texture = fetched_texture;
             }
             FoundCardInput::Subscribe => {
-                sender.output(FoundCardOutput::Subscribe(self.podcast.feed.clone()));
+               let _ = sender.output(FoundCardOutput::Subscribe(self.podcast.feed.clone()));
             }
         }
     }

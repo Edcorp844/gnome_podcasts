@@ -57,8 +57,8 @@ impl FactoryComponent for ShowCard {
                     inline_css: "
                         background-color: mix(@window_bg_color, @card_fg_color, 0.1);
                         border-radius: 12px;
-                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.03);
-                        border: 1px solid rgba(0, 0, 0, 0.05);
+                        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+                        border: 1px solid alpha(@borders, 0.8);
                         padding: 2px;
                     ",
 
@@ -103,6 +103,7 @@ impl FactoryComponent for ShowCard {
                 set_label: self.show.title().trim(),
                 set_valign: gtk::Align::Start,
                 set_halign: gtk::Align::Start,
+                set_xalign: 0.0,
 
                 set_wrap: true,
                 set_wrap_mode: gtk::pango::WrapMode::WordChar,

@@ -1,13 +1,16 @@
 use adw::prelude::*;
 use podcasts_data::{
-    Episode, Show, ShowId,
+    Episode, EpisodeId, Show, ShowId,
     dbqueries::{self, EpisodeFilter},
     discovery::FoundPodcast,
     errors::DataError,
 };
 use relm4::{Component, ComponentParts, ComponentSender, prelude::*};
 
-use crate::{components::episode_list_item::EpisodeListItem, util::episode_description_parser};
+use crate::{
+    components::episode_list_item::{EpisodeListItem, EpisodeListItemOutput},
+    util::episode_description_parser,
+};
 
 pub struct ShowPage {
     show: Option<Show>,
@@ -23,6 +26,13 @@ pub enum ShowPageInput {
     GetShow(ShowId),
     ShowGotten(Result<Show, DataError>),
     ImageDownloaded(Option<adw::gdk::Texture>),
+    StreamEpisode(EpisodeId),
+}
+
+#[derive(Debug)]
+pub enum ShowPageOutput {
+    StreamEpisode(EpisodeId),
+    NotifyError(String),
 }
 
 #[derive(Debug)]
@@ -34,7 +44,7 @@ pub enum ShowPageCmdInput {
 impl Component for ShowPage {
     type Init = ShowId;
     type Input = ShowPageInput;
-    type Output = ();
+    type Output = ShowPageOutput;
     type CommandOutput = ShowPageCmdInput;
 
     view! {
@@ -83,8 +93,8 @@ impl Component for ShowPage {
                                         inline_css: "
                                             background-color: mix(@window_bg_color, @card_fg_color, 0.1);
                                             border-radius: 16px;
-                                            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
-                                            border: 1px solid rgba(255, 255, 255, 0.05);
+                                            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+                                            border: 1px solid alpha(@borders, 0.8);
                                         ",
 
                                         gtk::Label {
@@ -314,7 +324,12 @@ impl Component for ShowPage {
     ) -> ComponentParts<Self> {
         let episodes_parent = gtk::ListBox::builder().build();
         let model = Self {
-            episodes: FactoryVecDeque::builder().launch(episodes_parent).detach(),
+            episodes: FactoryVecDeque::builder().launch(episodes_parent).forward(
+                sender.input_sender(),
+                |msg| match msg {
+                    EpisodeListItemOutput::StreamEpisode(id) => ShowPageInput::StreamEpisode(id),
+                },
+            ),
             episode_count: 0,
             podcast: None,
             show: None,
@@ -333,16 +348,8 @@ impl Component for ShowPage {
     fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, _root: &Self::Root) {
         match message {
             ShowPageInput::GetShow(show_id) => {
-                // DIAGNOSTIC: confirms the id actually arriving here matches
-                // what you expect. If this never prints, the input isn't
-                // reaching this component at all (e.g. the page shown on
-                // screen is a different/stale instance) — a very different
-                // problem than a failed DB lookup.
-                println!("ShowPage: fetching show_id = {:?}", show_id);
-
                 let show_result = dbqueries::get_podcast_from_id(show_id);
 
-                // DIAGNOSTIC: confirms whether the lookup itself succeeded.
                 match &show_result {
                     Ok(show) => println!("ShowPage: fetched show '{}'", show.title()),
                     Err(e) => println!("ShowPage: fetch FAILED: {e}"),
@@ -395,11 +402,6 @@ impl Component for ShowPage {
                     }
 
                     if let Some(show) = &self.show {
-                        let id = show.id();
-                        match dbqueries::get_podcast_cover_from_id(id) {
-                            Ok(show) => {}
-                            Err(error) => {}
-                        }
                         match dbqueries::get_pd_episodes(show) {
                             Ok(episodes) => {
                                 println!("Episodes Loaded: {:?}", episodes.len());
@@ -414,17 +416,25 @@ impl Component for ShowPage {
                             }
                             Err(error) => {
                                 eprintln!("Error Loading Episodes: {}", error);
+                                let _ = sender.output(ShowPageOutput::NotifyError(format!(
+                                    "Failed to load show episodes: {error}"
+                                )));
                             }
                         }
                     }
                 }
                 Err(error) => {
-                    eprintln!("Error Loading Show Metadata: {}", error);
                     self.load_error = Some(format!("Failed to load show: {error}"));
+                    let _ = sender.output(ShowPageOutput::NotifyError(format!(
+                        "Failed to load show: {error}"
+                    )));
                 }
             },
             ShowPageInput::ImageDownloaded(opt_texture) => {
                 self.show_image_texture = opt_texture;
+            }
+            ShowPageInput::StreamEpisode(id) => {
+                let _ = sender.output(ShowPageOutput::StreamEpisode(id));
             }
         }
     }
