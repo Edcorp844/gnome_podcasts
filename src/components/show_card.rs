@@ -2,6 +2,8 @@ use podcasts_data::{Show, ShowId};
 use relm4::adw::prelude::*;
 use relm4::prelude::*;
 
+use crate::util::cover_image::{ImageSize, fetch_cached_image};
+
 pub struct ShowCard {
     show: Show,
     texture: Option<adw::gdk::Texture>,
@@ -21,7 +23,6 @@ pub enum ShowCardOutput {
 #[derive(Debug)]
 pub enum ShowCardCmdInput {
     DownloadImage(Option<adw::gdk::Texture>),
-    SubscribeFinished,
 }
 
 #[relm4::factory(pub)]
@@ -139,21 +140,7 @@ impl FactoryComponent for ShowCard {
             let image_url = image_url_ref.to_string();
 
             sender.oneshot_command(async move {
-                let texture_res = tokio::task::spawn_blocking(move || {
-                    let load_image = || -> Option<gtk::gdk::Texture> {
-                        let file = gtk::gio::File::for_uri(&image_url);
-                        let (glib_bytes, _) = file.load_bytes(gtk::gio::Cancellable::NONE).ok()?;
-                        gtk::gdk::Texture::from_bytes(&glib_bytes).ok()
-                    };
-
-                    load_image()
-                })
-                .await;
-
-                let downloaded_texture = match texture_res {
-                    Ok(Some(texture)) => Some(texture),
-                    _ => None,
-                };
+                let downloaded_texture = fetch_cached_image(&image_url, ImageSize::default()).await;
 
                 ShowCardCmdInput::DownloadImage(downloaded_texture)
             });
@@ -180,9 +167,6 @@ impl FactoryComponent for ShowCard {
         match message {
             ShowCardCmdInput::DownloadImage(opt_texture) => {
                 sender.input(ShowCardInput::ImageDownloaded(opt_texture));
-            }
-            ShowCardCmdInput::SubscribeFinished => {
-                println!("Subscription handling processing completed.");
             }
         }
     }

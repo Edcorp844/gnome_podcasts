@@ -9,7 +9,10 @@ use relm4::{Component, ComponentParts, ComponentSender, prelude::*};
 
 use crate::{
     components::episode_list_item::{EpisodeListItem, EpisodeListItemOutput},
-    util::episode_description_parser,
+    util::{
+        cover_image::{ImageSize, fetch_cached_image},
+        episode_description_parser,
+    },
 };
 
 pub struct ShowPage {
@@ -53,7 +56,8 @@ impl Component for ShowPage {
             set_child = &adw::ToolbarView {
 
                 add_top_bar = &adw::HeaderBar {
-                    set_show_title: false,
+                    set_show_start_title_buttons: false,
+                    set_show_end_title_buttons: false,
                 },
 
                 #[wrap(Some)]
@@ -366,35 +370,9 @@ impl Component for ShowPage {
                         if let Some(image_url_ref) = show.image_uri() {
                             let image_url = image_url_ref.to_string();
                             sender.oneshot_command(async move {
-                                let texture_res = tokio::task::spawn_blocking(move || {
-                                    let load_image = || -> Option<gtk::gdk::Texture> {
-                                        let file = gtk::gio::File::for_uri(&image_url);
-                                        let (glib_bytes, _) =
-                                            file.load_bytes(gtk::gio::Cancellable::NONE).ok()?;
-
-                                        const IMAGE_BANNER_SIZE: i32 = 500;
-                                        let stream =
-                                            gtk::gio::MemoryInputStream::from_bytes(&glib_bytes);
-                                        let pixbuf = gtk::gdk_pixbuf::Pixbuf::from_stream_at_scale(
-                                            &stream,
-                                            IMAGE_BANNER_SIZE,
-                                            IMAGE_BANNER_SIZE,
-                                            true,
-                                            gtk::gio::Cancellable::NONE,
-                                        )
-                                        .ok()?;
-
-                                        Some(gtk::gdk::Texture::for_pixbuf(&pixbuf))
-                                    };
-
-                                    load_image()
-                                })
-                                .await;
-
-                                let downloaded_texture = match texture_res {
-                                    Ok(Some(texture)) => Some(texture),
-                                    _ => None,
-                                };
+                                let downloaded_texture =
+                                    fetch_cached_image(&image_url, ImageSize::from_dimesion(500))
+                                        .await;
 
                                 ShowPageCmdInput::DownloadImage(downloaded_texture)
                             });

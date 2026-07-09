@@ -1,77 +1,74 @@
 use adw::prelude::*;
 use gtk::gio::prelude::FileExt;
-use podcasts_data::{Episode, EpisodeId};
+use podcasts_data::discovery::FoundPodcast;
 use relm4::{
     FactorySender, RelmWidgetExt,
     factory::{DynamicIndex, FactoryComponent},
 };
 
-use crate::util::{cover_image::{ImageSize, fetch_cached_image}, episode_description_parser};
+use crate::util::{
+    cover_image::{ImageSize, fetch_cached_image},
+    episode_description_parser,
+};
 
-pub struct EpisodeListItem {
-    episode: Episode,
+pub struct PodcastListItem {
+    podcast: FoundPodcast,
     texture: Option<adw::gdk::Texture>,
 }
 
 #[derive(Debug)]
-pub enum EpisodeListItemInput {
+pub enum PodcastListItemInput {
     ImageDownloaded(Option<adw::gdk::Texture>),
-    StreamEpisode,
+    Subscribe,
 }
 
 #[derive(Debug)]
-pub enum EpisodeListItemOutput {
-    StreamEpisode(EpisodeId),
+pub enum PodcastListItemOutput {
+    Subscribe(String),
 }
 
 #[derive(Debug)]
-pub enum EpisodeListItemCmdInput {
+pub enum PodcastListItemCmdInput {
     DownloadImage(Option<adw::gdk::Texture>),
 }
 
 #[relm4::factory(pub)]
-impl FactoryComponent for EpisodeListItem {
-    type Init = Episode;
-    type Input = EpisodeListItemInput;
-    type Output = EpisodeListItemOutput;
-    type CommandOutput = EpisodeListItemCmdInput;
+impl FactoryComponent for PodcastListItem {
+    type Init = FoundPodcast;
+    type Input = PodcastListItemInput;
+    type Output = PodcastListItemOutput;
+    type CommandOutput = PodcastListItemCmdInput;
     type ParentWidget = gtk::ListBox;
 
-    fn init_model(episode: Self::Init, _index: &DynamicIndex, sender: FactorySender<Self>) -> Self {
-        let clone = episode.clone();
+    fn init_model(podcast: Self::Init, _index: &DynamicIndex, sender: FactorySender<Self>) -> Self {
+        let image_url = podcast.clone().art;
+        sender.oneshot_command(async move {
+            let downloaded_texture = fetch_cached_image(&image_url, ImageSize::default()).await;
 
-        if let Some(image_url_ref) = clone.image_uri() {
-            let image_url = image_url_ref.to_string();
-
-            sender.oneshot_command(async move {
-                let downloaded_texture = fetch_cached_image(&image_url, ImageSize::default()).await;
-
-                EpisodeListItemCmdInput::DownloadImage(downloaded_texture)
-            });
-        }
+            PodcastListItemCmdInput::DownloadImage(downloaded_texture)
+        });
 
         Self {
-            episode,
+            podcast,
             texture: None,
         }
     }
 
     fn update(&mut self, message: Self::Input, sender: FactorySender<Self>) {
         match message {
-            EpisodeListItemInput::ImageDownloaded(fetched_texture) => {
+            PodcastListItemInput::ImageDownloaded(fetched_texture) => {
                 self.texture = fetched_texture;
             }
-            EpisodeListItemInput::StreamEpisode => {
-                println!("Launched: {:?}", self.episode.id());
-                let _ = sender.output(EpisodeListItemOutput::StreamEpisode(self.episode.id()));
+            PodcastListItemInput::Subscribe => {
+                let _ = sender.output(PodcastListItemOutput::Subscribe(self.podcast.feed.clone()));
             }
         }
     }
 
     fn update_cmd(&mut self, message: Self::CommandOutput, sender: FactorySender<Self>) {
         match message {
-            EpisodeListItemCmdInput::DownloadImage(opt_texture) => {
-                sender.input(EpisodeListItemInput::ImageDownloaded(opt_texture));
+            PodcastListItemCmdInput::DownloadImage(opt_texture) => {
+                sender.input(PodcastListItemInput::ImageDownloaded(opt_texture));
             }
         }
     }
@@ -105,7 +102,7 @@ impl FactoryComponent for EpisodeListItem {
 
                                         gtk::Label {
                                             #[watch]
-                                            set_label: &self.episode.title().trim().chars().take(2).collect::<String>().to_uppercase(),
+                                            set_label: &self.podcast.title.trim().chars().take(2).collect::<String>().to_uppercase(),
                                             add_css_class: "title-large",
                                             set_hexpand: true,
                                             set_vexpand: true,
@@ -138,15 +135,10 @@ impl FactoryComponent for EpisodeListItem {
                 set_valign: gtk::Align::Start,
                 set_margin_start: 16,
 
-                gtk::Label{
-                    set_label:  &self.episode.epoch().format("%e %b").to_string(),
-                    add_css_class: "caption",
-                    set_halign: gtk::Align::Start,
-                    set_wrap: true
-                },
+
 
                 gtk::Label{
-                    set_label:  self.episode.title(),
+                    set_label:  &self.podcast.title,
                     add_css_class: "title-4",
                     set_halign: gtk::Align::Start,
                     set_wrap: true
@@ -158,20 +150,14 @@ impl FactoryComponent for EpisodeListItem {
                     set_use_markup: true,
                    #[watch]
                  set_markup: &{
-                        let raw_markup = if let Some(desc) = self.episode.description() {
-                            let markup = episode_description_parser::html2pango_markup(desc);
 
-                            if markup.is_empty() && !desc.is_empty() {
-                                html2text::config::plain()
+                        let desc = &self.podcast.description;
+                            //let markup = episode_description_parser::html2pango_markup(&desc);
+
+                           let  raw_markup= html2text::config::plain()
                                     .string_from_read(desc.as_bytes(), desc.len())
-                                    .unwrap_or_else(|_| desc.to_string())
-                            } else {
-                                markup
-                            }
-                        } else {
-                            "".to_string()
-                        };
-                        raw_markup.replace('\n', " ").replace('\r', " ")
+                                    .unwrap_or_else(|_| desc.to_string());
+                             raw_markup.replace('\n', " ").replace('\r', " ")
                     },
                     set_halign: gtk::Align::Start,
                     set_wrap: true,
@@ -180,35 +166,23 @@ impl FactoryComponent for EpisodeListItem {
                     set_css_classes: &vec!["dimmed", "body"]
                 },
 
-                gtk::Separator{
-                    set_vexpand: true,
-                    add_css_class:"spacer"
+                gtk::Label{
+                    set_label:   &match &self.podcast.last_publication {
+                        Some(date) => {
+                            // Using standard strftime syntax: e.g., "Published: 2026-07-09"
+                            format!("Published: {}", date.format("%Y-%m-%d"))
+                        }
+                        None => "No publication date available".to_string(),
+                    },
+
+                    add_css_class: "caption",
+                    set_halign: gtk::Align::Start,
+                    set_wrap: true
                 },
 
-                gtk::Button{
-                    set_label: &{
-                        let duration_str = match self.episode.duration() {
-                            Some(seconds) if seconds > 0 => {
-                                let hours = seconds / 3600;
-                                let minutes = (seconds % 3600) / 60;
-
-                                if hours > 0 {
-                                    format!("{}h {}m", hours, minutes)
-                                } else {
-                                    format!("{}m", minutes)
-                                }
-                            }
-                            _ => "0m".to_string(),
-                        };
-                        format!("▶ {}", duration_str)
-                    },
-                    set_css_classes: &vec!["pill"],
-                    set_halign: gtk::Align::Start,
-                    set_valign: gtk::Align::Start,
-
-                   connect_clicked[sender] => move |_| {
-                        sender.input(EpisodeListItemInput::StreamEpisode);
-                    }
+                gtk::Separator{
+                    set_vexpand: true,
+                    add_css_class:"spacer",
                 }
             }
         }

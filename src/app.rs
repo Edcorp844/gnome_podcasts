@@ -8,6 +8,7 @@ use crate::components::miniplayer::MiniplayerModelOutput;
 use crate::pages::home::HomPageOutPut;
 use crate::pages::home::HomePage;
 use crate::pages::new::NewPage;
+use crate::pages::search::SearchPage;
 use crate::pages::shows::ShowsPage;
 use crate::pages::shows::ShowsPageOutput;
 use crate::workers::action_worker::service::ActionWorker;
@@ -17,6 +18,7 @@ use crate::workers::action_worker::service::ActionWorkerOutput;
 use adw::gio;
 use gst_play::PlayState;
 use relm4::ComponentParts;
+use relm4::RelmIterChildrenExt;
 use relm4::adw::prelude::*;
 use relm4::prelude::*;
 
@@ -189,7 +191,7 @@ impl Component for AppModel {
         let worker_controller =
             ActionWorker::builder()
                 .launch(())
-                .connect_receiver(move |parent_sender, output| match output {
+                .connect_receiver(move |_parent_sender, output| match output {
                     ActionWorkerOutput::NotifyError(error) => {
                         action_sender
                             .clone()
@@ -261,7 +263,9 @@ impl Component for AppModel {
 
         if let Some(row) = widgets
             .pages
-            .first_child()
+            .iter_children()
+            .skip(1)
+            .next()
             .and_then(|w| w.dynamic_cast::<gtk::ListBoxRow>().ok())
         {
             widgets.pages.select_row(Some(&row));
@@ -288,6 +292,12 @@ impl Component for AppModel {
 
                 if !self.pages_cache.contains_key(&key) {
                     match page {
+                        NavigationPage::Search => {
+                            let instantiated_page = SearchPage::builder().launch(()).detach();
+
+                            self.pages_cache
+                                .insert(key.clone(), PageController::Search(instantiated_page));
+                        }
                         NavigationPage::Home => {
                             let instantiated_page = HomePage::builder().launch(()).detach();
 

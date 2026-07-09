@@ -3,6 +3,8 @@ use log::{error, info};
 use podcasts_data::{FEED_MANAGER, Source, dbqueries, discovery::FoundPodcast};
 use relm4::prelude::*;
 use std::fs::File;
+
+use crate::util::cover_image::{ImageSize, fetch_cached_image};
 pub struct FoundPodcastsCard {
     podcast: FoundPodcast,
     texture: Option<adw::gdk::Texture>,
@@ -166,22 +168,7 @@ impl FactoryComponent for FoundPodcastsCard {
         let url_string = podcast.art.clone();
 
         sender.oneshot_command(async move {
-            let texture_res = tokio::task::spawn_blocking(move || {
-                let load_image = || -> Option<gtk::gdk::Texture> {
-                    let file = gtk::gio::File::for_uri(&url_string);
-                    let (glib_bytes, _) = file.load_bytes(gtk::gio::Cancellable::NONE).ok()?;
-                    gtk::gdk::Texture::from_bytes(&glib_bytes).ok()
-                };
-
-                load_image()
-            })
-            .await;
-
-            let downloaded_texture = match texture_res {
-                Ok(Some(texture)) => Some(texture),
-                _ => None,
-            };
-
+            let downloaded_texture = fetch_cached_image(&url_string, ImageSize::default()).await;
             FoundPodcastCardCmdInput::DownloadImage(downloaded_texture)
         });
 
@@ -197,7 +184,7 @@ impl FactoryComponent for FoundPodcastsCard {
                 self.texture = fetched_texture;
             }
             FoundCardInput::Subscribe => {
-               let _ = sender.output(FoundCardOutput::Subscribe(self.podcast.feed.clone()));
+                let _ = sender.output(FoundCardOutput::Subscribe(self.podcast.feed.clone()));
             }
         }
     }

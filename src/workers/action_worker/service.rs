@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use gst::glib::object::ObjectExt;
 use gst_play::PlayState;
+use gtk::gio::prelude::FileExt;
 use mpris_player::{Metadata, MprisPlayer, PlaybackStatus};
 use podcasts_data::Episode;
 use podcasts_data::EpisodeModel;
@@ -71,8 +72,6 @@ pub enum MprisCommand {
 }
 
 
-
-// --- The Action Worker Struct ---
 pub struct ActionWorker {
     syncing: bool,
     player: gst_play::Play,
@@ -157,9 +156,33 @@ impl Worker for ActionWorker {
                             let mut metadata = mpris_player::Metadata::new();
                             metadata.title = Some(title);
                             metadata.artist = Some(vec![show_title]);
-                            metadata.art_url = art_url;
+
+                            if let Some(ref remote_url) = art_url {
+                                if !remote_url.is_empty() {
+                                    let mut cache_path = adw::glib::user_cache_dir();
+                                    cache_path.push("xpodcasts");
+                                    cache_path.push("covers");
+
+                                    let glib_url_bytes = adw::glib::Bytes::from(remote_url.as_bytes());
+                                    if let Some(hashed_name) = adw::glib::compute_checksum_for_bytes(
+                                        adw::glib::ChecksumType::Sha256,
+                                        &glib_url_bytes
+                                    ) {
+                                        let local_disk_file = cache_path.join(hashed_name.as_str());
+
+                                        if local_disk_file.exists() {
+                                        let uri_string = adw::gio::File::for_path(local_disk_file).uri();
+                                            metadata.art_url = Some(uri_string.to_string());
+                                        } else {
+                                            metadata.art_url = Some(remote_url.clone());
+                                        }
+                                    }
+                                }
+                            }
+
                             player_ref.set_metadata(metadata);
                         }
+
                     }
                 });
             }
@@ -182,8 +205,8 @@ impl Worker for ActionWorker {
                 self.syncing = false;
             }
             ActionWorkerInput::Subscirbe(feed) => {
-                relm4::tokio::spawn(async move {
-                    println!("Subscribing to feed: {}", feed);
+             relm4::tokio::spawn(async move {
+                    Self::subscribe(sender, feed).await;
                 });
             }
             ActionWorkerInput::StateChanged(state) => {

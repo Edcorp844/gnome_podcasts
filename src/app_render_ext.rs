@@ -10,6 +10,7 @@ impl AppModel {
     pub(crate) fn render_sidebar_list(widgets: &AppModelWidgets, sender: &ComponentSender<Self>) {
         // Data configurations
         let pages_list_items = [
+            ("edit-find-symbolic", "Search"),
             ("user-home-symbolic", "Home"),
             ("view-grid-symbolic", "New"),
         ];

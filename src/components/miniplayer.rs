@@ -10,12 +10,14 @@ use relm4::prelude::*;
 use crate::components::volume_scale::VolumeControlInit;
 use crate::components::volume_scale::VolumeControlModel;
 use crate::components::volume_scale::VolumeControlOutput;
+use crate::util::cover_image::ImageSize;
+use crate::util::cover_image::fetch_cached_image;
 
 pub struct MiniPlayerModel {
     pub volume_slider: Controller<VolumeControlModel>,
     texture: Option<adw::gdk::Texture>,
     current_state: PlayState,
-    current_Episode: Option<Episode>,
+    current_episode: Option<Episode>,
 }
 
 #[derive(Debug)]
@@ -63,7 +65,7 @@ impl Component for MiniPlayerModel {
             volume_slider,
             texture: None,
             current_state: PlayState::Stopped,
-            current_Episode: None,
+            current_episode: None,
         };
 
         let widgets = view_output!();
@@ -82,39 +84,13 @@ impl Component for MiniPlayerModel {
                 match dbqueries::get_episode_from_id(id) {
                     Ok(episode) => {
                         let image_uri_opt = episode.image_uri().map(|s| s.to_string());
-                        self.current_Episode = Some(episode);
-                        
+                        self.current_episode = Some(episode);
+
                         if let Some(image_uri) = image_uri_opt {
                             sender.oneshot_command(async move {
-                                let texture_res = tokio::task::spawn_blocking(move || {
-                                    let load_image = || -> Option<gtk::gdk::Texture> {
-                                        let file = gtk::gio::File::for_uri(&image_uri);
-                                        let (glib_bytes, _) =
-                                            file.load_bytes(gtk::gio::Cancellable::NONE).ok()?;
-
-                                        const THUMB_SIZE: i32 = 50;
-                                        let stream =
-                                            gtk::gio::MemoryInputStream::from_bytes(&glib_bytes);
-                                        let pixbuf = gtk::gdk_pixbuf::Pixbuf::from_stream_at_scale(
-                                            &stream,
-                                            THUMB_SIZE,
-                                            THUMB_SIZE,
-                                            true,
-                                            gtk::gio::Cancellable::NONE,
-                                        )
-                                        .ok()?;
-
-                                        Some(gtk::gdk::Texture::for_pixbuf(&pixbuf))
-                                    };
-
-                                    load_image()
-                                })
-                                .await;
-
-                                let downloaded_texture = match texture_res {
-                                    Ok(Some(texture)) => Some(texture),
-                                    _ => None,
-                                };
+                                let downloaded_texture =
+                                    fetch_cached_image(&image_uri, ImageSize::from_dimesion(50))
+                                        .await;
 
                                 MiniPlayerModelCmdInput::DownloadImage(downloaded_texture)
                             });
@@ -287,7 +263,7 @@ impl Component for MiniPlayerModel {
 
                         gtk::Label {
                             #[watch]
-                            set_label:match &model.current_Episode {
+                            set_label:match &model.current_episode {
                                 Some(episode) => episode.title(),
                                 None => "No Track Selected",
                             },
