@@ -1,12 +1,17 @@
+use std::collections::HashMap;
+
 use adw::prelude::*;
 
 use podcasts_data::{
-    dbqueries,
-    discovery::{ALL_PLATFORM_IDS, FoundPodcast, SearchError, search},
+    EpisodeId, dbqueries, discovery::{ALL_PLATFORM_IDS, FoundPodcast, SearchError, search},
 };
 use relm4::{Component, ComponentParts, ComponentSender, prelude::*};
 
-use crate::components::podcast_search_results::{PodcastResults, PodcastResultsInput};
+use crate::{
+    app_navigation_ext::{NavigationPage, PageController}, components::podcast_search_results::{
+        PodcastResults, PodcastResultsInput, PodcastResultsOutput,
+    }, pages::podcast::{PodcastPage, PodcastPageOutput},
+};
 
 // 1. Define the possible pages you want to visit across your app
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -22,24 +27,32 @@ pub enum ResultCategory {
     library,
 }
 
+#[derive(Debug)]
 pub struct SearchPage {
     pub current_page: PageTarget,
     result_category: ResultCategory,
-    podcast_results_widget: Controller<PodcastResults>
+    pub active_pages: HashMap<String, PageController>,
+    podcast_results_widget: Controller<PodcastResults>,
 }
 
 #[derive(Debug)]
 pub enum SearchPageInput {
-    PushPage(PageTarget),
+    PushPage(String),
+    OpenPodcast(FoundPodcast),
     PopPage,
     SwitchResultCategory(ResultCategory),
     PodcastsLoaded(Result<Vec<FoundPodcast>, SearchError>),
     UpdateQuery(String),
     TriggerSearch(String),
+    Subscribe(String),
 }
 
 #[derive(Debug)]
-pub enum SearchPageOutput {}
+pub enum SearchPageOutput {
+    UpdateISSearching(bool),
+    Subscribe(String),
+    StreamEpisode(EpisodeId)
+}
 
 #[derive(Debug)]
 pub enum SearchPageCmdInput {
@@ -58,17 +71,27 @@ impl Component for SearchPage {
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let podcast_results_widget = PodcastResults::builder().launch(()).detach();
+        let podcast_results_widget =
+            PodcastResults::builder()
+                .launch(())
+                .forward(sender.input_sender(), |msg| match msg {
+                    PodcastResultsOutput::Subscribe(feed) => SearchPageInput::Subscribe(feed),
+                    PodcastResultsOutput::OpenPodcast(podcast) => {
+                        SearchPageInput::OpenPodcast(podcast)
+                    }
+                });
         let model = Self {
             current_page: PageTarget::MainPodcastsList,
             result_category: ResultCategory::Podcast,
-            podcast_results_widget
+            active_pages: HashMap::new(),
+            podcast_results_widget,
         };
 
         let widgets = view_output!();
 
         ComponentParts { model, widgets }
     }
+
     fn update_with_view(
         &mut self,
         widgets: &mut Self::Widgets,
@@ -76,16 +99,24 @@ impl Component for SearchPage {
         sender: ComponentSender<Self>,
         root: &Self::Root,
     ) {
-        // FIX: Match against a reference to prevent partial moves
-        match &message {
+       match &message {
+            SearchPageInput::Subscribe(feed) => {
+                let _ = sender.output(SearchPageOutput::Subscribe(feed.clone()));
+            }
+
             SearchPageInput::PodcastsLoaded(data) => match data {
                 Ok(data) => {
-                   self.podcast_results_widget.emit(PodcastResultsInput::Results(data.clone()));
+                    let _ = sender.output(SearchPageOutput::UpdateISSearching(false));
+                    self.podcast_results_widget
+                        .emit(PodcastResultsInput::Results(data.clone()));
                 }
                 Err(_error) => {}
             },
+
             SearchPageInput::TriggerSearch(text) => {
-                self.podcast_results_widget.emit(PodcastResultsInput::SearchBegan);
+                self.podcast_results_widget
+                    .emit(PodcastResultsInput::SearchBegan);
+                let _ = sender.output(SearchPageOutput::UpdateISSearching(true));
                 let search_text = text.clone();
                 println!("Searching: {search_text}");
                 sender.oneshot_command(async move {
@@ -97,35 +128,34 @@ impl Component for SearchPage {
                             Ok(_) => {}
                         }
                     }
-                    // Use the cloned thread-safe string here
+
                     SearchPageCmdInput::Podcasts(search(&search_text).await)
                 });
             }
             SearchPageInput::UpdateQuery(_text) => {}
-            SearchPageInput::PushPage(target) => {
-                self.current_page = *target; // Copy the enum value out
-
-                match target {
-                    PageTarget::PodcastDetails => {
-                        widgets.nav_view.push_by_tag("podcast-details-page");
-                    }
-                    PageTarget::EpisodeDescription => {
-                        widgets.nav_view.push_by_tag("episode-desc-page");
-                    }
-                    PageTarget::MainPodcastsList => {
-                        widgets.nav_view.push_by_tag("root-podcasts-page");
-                    }
+            SearchPageInput::OpenPodcast(podcast) => {
+                let key = podcast.title.clone();
+                let podcast_page = PodcastPage::builder().launch(podcast.clone()).forward(sender.output_sender(), |msg| match msg {
+                    PodcastPageOutput::StreamEpisode(episode)=>SearchPageOutput::StreamEpisode(episode),
+                    PodcastPageOutput::Subscribe(feed)=>SearchPageOutput::Subscribe(feed)
+                });
+                let controller = PageController::Podcast(podcast_page);
+                self.active_pages.insert(key.to_string(), controller);
+                sender.input(SearchPageInput::PushPage(key.to_string()));
+            }
+            SearchPageInput::PushPage(page) => {
+                if let Some(PageController::Podcast(page_ctrl)) = self.active_pages.get(page) {
+                    widgets.nav_view.push(page_ctrl.widget());
                 }
             }
             SearchPageInput::PopPage => {
                 widgets.nav_view.pop();
             }
-            SearchPageInput::SwitchResultCategory(category)=>{
+            SearchPageInput::SwitchResultCategory(category) => {
                 self.result_category = *category;
             }
         }
 
-        // Now message is untouched and can be safely consumed here
         self.update(message, sender, root);
     }
 
@@ -164,17 +194,14 @@ impl Component for SearchPage {
                             set_show_start_title_buttons: false,
                             set_show_end_title_buttons: false,
 
-                            // FIX: Centering wrapper structure explicitly managed via the HeaderBar's placement layer
+
                             #[wrap(Some)]
                             set_title_widget = &gtk::Box {
                                 set_orientation: gtk::Orientation::Horizontal,
                                 set_spacing: 6,
                                 set_hexpand: true,
-                                // FIX: Changed from Center to Fill so the bar expands to its bounding limits
                                 set_halign: gtk::Align::Center,
                                 set_valign: gtk::Align::Center,
-
-                                // FIX: Forcing explicit dimensions via size request constraints
                                 set_size_request: (360, -1),
 
                                 gtk::SearchEntry {
@@ -182,13 +209,11 @@ impl Component for SearchPage {
                                     set_hexpand: true,
                                     set_halign: gtk::Align::Fill,
 
-                                    // TRIGGER A: Fires on every single character keystroke (Live Search)
                                     connect_search_changed[sender] => move |entry| {
                                         let text = entry.text().to_string();
                                         sender.input(SearchPageInput::UpdateQuery(text));
                                     },
 
-                                    // TRIGGER B: Fires only when pressing Enter (Debounced/Manual Search)
                                     connect_activate[sender] => move |entry| {
                                         let text = entry.text().to_string();
                                         sender.input(SearchPageInput::TriggerSearch(text));
@@ -198,37 +223,33 @@ impl Component for SearchPage {
                             },
 
                             pack_end=&adw::ToggleGroup {
-                                    // Keeps item button segments uniform in dimension
-                                    set_homogeneous: true,
-                                    //add_css_class: "round",
+                                set_homogeneous: true,
+                                add_css_class: "round",
 
-                                    // Use a string matching the 'name' property below to dictate the default selection
-                                    set_active_name: Some("podcasts"),
+                                set_active_name: Some("podcasts"),
 
-                                    // Track layout transitions when a user toggles the items
-                                    connect_active_name_notify[sender] => move |group| {
-                                        if let Some(active_tab) = group.active_name() {
-                                            match active_tab.as_str() {
-                                                "podcasts" => {  sender.input(SearchPageInput::SwitchResultCategory(ResultCategory::Podcast)) }
-                                                "library" => { sender.input(SearchPageInput::SwitchResultCategory(ResultCategory::Podcast))  }
-                                                _ => {}
-                                            }
+                                connect_active_name_notify[sender] => move |group| {
+                                    if let Some(active_tab) = group.active_name() {
+                                        match active_tab.as_str() {
+                                            "podcasts" => {  sender.input(SearchPageInput::SwitchResultCategory(ResultCategory::Podcast)) }
+                                            "library" => { sender.input(SearchPageInput::SwitchResultCategory(ResultCategory::Podcast))  }
+                                            _ => {}
                                         }
-                                    },
-
-                                    // --- Tab Selection Options ---
-                                    add = adw::Toggle {
-                                        set_name: Some("podcasts"),
-                                        set_label: Some("Podcasts"),
-
-                                    },
-
-                                    add = adw::Toggle {
-                                        set_name: Some("library"),
-                                        set_label: Some("Library"),
-
                                     }
+                                },
+
+                                add = adw::Toggle {
+                                    set_name: Some("podcasts"),
+                                    set_label: Some("Podcasts"),
+
+                                },
+
+                                add = adw::Toggle {
+                                    set_name: Some("library"),
+                                    set_label: Some("Library"),
+
                                 }
+                            }
                         },
 
                        #[wrap(Some)]

@@ -7,10 +7,18 @@ use crate::{
 };
 
 impl AppModel {
+    pub(crate) fn show_search_page(widgets: &AppModelWidgets, sender: &ComponentSender<Self>) {
+        let pages = &widgets.pages;
+        pages.unselect_all();
+
+        let library = &widgets.library;
+        library.unselect_all();
+
+        sender.input(AppModelInput::SelectPage(NavigationPage::Search));
+    }
     pub(crate) fn render_sidebar_list(widgets: &AppModelWidgets, sender: &ComponentSender<Self>) {
         // Data configurations
         let pages_list_items = [
-            ("edit-find-symbolic", "Search"),
             ("user-home-symbolic", "Home"),
             ("view-grid-symbolic", "New"),
         ];
@@ -42,9 +50,14 @@ impl AppModel {
 
         let pages_weak = widgets.pages.downgrade();
         let sender_clone = sender.clone();
+
+        let search_button_weak = widgets.search_button.downgrade();
         widgets.library.connect_row_activated(move |_, row| {
             if let Some(pages) = pages_weak.upgrade() {
                 pages.unselect_all();
+            }
+            if let Some(btn) = search_button_weak.upgrade() {
+                btn.set_active(false);
             }
 
             let widget_name = row.widget_name().to_string();
@@ -53,13 +66,18 @@ impl AppModel {
         });
 
         let library_weak = widgets.library.downgrade();
+        let search_button_weak = widgets.search_button.downgrade();
         let sender_clone = sender.clone();
         widgets.pages.connect_row_activated(move |_, row| {
             if let Some(library) = library_weak.upgrade() {
                 library.unselect_all();
             }
+            if let Some(btn) = search_button_weak.upgrade() {
+                btn.set_active(false);
+            }
             let widget_name = row.widget_name().to_string();
             let resolved_page = NavigationPage::from_name(&widget_name);
+
             sender_clone.input(AppModelInput::SelectPage(resolved_page));
         });
     }

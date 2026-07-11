@@ -31,9 +31,6 @@ impl ActionWorker {
             }
             sender.input(ActionWorkerInput::Execute(Action::QuickSyncNextcloud));
             sender.input(ActionWorkerInput::Execute(Action::RefreshAllViews));
-            sender.input(ActionWorkerInput::Execute(Action::GoToShow(Arc::new(
-                show.clone(),
-            ))));
             Ok::<(), anyhow::Error>(())
         }
         .await

@@ -8,6 +8,7 @@ use relm4::{
 
 use crate::util::{cover_image::{ImageSize, fetch_cached_image}, episode_description_parser};
 
+#[derive(Debug)]
 pub struct EpisodeListItem {
     episode: Episode,
     texture: Option<adw::gdk::Texture>,

@@ -1,13 +1,19 @@
-use podcasts_data::dbqueries;
+use std::collections::HashMap;
+
 use podcasts_data::discovery::{ALL_PLATFORM_IDS, FoundPodcast, SearchError, search};
+use podcasts_data::{EpisodeId, dbqueries};
 use relm4::adw::prelude::*;
 use relm4::prelude::*;
 
+use crate::app_navigation_ext::PageController;
 use crate::components::found_podcast_ui::{FoundCardOutput, FoundPodcastsCard};
+use crate::pages::podcast::{PodcastPage, PodcastPageOutput};
 
+#[derive(Debug)]
 pub struct HomePage {
     pub podcasts: FactoryVecDeque<FoundPodcastsCard>,
     pub is_loading: bool,
+    pub active_pages: HashMap<String, PageController>,
 }
 
 #[derive(Debug)]
@@ -19,13 +25,16 @@ pub enum HomePageCommand {
 pub enum HomePageInput {
     FetchPodcasts,
     PodcastsLoaded(Result<Vec<FoundPodcast>, SearchError>),
-    // Subscribe(String),
+    Subscribe(String),
+    PushPage(String),
+    OpenPodcast(FoundPodcast),
 }
 
 #[derive(Debug)]
 pub enum HomPageOutPut {
     ToggleSideBar,
     Subscribe(String),
+    StreamEpisode(EpisodeId),
 }
 
 #[relm4::component(pub)]
@@ -40,33 +49,18 @@ impl Component for HomePage {
             set_title: "Podcasts",
 
             #[wrap(Some)]
-            set_child = &adw::NavigationPage {
+            #[name = "nav_view"]
+            set_child = &adw::NavigationView {
+
+                // --- PAGE 1: Root List View ---
+                #[name = "root_page"]
+                add = &adw::NavigationPage {
 
                     #[wrap(Some)]
                     set_child = &adw::ToolbarView {
 
                         #[wrap(Some)]
-                        set_content = &gtk::Box{
-                            set_orientation: gtk::Orientation::Vertical,
-                            gtk::Separator {
-                                add_css_class: "tahoe-shimmer-line",
-                                #[watch]
-                                set_visible: model.is_loading,
-                                set_halign: gtk::Align::Fill,
-                                inline_css: " min-height: 2px;
-                                    border: none;  background: linear-gradient(90deg, 
-                                        rgba(0, 122, 255, 0) 0%, 
-                                        #007AFF 25%, 
-                                        #AF52DE 50%, 
-                                        #FF2D55 75%, 
-                                        rgba(255, 45, 85, 0) 100%
-                                    );
-                                    background-size: 200% 100%; animation: s from { background-position: 0% 0%; }
-                                    to { background-position: 200% 0%; }"
-
-                            },
-
-                            gtk::ScrolledWindow {
+                        set_content = &gtk::ScrolledWindow {
                                 set_vexpand : true,
                                 set_hscrollbar_policy: gtk::PolicyType::Never,
 
@@ -94,10 +88,9 @@ impl Component for HomePage {
                                     }
                                 }
                             }
-                        }
                     }
                 }
-
+            }
         }
     }
 
@@ -134,11 +127,15 @@ impl Component for HomePage {
 
         let model = HomePage {
             podcasts: FactoryVecDeque::builder().launch(grid).forward(
-                sender.output_sender(),
+                sender.input_sender(),
                 |msg| match msg {
-                    FoundCardOutput::Subscribe(feed) => HomPageOutPut::Subscribe(feed),
+                    FoundCardOutput::Subscribe(feed) => HomePageInput::Subscribe(feed),
+                    FoundCardOutput::OpenPodcastPage(podcast) => {
+                        HomePageInput::OpenPodcast(podcast)
+                    }
                 },
             ),
+            active_pages: HashMap::new(),
             is_loading: true,
         };
 
@@ -151,7 +148,13 @@ impl Component for HomePage {
         ComponentParts { model, widgets }
     }
 
-    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, _root: &Self::Root) {
+    fn update_with_view(
+        &mut self,
+        widgets: &mut Self::Widgets,
+        message: Self::Input, // Keeps original ownership here
+        sender: ComponentSender<Self>,
+        root: &Self::Root,
+    ) {
         match message {
             HomePageInput::FetchPodcasts => {
                 let search_texts = vec!["uganda", "news", "footboall", "Jesus", "phaneroo"];
@@ -173,6 +176,9 @@ impl Component for HomePage {
                 }
             }
 
+            HomePageInput::Subscribe(feed)=>{
+                let _= sender.output(HomPageOutPut::Subscribe(feed));
+            }
             // Captures background thread work payload safely
             HomePageInput::PodcastsLoaded(podcasts) => {
                 match podcasts {
@@ -189,7 +195,31 @@ impl Component for HomePage {
                 }
                 self.is_loading = false;
             }
+            HomePageInput::OpenPodcast(podcast) => {
+                let key = podcast.title.clone();
+                let podcast_page = PodcastPage::builder().launch(podcast.clone()).forward(
+                    sender.output_sender(),
+                    |msg| match msg {
+                        PodcastPageOutput::StreamEpisode(episode) => {
+                            HomPageOutPut::StreamEpisode(episode)
+                        }
+                        PodcastPageOutput::Subscribe(feed) => HomPageOutPut::Subscribe(feed),
+                    },
+                );
+                let controller = PageController::Podcast(podcast_page);
+                self.active_pages.insert(key.to_string(), controller);
+                sender.input(HomePageInput::PushPage(key.to_string()));
+            }
+            HomePageInput::PushPage(ref page) => {
+                // Use 'ref' to borrow instead of move
+                if let Some(PageController::Podcast(page_ctrl)) = self.active_pages.get(page) {
+                    // .widget() returns an owned GObject pointer, which is cheap to clone
+                    widgets.nav_view.push(page_ctrl.widget());
+                }
+            }
         }
+
+        // self.update(message, sender, root);
     }
 
     fn update_cmd(

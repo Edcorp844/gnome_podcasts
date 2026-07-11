@@ -4,6 +4,7 @@ use relm4::prelude::*;
 
 use crate::util::cover_image::{ImageSize, fetch_cached_image};
 
+#[derive(Debug)]
 pub struct ShowCard {
     show: Show,
     texture: Option<adw::gdk::Texture>,

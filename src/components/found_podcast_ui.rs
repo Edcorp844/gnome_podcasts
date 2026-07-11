@@ -5,6 +5,8 @@ use relm4::prelude::*;
 use std::fs::File;
 
 use crate::util::cover_image::{ImageSize, fetch_cached_image};
+
+#[derive(Debug)]
 pub struct FoundPodcastsCard {
     podcast: FoundPodcast,
     texture: Option<adw::gdk::Texture>,
@@ -13,11 +15,13 @@ pub struct FoundPodcastsCard {
 #[derive(Debug)]
 pub enum FoundCardInput {
     ImageDownloaded(Option<adw::gdk::Texture>),
+    OpenPodcastPage,
     Subscribe,
 }
 
 #[derive(Debug)]
 pub enum FoundCardOutput {
+    OpenPodcastPage(FoundPodcast),
     Subscribe(String),
 }
 
@@ -109,6 +113,7 @@ impl FactoryComponent for FoundPodcastsCard {
             // Horizontal container tracking Rank Index alongside Title/Author info
             gtk::Box {
                 set_orientation: gtk::Orientation::Horizontal,
+                set_halign: gtk::Align::Fill,
                 set_spacing: 8,
                 set_margin_top: 2,
 
@@ -150,7 +155,7 @@ impl FactoryComponent for FoundPodcastsCard {
                 gtk::Button {
                     set_icon_name: "list-add-symbolic",
                     set_tooltip_text: Some("Follow"),
-                    add_css_class: "circular",
+                    set_css_classes: &vec!["circular", "suggestted-action"],
                     set_valign: gtk::Align::Center,
 
                     connect_clicked[sender] => move |_| {
@@ -160,6 +165,12 @@ impl FactoryComponent for FoundPodcastsCard {
 
 
 
+            },
+
+            add_controller = gtk::GestureClick {
+                connect_released[sender] => move |_, _, _, _| {
+                    sender.input(FoundCardInput::OpenPodcastPage);
+                }
             }
         }
     }
@@ -185,6 +196,9 @@ impl FactoryComponent for FoundPodcastsCard {
             }
             FoundCardInput::Subscribe => {
                 let _ = sender.output(FoundCardOutput::Subscribe(self.podcast.feed.clone()));
+            }
+            FoundCardInput::OpenPodcastPage => {
+                let _ = sender.output(FoundCardOutput::OpenPodcastPage(self.podcast.clone()));
             }
         }
     }

@@ -1,6 +1,8 @@
 use relm4::{ComponentController, Controller};
 
-use crate::pages::{home::HomePage, new::NewPage, search::SearchPage, shows::ShowsPage};
+use crate::pages::{
+    home::HomePage, new::NewPage, podcast::PodcastPage, search::SearchPage, shows::ShowsPage,
+};
 
 #[derive(Debug)]
 pub enum NavigationPage {
@@ -9,6 +11,7 @@ pub enum NavigationPage {
     New,
     Shows,
     Library(String),
+    Podcast,
 }
 
 impl NavigationPage {
@@ -18,6 +21,7 @@ impl NavigationPage {
             "Home" => Self::Home,
             "New" => Self::New,
             "Shows" => Self::Shows,
+            "Podcast" => Self::Podcast,
             other => Self::Library(other.to_string()),
         }
     }
@@ -28,16 +32,20 @@ impl NavigationPage {
             Self::Home => "Home".to_string(),
             Self::New => "New".to_string(),
             Self::Shows => "Shows".to_string(),
+            Self::Podcast => "Podcast".to_string(),
             Self::Library(sub) => format!("Library_{}", sub),
         }
     }
 }
+
+#[derive(Debug)]
 
 pub enum PageController {
     Search(Controller<SearchPage>),
     Home(Controller<HomePage>),
     New(Controller<NewPage>),
     Shows(Controller<ShowsPage>),
+    Podcast(Controller<PodcastPage>),
     //Library(Controller<LibraryPage>),
 }
 
@@ -48,6 +56,7 @@ impl PageController {
             Self::Home(c) => c.widget(),
             Self::New(c) => c.widget(),
             Self::Shows(c) => c.widget(),
+            Self::Podcast(c) => c.widget(),
         }
     }
 }

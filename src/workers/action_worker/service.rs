@@ -3,6 +3,7 @@ use std::sync::Arc;
 use gst::glib::object::ObjectExt;
 use gst_play::PlayState;
 use gtk::gio::prelude::FileExt;
+use gst::prelude::*;
 use mpris_player::{Metadata, MprisPlayer, PlaybackStatus};
 use podcasts_data::Episode;
 use podcasts_data::EpisodeModel;
@@ -17,6 +18,9 @@ use podcasts_data::EpisodeId;
 use podcasts_data::dbqueries; // adjust import path/name if yours differs
 
 use crate::action::Action;
+use crate::util::gst_errors::handel_gst_core_error;
+use crate::util::gst_errors::handel_gst_resource_error;
+use crate::util::gst_errors::handel_gst_stream_error;
 use crate::workers::action_worker::service::ActionWorkerInput::Execute;
 
 // -----------------------------------------------------------------------
@@ -55,6 +59,7 @@ pub enum ActionWorkerOutput {
     StateChanged(gst_play::PlayState),
     PositionChanged(u64),
     SetCurrentEpisode(EpisodeId),
+    RefreshAllViews
 }
 
 #[derive(Debug, Clone)]
@@ -104,6 +109,29 @@ impl Worker for ActionWorker {
                 let _ = position_sender.output(ActionWorkerOutput::PositionChanged(pos.mseconds()));
             }
         });
+
+        let error_sender = sender.clone();
+        player_signals.connect_error(move |_player, error, _details| {
+            let raw_error_msg = error.to_string();
+            let error_msg;
+
+            // 1. First try matching strict type variants
+            if let Some(res_err) = error.kind::<gst::ResourceError>() {
+                error_msg = handel_gst_resource_error(res_err);
+            } else if let Some(stream_err) = error.kind::<gst::StreamError>() {
+                error_msg = handel_gst_stream_error(stream_err);
+            } else if let Some(core_err) = error.kind::<gst::CoreError>() {
+                error_msg = handel_gst_core_error(core_err);
+            // 2. Smart String Fallback to clean up unmapped low-level strings
+            } else if raw_error_msg.contains("souphttpsrc") || raw_error_msg.contains("reason error (-5)") {
+                error_msg = "Could not stream the podcast due to a network connection timeout or a bad server response.".to_string();
+            } else {
+                error_msg = "An unexpected playback error occurred.".to_string();
+            }
+
+            let _ = error_sender.output(ActionWorkerOutput::NotifyError(error_msg));
+        });
+
 
         let state_sender = sender.clone();
         player_signals.connect_state_changed(move |_, state| {
@@ -236,6 +264,10 @@ impl ActionWorker {
             // here (DB read/write, network call) before broadcasting.
             // ----------------------------------------------------------
             Action::RefreshEpisode(id) => self.refresh_episode(id, sender.clone()),
+            
+            Action::RefreshAllViews => {
+                 let _ = sender.output(ActionWorkerOutput::RefreshAllViews);
+            }
 
             Action::RefreshWidgetIfSame(id) => {
                 let _ = sender.output(ActionWorkerOutput::Forward(Action::RefreshWidgetIfSame(id)));
@@ -302,8 +334,7 @@ impl ActionWorker {
             // them unchanged so the subscriber runs the exact same widget
             // code your original `do_action` had.
             // ----------------------------------------------------------
-            other @ (Action::RefreshAllViews
-            | Action::RefreshShowsView
+            other @ (Action::RefreshShowsView
             | Action::RefreshEpisodesView
             | Action::ReplaceWidget(_)
             | Action::GoToEpisodeDescription(_, _)

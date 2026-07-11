@@ -4,6 +4,7 @@ use relm4::prelude::*;
 
 use crate::components::podcats_list_item::{PodcastListItem, PodcastListItemOutput};
 
+#[derive(Debug)]
 pub struct PodcastResults {
     // A FactoryVecDeque coordinates your children (PodcastListItem) inside the ListBox
     pub podcasts: FactoryVecDeque<PodcastListItem>,
@@ -19,6 +20,7 @@ pub enum PodcastResultsInput {
 #[derive(Debug)]
 pub enum PodcastResultsOutput {
     Subscribe(String),
+    OpenPodcast(FoundPodcast),
 }
 
 #[relm4::component(pub)]
@@ -41,9 +43,11 @@ impl SimpleComponent for PodcastResults {
                 PodcastListItemOutput::Subscribe(feed_url) => {
                     PodcastResultsOutput::Subscribe(feed_url)
                 }
+                PodcastListItemOutput::OpenPodcastPage(podcast) => {
+                    PodcastResultsOutput::OpenPodcast(podcast)
+                }
             });
 
-        
         let model = Self {
             podcasts,
             loading: false,
@@ -73,7 +77,7 @@ impl SimpleComponent for PodcastResults {
         }
     }
 
-   view! {
+    view! {
         #[name = "content_stack"]
         gtk::Stack {
             // FIX: Watch the loading property and change the active page string identifier automatically

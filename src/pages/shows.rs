@@ -11,6 +11,7 @@ use crate::{
     pages::show::{ShowPage, ShowPageOutput},
 };
 
+#[derive(Debug)]
 pub struct ShowsPage {
     shows: FactoryVecDeque<ShowCard>,
     open_show_pages: Vec<Controller<ShowPage>>,
@@ -105,7 +106,7 @@ impl Component for ShowsPage {
                     any_downloaded: None,
                     completed: None,
                     title_or_description: None,
-                    reverse_order: false,
+                    reverse_order: true,
                 };
                 let data = dbqueries::get_podcasts_filter(&[], &filter);
                 sender.input(ShowsPageInput::ShowsLoaded(data));

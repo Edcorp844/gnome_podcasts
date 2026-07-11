@@ -15,6 +15,7 @@ use crate::{
     },
 };
 
+#[derive(Debug)]
 pub struct ShowPage {
     show: Option<Show>,
     podcast: Option<FoundPodcast>,
@@ -156,25 +157,29 @@ impl Component for ShowPage {
                                         set_use_markup: true,
                                         #[watch]
                                         set_markup: &{
-                                            if let Some(desc) = model.show.as_ref().map(|s| s.description()) {
+                                            let raw_markup = if let Some(show) = model.show.as_ref() {
+                                                let desc = show.description();
                                                 let markup = episode_description_parser::html2pango_markup(desc);
 
-                                                // Check if the generated markup is empty or invalid compared to the original input
-                                                if markup.is_empty() && !desc.is_empty() {
+                                                if !markup.is_empty() {
+                                                    markup
+                                                } else if !desc.is_empty() {
                                                     html2text::config::plain()
                                                         .string_from_read(desc.as_bytes(), desc.len())
                                                         .unwrap_or_else(|_| desc.to_string())
                                                 } else {
-                                                    markup
+                                                    "".to_string()
                                                 }
                                             } else {
                                                 "".to_string()
-                                            }
+                                            };
+
+                                            raw_markup.replace('\n', " ").replace('\r', " ")
                                         },
                                         set_halign: gtk::Align::Start,
                                         set_wrap: true,
                                         set_max_width_chars: 75,
-                                        set_lines: 3,
+                                        set_lines: 6,
                                         set_ellipsize: gtk::pango::EllipsizeMode::End,
                                         set_css_classes: &vec!["dimmed", "body"],
                                     },
@@ -353,12 +358,6 @@ impl Component for ShowPage {
         match message {
             ShowPageInput::GetShow(show_id) => {
                 let show_result = dbqueries::get_podcast_from_id(show_id);
-
-                match &show_result {
-                    Ok(show) => println!("ShowPage: fetched show '{}'", show.title()),
-                    Err(e) => println!("ShowPage: fetch FAILED: {e}"),
-                }
-
                 sender.input(ShowPageInput::ShowGotten(show_result));
             }
             ShowPageInput::ShowGotten(show_result) => match show_result {

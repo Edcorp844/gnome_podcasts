@@ -8,6 +8,7 @@ use relm4::{Component, ComponentParts, ComponentSender, prelude::*};
 
 use crate::components::show_card::ShowCard;
 
+#[derive(Debug)]
 pub struct NewPage {
     shows: FactoryVecDeque<ShowCard>,
     is_loading: bool,

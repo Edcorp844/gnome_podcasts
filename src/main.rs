@@ -1,4 +1,5 @@
 use crate::app::AppModel;
+use gtk::prelude::*; // Required for StyleContext and Display traits
 use relm4::RelmApp;
 use std::sync::LazyLock;
 
@@ -24,5 +25,25 @@ fn main() {
     gst::init().expect("Error initializing gstreamer");
 
     let app = RelmApp::new("org.flame.podcasts");
+
+    let provider = gtk::CssProvider::new();
+
+    let css_data = "
+        @keyframes shimmer-flow {
+            from { background-position: 0% 0%; }
+            to { background-position: 200% 10%; }
+        }
+    ";
+
+    provider.load_from_string(css_data);
+
+    if let Some(display) = gtk::gdk::Display::default() {
+        gtk::style_context_add_provider_for_display(
+            &display,
+            &provider,
+            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        );
+    }
+
     app.run::<AppModel>(());
 }

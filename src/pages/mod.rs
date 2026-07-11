@@ -1,5 +1,6 @@
 pub mod home;
 pub mod new;
-pub mod shows;
-pub mod show;
+pub mod podcast;
 pub mod search;
+pub mod show;
+pub mod shows;

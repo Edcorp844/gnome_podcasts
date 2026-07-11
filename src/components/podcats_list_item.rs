@@ -1,16 +1,13 @@
 use adw::prelude::*;
-use gtk::gio::prelude::FileExt;
 use podcasts_data::discovery::FoundPodcast;
 use relm4::{
     FactorySender, RelmWidgetExt,
     factory::{DynamicIndex, FactoryComponent},
 };
 
-use crate::util::{
-    cover_image::{ImageSize, fetch_cached_image},
-    episode_description_parser,
-};
+use crate::util::cover_image::{ImageSize, fetch_cached_image};
 
+#[derive(Debug)]
 pub struct PodcastListItem {
     podcast: FoundPodcast,
     texture: Option<adw::gdk::Texture>,
@@ -20,11 +17,13 @@ pub struct PodcastListItem {
 pub enum PodcastListItemInput {
     ImageDownloaded(Option<adw::gdk::Texture>),
     Subscribe,
+    OpenPodcastPage,
 }
 
 #[derive(Debug)]
 pub enum PodcastListItemOutput {
     Subscribe(String),
+    OpenPodcastPage(FoundPodcast),
 }
 
 #[derive(Debug)]
@@ -62,6 +61,9 @@ impl FactoryComponent for PodcastListItem {
             PodcastListItemInput::Subscribe => {
                 let _ = sender.output(PodcastListItemOutput::Subscribe(self.podcast.feed.clone()));
             }
+            PodcastListItemInput::OpenPodcastPage => {
+                let _ = sender.output(PodcastListItemOutput::OpenPodcastPage(self.podcast.clone()));
+            }
         }
     }
 
@@ -77,56 +79,58 @@ impl FactoryComponent for PodcastListItem {
         gtk::Box{
             set_orientation: gtk::Orientation::Horizontal,
             set_margin_all: 16,
-            set_halign: gtk::Align::Start,
+            set_valign: gtk::Align::Start,
+            set_halign: gtk::Align::Fill,
+            set_spacing: 12,
 
             gtk::Overlay {
-                                    set_height_request: 150,
-                                    set_width_request: 150,
-                                    set_halign: gtk::Align::Start,
-                                    set_valign: gtk::Align::Start,
+                set_height_request: 150,
+                set_width_request: 150,
+                set_halign: gtk::Align::Start,
+                set_valign: gtk::Align::Start,
 
-                                    #[wrap(Some)]
-                                    set_child = &gtk::Box {
-                                        set_orientation: gtk::Orientation::Vertical,
-                                        set_hexpand: true,
-                                        set_vexpand: true,
-                                        set_halign: gtk::Align::Fill,
-                                        set_valign: gtk::Align::Fill,
+                #[wrap(Some)]
+                set_child = &gtk::Box {
+                    set_orientation: gtk::Orientation::Vertical,
+                    set_hexpand: true,
+                    set_vexpand: true,
+                    set_halign: gtk::Align::Fill,
+                    set_valign: gtk::Align::Fill,
 
-                                        inline_css: "
-                                            background-color: mix(@window_bg_color, @card_fg_color, 0.1);
-                                            border-radius: 16px;
-                                            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
-                                            border: 1px solid alpha(@borders, 0.8);
-                                        ",
+                    inline_css: "
+                        background-color: mix(@window_bg_color, @card_fg_color, 0.1);
+                        border-radius: 16px;
+                        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+                        border: 1px solid alpha(@borders, 0.8);
+                    ",
 
-                                        gtk::Label {
-                                            #[watch]
-                                            set_label: &self.podcast.title.trim().chars().take(2).collect::<String>().to_uppercase(),
-                                            add_css_class: "title-large",
-                                            set_hexpand: true,
-                                            set_vexpand: true,
-                                            set_halign: gtk::Align::Center,
-                                            set_valign: gtk::Align::Center,
-                                            inline_css: "color: @dim_label_opacity; opacity: 0.25; font-weight: 800;",
-                                        }
-                                    },
+                    gtk::Label {
+                        #[watch]
+                        set_label: &self.podcast.title.trim().chars().take(2).collect::<String>().to_uppercase(),
+                        add_css_class: "title-large",
+                        set_hexpand: true,
+                        set_vexpand: true,
+                        set_halign: gtk::Align::Center,
+                        set_valign: gtk::Align::Center,
+                        inline_css: "color: @dim_label_opacity; opacity: 0.25; font-weight: 800;",
+                    }
+                },
 
-                                    add_overlay = &gtk::Picture {
-                                        #[watch]
-                                        set_paintable: self.texture.as_ref().map(|t| t.upcast_ref::<adw::gdk::Paintable>()),
-                                        #[watch]
-                                        set_visible: self.texture.is_some(),
+                add_overlay = &gtk::Picture {
+                    #[watch]
+                    set_paintable: self.texture.as_ref().map(|t| t.upcast_ref::<adw::gdk::Paintable>()),
+                    #[watch]
+                    set_visible: self.texture.is_some(),
 
-                                        set_hexpand: true,
-                                        set_vexpand: true,
-                                        set_halign: gtk::Align::Fill,
-                                        set_valign: gtk::Align::Fill,
-                                        set_content_fit: gtk::ContentFit::Cover,
-                                        set_can_shrink: true,
-                                        inline_css: "border-radius: 16px; overflow: hidden;",
-                                    }
-                                },
+                    set_hexpand: true,
+                    set_vexpand: true,
+                    set_halign: gtk::Align::Fill,
+                    set_valign: gtk::Align::Fill,
+                    set_content_fit: gtk::ContentFit::Cover,
+                    set_can_shrink: true,
+                    inline_css: "border-radius: 16px; overflow: hidden;",
+                }
+            },
 
             gtk::Box{
                 set_orientation: gtk::Orientation::Vertical,
@@ -135,12 +139,18 @@ impl FactoryComponent for PodcastListItem {
                 set_valign: gtk::Align::Start,
                 set_margin_start: 16,
 
-
-
                 gtk::Label{
                     set_label:  &self.podcast.title,
                     add_css_class: "title-4",
                     set_halign: gtk::Align::Start,
+                    set_xalign: 0.0,
+                    set_wrap: true
+                },
+
+                gtk::Label{
+                    set_label:  &self.podcast.author,
+                    set_halign: gtk::Align::Start,
+                    set_xalign: 0.0,
                     set_wrap: true
                 },
 
@@ -148,20 +158,18 @@ impl FactoryComponent for PodcastListItem {
                 gtk::Label {
                     #[watch]
                     set_use_markup: true,
-                   #[watch]
-                 set_markup: &{
-
+                    #[watch]
+                    set_markup: &{
                         let desc = &self.podcast.description;
-                            //let markup = episode_description_parser::html2pango_markup(&desc);
-
-                           let  raw_markup= html2text::config::plain()
-                                    .string_from_read(desc.as_bytes(), desc.len())
-                                    .unwrap_or_else(|_| desc.to_string());
-                             raw_markup.replace('\n', " ").replace('\r', " ")
+                        let  raw_markup= html2text::config::plain()
+                            .string_from_read(desc.as_bytes(), desc.len())
+                            .unwrap_or_else(|_| desc.to_string());
+                        raw_markup.replace('\n', " ").replace('\r', " ")
                     },
                     set_halign: gtk::Align::Start,
+                    set_xalign: 0.0,
                     set_wrap: true,
-                    set_lines: 3,
+                    set_lines: 2,
                     set_ellipsize: gtk::pango::EllipsizeMode::End,
                     set_css_classes: &vec!["dimmed", "body"]
                 },
@@ -169,13 +177,13 @@ impl FactoryComponent for PodcastListItem {
                 gtk::Label{
                     set_label:   &match &self.podcast.last_publication {
                         Some(date) => {
-                            // Using standard strftime syntax: e.g., "Published: 2026-07-09"
-                            format!("Published: {}", date.format("%Y-%m-%d"))
+                            format!("Updated: {}", date.format("%-d %B %Y"))
                         }
-                        None => "No publication date available".to_string(),
+                        None => "".to_string(),
                     },
 
                     add_css_class: "caption",
+                    set_xalign: 0.0,
                     set_halign: gtk::Align::Start,
                     set_wrap: true
                 },
@@ -183,6 +191,28 @@ impl FactoryComponent for PodcastListItem {
                 gtk::Separator{
                     set_vexpand: true,
                     add_css_class:"spacer",
+                }
+            },
+
+            gtk::Separator{
+                set_hexpand: true,
+                add_css_class:"spacer"
+            },
+
+            gtk::Button {
+                set_icon_name: "list-add-symbolic",
+                set_tooltip_text: Some("Follow"),
+                set_css_classes: &vec!["circular", "suggested-action"],
+                set_valign: gtk::Align::Center,
+
+                connect_clicked[sender] => move |_| {
+                    sender.input(PodcastListItemInput::Subscribe);
+                }
+            },
+
+            add_controller = gtk::GestureClick {
+                connect_released[sender] => move |_, _, _, _| {
+                    sender.input(PodcastListItemInput::OpenPodcastPage);
                 }
             }
         }
