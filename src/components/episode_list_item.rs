@@ -1,12 +1,14 @@
 use adw::prelude::*;
-use gtk::gio::prelude::FileExt;
 use podcasts_data::{Episode, EpisodeId};
 use relm4::{
     FactorySender, RelmWidgetExt,
     factory::{DynamicIndex, FactoryComponent},
 };
 
-use crate::util::{cover_image::{ImageSize, fetch_cached_image}, episode_description_parser};
+use crate::util::{
+    cover_image::{ImageSize, fetch_cached_image},
+    episode_description_parser,
+};
 
 #[derive(Debug)]
 pub struct EpisodeListItem {
@@ -18,11 +20,20 @@ pub struct EpisodeListItem {
 pub enum EpisodeListItemInput {
     ImageDownloaded(Option<adw::gdk::Texture>),
     StreamEpisode,
+    DownloadStarted,
+    DownloadProgress(f64),
+    CancleDownload,
+    DownloadCancled,
+    RequestDownload,
+    DownloadFinished,
 }
 
 #[derive(Debug)]
 pub enum EpisodeListItemOutput {
     StreamEpisode(EpisodeId),
+    RequestDownload(EpisodeId),
+    CancleDownload(EpisodeId),
+    NotifyError(String),
 }
 
 #[derive(Debug)]
@@ -63,9 +74,18 @@ impl FactoryComponent for EpisodeListItem {
                 self.texture = fetched_texture;
             }
             EpisodeListItemInput::StreamEpisode => {
-                println!("Launched: {:?}", self.episode.id());
                 let _ = sender.output(EpisodeListItemOutput::StreamEpisode(self.episode.id()));
             }
+            EpisodeListItemInput::CancleDownload => {
+                 let _ = sender.output(EpisodeListItemOutput::CancleDownload(self.episode.id()));
+            },
+            EpisodeListItemInput::DownloadCancled => todo!(),
+            EpisodeListItemInput::RequestDownload => {
+                 let _ = sender.output(EpisodeListItemOutput::RequestDownload(self.episode.id()));
+            },
+            EpisodeListItemInput::DownloadStarted => todo!(),
+            EpisodeListItemInput::DownloadProgress(fraction) => todo!(),
+            EpisodeListItemInput::DownloadFinished => todo!(),
         }
     }
 
@@ -84,53 +104,53 @@ impl FactoryComponent for EpisodeListItem {
             set_halign: gtk::Align::Start,
 
             gtk::Overlay {
-                                    set_height_request: 150,
-                                    set_width_request: 150,
-                                    set_halign: gtk::Align::Start,
-                                    set_valign: gtk::Align::Start,
+                set_height_request: 150,
+                set_width_request: 150,
+                set_halign: gtk::Align::Start,
+                set_valign: gtk::Align::Start,
 
-                                    #[wrap(Some)]
-                                    set_child = &gtk::Box {
-                                        set_orientation: gtk::Orientation::Vertical,
-                                        set_hexpand: true,
-                                        set_vexpand: true,
-                                        set_halign: gtk::Align::Fill,
-                                        set_valign: gtk::Align::Fill,
+                #[wrap(Some)]
+                set_child = &gtk::Box {
+                    set_orientation: gtk::Orientation::Vertical,
+                    set_hexpand: true,
+                    set_vexpand: true,
+                    set_halign: gtk::Align::Fill,
+                    set_valign: gtk::Align::Fill,
 
-                                        inline_css: "
-                                            background-color: mix(@window_bg_color, @card_fg_color, 0.1);
-                                            border-radius: 16px;
-                                            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
-                                            border: 1px solid alpha(@borders, 0.8);
-                                        ",
+                    inline_css: "
+                        background-color: mix(@window_bg_color, @card_fg_color, 0.1);
+                        border-radius: 16px;
+                        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+                        border: 1px solid alpha(@borders, 0.8);
+                    ",
 
-                                        gtk::Label {
-                                            #[watch]
-                                            set_label: &self.episode.title().trim().chars().take(2).collect::<String>().to_uppercase(),
-                                            add_css_class: "title-large",
-                                            set_hexpand: true,
-                                            set_vexpand: true,
-                                            set_halign: gtk::Align::Center,
-                                            set_valign: gtk::Align::Center,
-                                            inline_css: "color: @dim_label_opacity; opacity: 0.25; font-weight: 800;",
-                                        }
-                                    },
+                    gtk::Label {
+                        #[watch]
+                        set_label: &self.episode.title().trim().chars().take(2).collect::<String>().to_uppercase(),
+                        add_css_class: "title-large",
+                        set_hexpand: true,
+                        set_vexpand: true,
+                        set_halign: gtk::Align::Center,
+                        set_valign: gtk::Align::Center,
+                        inline_css: "color: @dim_label_opacity; opacity: 0.25; font-weight: 800;",
+                    }
+                },
 
-                                    add_overlay = &gtk::Picture {
-                                        #[watch]
-                                        set_paintable: self.texture.as_ref().map(|t| t.upcast_ref::<adw::gdk::Paintable>()),
-                                        #[watch]
-                                        set_visible: self.texture.is_some(),
+                add_overlay = &gtk::Picture {
+                    #[watch]
+                    set_paintable: self.texture.as_ref().map(|t| t.upcast_ref::<adw::gdk::Paintable>()),
+                    #[watch]
+                    set_visible: self.texture.is_some(),
 
-                                        set_hexpand: true,
-                                        set_vexpand: true,
-                                        set_halign: gtk::Align::Fill,
-                                        set_valign: gtk::Align::Fill,
-                                        set_content_fit: gtk::ContentFit::Cover,
-                                        set_can_shrink: true,
-                                        inline_css: "border-radius: 16px; overflow: hidden;",
-                                    }
-                                },
+                    set_hexpand: true,
+                    set_vexpand: true,
+                    set_halign: gtk::Align::Fill,
+                    set_valign: gtk::Align::Fill,
+                    set_content_fit: gtk::ContentFit::Cover,
+                    set_can_shrink: true,
+                    inline_css: "border-radius: 16px; overflow: hidden;",
+                }
+            },
 
             gtk::Box{
                 set_orientation: gtk::Orientation::Vertical,
@@ -211,7 +231,18 @@ impl FactoryComponent for EpisodeListItem {
                         sender.input(EpisodeListItemInput::StreamEpisode);
                     }
                 }
-            }
+            },
+
+            gtk::Button{
+                    set_label: "Download",
+                    set_css_classes: &vec!["pill"],
+                    set_halign: gtk::Align::Start,
+                    set_valign: gtk::Align::Start,
+
+                    connect_clicked[sender] => move |_| {
+                        sender.input(EpisodeListItemInput::RequestDownload);
+                    }
+                }
         }
     }
 }

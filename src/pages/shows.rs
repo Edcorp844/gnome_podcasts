@@ -30,6 +30,8 @@ pub enum ShowsPageInput {
 pub enum ShowsPageOutput {
     StreamEpisode(EpisodeId),
     NotifyError(String),
+    RequestDownload(EpisodeId),
+    CancleDownload(EpisodeId),
 }
 
 #[derive(Debug)]
@@ -137,6 +139,12 @@ impl Component for ShowsPage {
                                 ShowsPageOutput::NotifyError(error)
                             }
                             ShowPageOutput::StreamEpisode(id) => ShowsPageOutput::StreamEpisode(id),
+                            ShowPageOutput::RequestDownload(episode_id) => {
+                                ShowsPageOutput::RequestDownload(episode_id)
+                            }
+                            ShowPageOutput::CancleDownload(episode_id) => {
+                                ShowsPageOutput::CancleDownload(episode_id)
+                            }
                         });
 
                 widgets.nav_view.push(show_page.widget());

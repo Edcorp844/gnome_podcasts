@@ -63,6 +63,12 @@ pub enum AppModelInput {
     Subscribe(String),
     ChangePlayBackState(PlayState),
     SetCurrentEpisode(EpisodeId),
+    RequestDownload(EpisodeId),
+    CancleDownload(EpisodeId),
+    DownloadStarted(EpisodeId),
+    DownloadCancled(EpisodeId),
+    DownloadProgress(EpisodeId, f64),
+    DownloadFinished(EpisodeId),
     None,
 }
 
@@ -357,6 +363,15 @@ impl Component for AppModel {
                                     SearchPageOutput::StreamEpisode(episode) => {
                                         AppModelInput::StreamEpisode(episode)
                                     }
+                                    SearchPageOutput::NotifyError(error) => {
+                                        AppModelInput::NotifyError(error)
+                                    }
+                                    SearchPageOutput::RequestDownload(episode_id) => {
+                                        AppModelInput::RequestDownload(episode_id)
+                                    }
+                                    SearchPageOutput::CancleDownload(episode_id) => {
+                                        AppModelInput::CancleDownload(episode_id)
+                                    }
                                 },
                             );
                             PageController::Search(page_instance)
@@ -373,11 +388,17 @@ impl Component for AppModel {
                             let page_instance = ShowsPage::builder().launch(()).forward(
                                 sender.input_sender(),
                                 |msg| match msg {
-                                    ShowsPageOutput::NotifyError(err) => {
-                                        AppModelInput::NotifyError(err)
+                                    ShowsPageOutput::NotifyError(error) => {
+                                        AppModelInput::NotifyError(error)
                                     }
                                     ShowsPageOutput::StreamEpisode(id) => {
                                         AppModelInput::StreamEpisode(id)
+                                    }
+                                    ShowsPageOutput::RequestDownload(episode_id) => {
+                                        AppModelInput::RequestDownload(episode_id)
+                                    }
+                                    ShowsPageOutput::CancleDownload(episode_id) => {
+                                        AppModelInput::CancleDownload(episode_id)
                                     }
                                 },
                             );
@@ -438,6 +459,26 @@ impl Component for AppModel {
             }
 
             AppModelInput::None => {}
+            AppModelInput::RequestDownload(episode_id) => {
+                self.worker_controller
+                    .emit(ActionWorkerInput::DownloadEpisode(episode_id));
+            }
+            AppModelInput::CancleDownload(episode_id) => {
+                self.worker_controller
+                    .emit(ActionWorkerInput::CancelDownload(episode_id));
+            }
+            AppModelInput::DownloadStarted(episode_id) =>{
+                println!("Download of {:?} started", episode_id);
+            },
+            AppModelInput::DownloadCancled(episode_id) => {
+                println!("Download of {:?} Cancled", episode_id);
+            },
+            AppModelInput::DownloadProgress(episode_id, fraction) => {
+                println!("Download of {:?} Progress {}", episode_id, fraction);
+            },
+            AppModelInput::DownloadFinished(episode_id) => {
+                println!("Download of {:?} Finished", episode_id);
+            },
         }
 
         self.update_view(widgets, sender);

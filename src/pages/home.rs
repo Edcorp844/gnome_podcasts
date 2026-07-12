@@ -35,6 +35,9 @@ pub enum HomPageOutPut {
     ToggleSideBar,
     Subscribe(String),
     StreamEpisode(EpisodeId),
+    NotifyError(String),
+    RequestDownload(EpisodeId),
+    CancleDownload(EpisodeId),
 }
 
 #[relm4::component(pub)]
@@ -176,8 +179,8 @@ impl Component for HomePage {
                 }
             }
 
-            HomePageInput::Subscribe(feed)=>{
-                let _= sender.output(HomPageOutPut::Subscribe(feed));
+            HomePageInput::Subscribe(feed) => {
+                let _ = sender.output(HomPageOutPut::Subscribe(feed));
             }
             // Captures background thread work payload safely
             HomePageInput::PodcastsLoaded(podcasts) => {
@@ -204,6 +207,13 @@ impl Component for HomePage {
                             HomPageOutPut::StreamEpisode(episode)
                         }
                         PodcastPageOutput::Subscribe(feed) => HomPageOutPut::Subscribe(feed),
+                        PodcastPageOutput::NotifyError(error) => HomPageOutPut::NotifyError(error),
+                        PodcastPageOutput::RequestDownload(episode_id) => {
+                            HomPageOutPut::RequestDownload(episode_id)
+                        }
+                        PodcastPageOutput::CancleDownload(episode_id) => {
+                            HomPageOutPut::CancleDownload(episode_id)
+                        }
                     },
                 );
                 let controller = PageController::Podcast(podcast_page);

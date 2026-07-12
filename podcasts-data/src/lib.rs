@@ -78,7 +78,7 @@ pub mod xdg_dirs {
     use std::sync::LazyLock;
 
     pub(crate) static PODCASTS_XDG: LazyLock<xdg::BaseDirectories> =
-        LazyLock::new(|| xdg::BaseDirectories::with_prefix("gnome-podcasts"));
+        LazyLock::new(|| xdg::BaseDirectories::with_prefix("flame-podcasts"));
 
     /// XDG_DATA Directory `Pathbuf`.
     pub static PODCASTS_DATA: LazyLock<PathBuf> = LazyLock::new(|| {

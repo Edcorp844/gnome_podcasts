@@ -1,14 +1,16 @@
+use std::collections::HashMap;
+
 use adw::prelude::*;
 use podcasts_data::{
-    Episode, EpisodeId, Show, ShowId,
-    dbqueries::{self, EpisodeFilter},
+    EpisodeId, Show, ShowId,
+    dbqueries::{self},
     discovery::FoundPodcast,
     errors::DataError,
 };
 use relm4::{Component, ComponentParts, ComponentSender, prelude::*};
 
 use crate::{
-    components::episode_list_item::{EpisodeListItem, EpisodeListItemOutput},
+    components::episode_list_item::{EpisodeListItem, EpisodeListItemInput, EpisodeListItemOutput},
     util::{
         cover_image::{ImageSize, fetch_cached_image},
         episode_description_parser,
@@ -20,6 +22,7 @@ pub struct ShowPage {
     show: Option<Show>,
     podcast: Option<FoundPodcast>,
     episodes: FactoryVecDeque<EpisodeListItem>,
+    index_by_id: HashMap<EpisodeId, relm4::factory::DynamicIndex>,
     episode_count: usize,
     show_image_texture: Option<adw::gdk::Texture>,
     load_error: Option<String>,
@@ -31,12 +34,19 @@ pub enum ShowPageInput {
     ShowGotten(Result<Show, DataError>),
     ImageDownloaded(Option<adw::gdk::Texture>),
     StreamEpisode(EpisodeId),
+    DownloadStarted(EpisodeId),
+    DownloadCancled(EpisodeId),
+    RequestDownload(EpisodeId),
+    DownloadProgress(EpisodeId, f64),
+    DownloadFinished(EpisodeId),
 }
 
 #[derive(Debug)]
 pub enum ShowPageOutput {
     StreamEpisode(EpisodeId),
     NotifyError(String),
+    RequestDownload(EpisodeId),
+    CancleDownload(EpisodeId),
 }
 
 #[derive(Debug)]
@@ -334,11 +344,19 @@ impl Component for ShowPage {
         let episodes_parent = gtk::ListBox::builder().build();
         let model = Self {
             episodes: FactoryVecDeque::builder().launch(episodes_parent).forward(
-                sender.input_sender(),
+                sender.output_sender(),
                 |msg| match msg {
-                    EpisodeListItemOutput::StreamEpisode(id) => ShowPageInput::StreamEpisode(id),
+                    EpisodeListItemOutput::StreamEpisode(id) => ShowPageOutput::StreamEpisode(id),
+                    EpisodeListItemOutput::RequestDownload(episode_id) => {
+                        ShowPageOutput::RequestDownload(episode_id)
+                    }
+                    EpisodeListItemOutput::CancleDownload(episode_id) => {
+                        ShowPageOutput::CancleDownload(episode_id)
+                    }
+                    EpisodeListItemOutput::NotifyError(error) => ShowPageOutput::NotifyError(error),
                 },
             ),
+            index_by_id: HashMap::new(),
             episode_count: 0,
             podcast: None,
             show: None,
@@ -387,7 +405,9 @@ impl Component for ShowPage {
                                 guard.clear();
 
                                 for episode in episodes.iter().take(10) {
-                                    guard.push_back(episode.clone());
+                                    let index = guard.push_back(episode.clone());
+
+                                    self.index_by_id.insert(episode.id(), index);
                                 }
                                 self.episode_count = episodes.len();
                             }
@@ -412,6 +432,37 @@ impl Component for ShowPage {
             }
             ShowPageInput::StreamEpisode(id) => {
                 let _ = sender.output(ShowPageOutput::StreamEpisode(id));
+            }
+            ShowPageInput::DownloadStarted(episode_id) => {
+                if let Some(index) = self.index_by_id.get(&episode_id) {
+                    self.episodes
+                        .send(index.current_index(), EpisodeListItemInput::DownloadStarted);
+                }
+            }
+            ShowPageInput::RequestDownload(episode_id) => {
+                let _ = sender.output(ShowPageOutput::RequestDownload(episode_id));
+            }
+            ShowPageInput::DownloadProgress(episode_id, fraction) => {
+                if let Some(index) = self.index_by_id.get(&episode_id) {
+                    self.episodes.send(
+                        index.current_index(),
+                        EpisodeListItemInput::DownloadProgress(fraction),
+                    );
+                }
+            }
+            ShowPageInput::DownloadCancled(episode_id) => {
+                if let Some(index) = self.index_by_id.get(&episode_id) {
+                    self.episodes
+                        .send(index.current_index(), EpisodeListItemInput::DownloadCancled);
+                }
+            }
+            ShowPageInput::DownloadFinished(episode_id) => {
+                if let Some(index) = self.index_by_id.get(&episode_id) {
+                    self.episodes.send(
+                        index.current_index(),
+                        EpisodeListItemInput::DownloadFinished,
+                    );
+                }
             }
         }
     }

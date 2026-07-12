@@ -3,14 +3,17 @@ use std::collections::HashMap;
 use adw::prelude::*;
 
 use podcasts_data::{
-    EpisodeId, dbqueries, discovery::{ALL_PLATFORM_IDS, FoundPodcast, SearchError, search},
+    EpisodeId, dbqueries,
+    discovery::{ALL_PLATFORM_IDS, FoundPodcast, SearchError, search},
 };
 use relm4::{Component, ComponentParts, ComponentSender, prelude::*};
 
 use crate::{
-    app_navigation_ext::{NavigationPage, PageController}, components::podcast_search_results::{
+    app_navigation_ext::PageController,
+    components::podcast_search_results::{
         PodcastResults, PodcastResultsInput, PodcastResultsOutput,
-    }, pages::podcast::{PodcastPage, PodcastPageOutput},
+    },
+    pages::podcast::{PodcastPage, PodcastPageOutput},
 };
 
 // 1. Define the possible pages you want to visit across your app
@@ -50,8 +53,11 @@ pub enum SearchPageInput {
 #[derive(Debug)]
 pub enum SearchPageOutput {
     UpdateISSearching(bool),
+    StreamEpisode(EpisodeId),
+    NotifyError(String),
+    RequestDownload(EpisodeId),
+    CancleDownload(EpisodeId),
     Subscribe(String),
-    StreamEpisode(EpisodeId)
 }
 
 #[derive(Debug)]
@@ -99,7 +105,7 @@ impl Component for SearchPage {
         sender: ComponentSender<Self>,
         root: &Self::Root,
     ) {
-       match &message {
+        match &message {
             SearchPageInput::Subscribe(feed) => {
                 let _ = sender.output(SearchPageOutput::Subscribe(feed.clone()));
             }
@@ -135,10 +141,22 @@ impl Component for SearchPage {
             SearchPageInput::UpdateQuery(_text) => {}
             SearchPageInput::OpenPodcast(podcast) => {
                 let key = podcast.title.clone();
-                let podcast_page = PodcastPage::builder().launch(podcast.clone()).forward(sender.output_sender(), |msg| match msg {
-                    PodcastPageOutput::StreamEpisode(episode)=>SearchPageOutput::StreamEpisode(episode),
-                    PodcastPageOutput::Subscribe(feed)=>SearchPageOutput::Subscribe(feed)
-                });
+                let podcast_page = PodcastPage::builder().launch(podcast.clone()).forward(
+                    sender.output_sender(),
+                    |msg| match msg {
+                        PodcastPageOutput::StreamEpisode(episode) => {
+                            SearchPageOutput::StreamEpisode(episode)
+                        }
+                        PodcastPageOutput::Subscribe(feed) => SearchPageOutput::Subscribe(feed),
+                        PodcastPageOutput::NotifyError(_) => todo!(),
+                        PodcastPageOutput::RequestDownload(episode_id) => {
+                            SearchPageOutput::RequestDownload(episode_id)
+                        }
+                        PodcastPageOutput::CancleDownload(episode_id) => {
+                            SearchPageOutput::CancleDownload(episode_id)
+                        }
+                    },
+                );
                 let controller = PageController::Podcast(podcast_page);
                 self.active_pages.insert(key.to_string(), controller);
                 sender.input(SearchPageInput::PushPage(key.to_string()));

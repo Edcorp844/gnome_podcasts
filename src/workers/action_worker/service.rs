@@ -46,6 +46,9 @@ pub enum ActionWorkerInput {
     SyncFinished,
     TogglePlayBack,
     StateChanged(gst_play::PlayState),
+    DownloadEpisode(EpisodeId),
+    CancelDownload(EpisodeId),
+
 }
 
 #[derive(Debug, Clone)]
@@ -59,7 +62,14 @@ pub enum ActionWorkerOutput {
     StateChanged(gst_play::PlayState),
     PositionChanged(u64),
     SetCurrentEpisode(EpisodeId),
-    RefreshAllViews
+    RefreshAllViews,
+    DownloadStarted(EpisodeId),
+    DownloadProgress { id: EpisodeId, fraction: f64 },
+    DownloadFinished(EpisodeId),
+    DownloadCancelled(EpisodeId),
+    ErrorNotification(String),
+    RefreshEpisode(EpisodeId),
+
 }
 
 #[derive(Debug, Clone)]
@@ -237,6 +247,15 @@ impl Worker for ActionWorker {
                     Self::subscribe(sender, feed).await;
                 });
             }
+           ActionWorkerInput::DownloadEpisode(episode) => {
+                relm4::spawn(async move {
+                    ActionWorker::download_podcast_episode(sender, episode).await;
+                });
+            }
+            ActionWorkerInput::CancelDownload(id) => {
+                Self::cancel_download(id, &sender);
+            }
+
             ActionWorkerInput::StateChanged(state) => {
                 self.current_player_state = state;
 

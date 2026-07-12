@@ -32,7 +32,6 @@ pub enum PodcastPageInput {
     GetEpisodes,
     Show(Show),
     Episoded(Vec<Episode>),
-    StreamEpisode(EpisodeId),
     StreamLatestEpisode,
     Subscribe,
     SetSubscriptionStatus(bool),
@@ -41,6 +40,9 @@ pub enum PodcastPageInput {
 #[derive(Debug)]
 pub enum PodcastPageOutput {
     StreamEpisode(EpisodeId),
+    NotifyError(String),
+    RequestDownload(EpisodeId),
+    CancleDownload(EpisodeId),
     Subscribe(String),
 }
 
@@ -64,9 +66,20 @@ impl Component for PodcastPage {
         let episodes_parent = gtk::ListBox::builder().build();
         let model = PodcastPage {
             episodes: FactoryVecDeque::builder().launch(episodes_parent).forward(
-                sender.input_sender(),
+                sender.output_sender(),
                 |msg| match msg {
-                    EpisodeListItemOutput::StreamEpisode(id) => PodcastPageInput::StreamEpisode(id),
+                    EpisodeListItemOutput::StreamEpisode(id) => {
+                        PodcastPageOutput::StreamEpisode(id)
+                    }
+                    EpisodeListItemOutput::RequestDownload(episode_id) => {
+                        PodcastPageOutput::RequestDownload(episode_id)
+                    }
+                    EpisodeListItemOutput::CancleDownload(episode_id) => {
+                        PodcastPageOutput::CancleDownload(episode_id)
+                    }
+                    EpisodeListItemOutput::NotifyError(error) => {
+                        PodcastPageOutput::NotifyError(error)
+                    }
                 },
             ),
             podcast,
@@ -112,7 +125,7 @@ impl Component for PodcastPage {
             PodcastPageInput::SetSubscriptionStatus(status) => {
                 self.subscribed = Some(status);
             }
-            PodcastPageInput::SetLoadingEpisodes(state)=> {
+            PodcastPageInput::SetLoadingEpisodes(state) => {
                 println!("loadind episodes: {state}");
             }
             PodcastPageInput::Show(show) => {
@@ -133,9 +146,6 @@ impl Component for PodcastPage {
                     guard.push_back(episode.clone());
                 }
                 self.episode_count = episodes.len();
-            }
-            PodcastPageInput::StreamEpisode(episode) => {
-                let _ = sender.output(PodcastPageOutput::StreamEpisode(episode));
             }
             PodcastPageInput::Subscribe => {
                 let _ = sender.output(PodcastPageOutput::Subscribe(self.podcast.feed.clone()));
@@ -442,11 +452,11 @@ impl Component for PodcastPage {
                                     set_halign: gtk::Align::Fill,
                                     set_valign: gtk::Align::Start,
                                     set_spacing: 24,
-                                 
+
                                     gtk::Box{
                                         set_orientation: gtk::Orientation::Vertical,
                                         set_spacing: 16,
-                                                               
+
                                         gtk::Label {
                                             set_label: "Author",
                                             set_css_classes: &vec!["dimmed", "heading"],
@@ -462,13 +472,13 @@ impl Component for PodcastPage {
                                             set_wrap: true
                                         },
                                     },
-                                
+
                                     gtk::Separator { set_hexpand: true, add_css_class: "spacer" },
 
                                     gtk::Box{
                                         set_orientation: gtk::Orientation::Vertical,
                                         set_spacing: 16,
-                                                               
+
                                         gtk::Label {
                                             set_label: "Last Updated",
                                             set_css_classes: &vec!["dimmed", "heading"],
@@ -496,7 +506,7 @@ impl Component for PodcastPage {
                                     gtk::Box{
                                         set_orientation: gtk::Orientation::Vertical,
                                         set_spacing: 16,
-                                                               
+
                                         gtk::Label {
                                             set_label: "Episodes",
                                             set_css_classes: &vec!["dimmed", "heading"],
