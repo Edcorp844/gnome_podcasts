@@ -1,7 +1,9 @@
+use std::path::Path;
 use std::sync::Arc;
 
 use gst::glib::object::ObjectExt;
 use gst_play::PlayState;
+use gtk::gio::File;
 use gtk::gio::prelude::FileExt;
 use gst::prelude::*;
 use mpris_player::{Metadata, MprisPlayer, PlaybackStatus};
@@ -59,7 +61,7 @@ pub enum ActionWorkerOutput {
     UriReady(String),
     NotifyError(String),
     SyncFinished,
-    StateChanged(gst_play::PlayState),
+    StateChanged(gst_play::PlayState, EpisodeId),
     PositionChanged(u64),
     SetCurrentEpisode(EpisodeId),
     RefreshAllViews,
@@ -259,9 +261,12 @@ impl Worker for ActionWorker {
             ActionWorkerInput::StateChanged(state) => {
                 self.current_player_state = state;
 
-              let _ = self.mpris_tx.send_blocking(MprisCommand::ChangePlaybackState(state));
-                let _ = sender.output(ActionWorkerOutput::StateChanged(state));
+                let _ = self.mpris_tx.send_blocking(MprisCommand::ChangePlaybackState(state));
+                if let Some(id) = self.current_episode {
+                    let _ = sender.output(ActionWorkerOutput::StateChanged(state, id));
+                }
             }
+            
             ActionWorkerInput::TogglePlayBack => match self.current_player_state {
                 gst_play::PlayState::Stopped | gst_play::PlayState::Paused => {
                     self.player.play();
@@ -301,14 +306,28 @@ impl ActionWorker {
             Action::FeedRefreshed(id) => {
                 let _ = sender.output(ActionWorkerOutput::Forward(Action::FeedRefreshed(id)));
             }
-            Action::StreamEpisode(id) => {
-                self.current_episode = Some(id);
 
-                if let Some(id) = self.current_episode {
+            Action::TogglePlay(id) => {
+                if self.current_episode == Some(id) {
+                    sender.input(ActionWorkerInput::TogglePlayBack);
+                } else {
+                    self.current_episode = Some(id);
+
                     let _ = sender.output(ActionWorkerOutput::SetCurrentEpisode(id));
                     match dbqueries::get_episode_from_id(id) {
                         Ok(episode) => {
-                            if let Some(stream_url) = episode.uri() {
+                            let uri = if let Some(path) = episode.local_uri() {
+                                if Path::new(path).exists() {
+                                    let file_uri = File::for_path(path).uri();
+                                    Some(file_uri.to_string())
+                                } else {
+                                    None
+                                }      
+                            } else { 
+                                episode.uri().map(|u| u.to_string())
+                            };
+
+                            if let Some(stream_url) = uri {
                                 self.player.set_uri(Some(&stream_url));
                                 self.player.play();
                             }
@@ -316,9 +335,7 @@ impl ActionWorker {
                             let title = episode.title().to_string();
                             let mut show_title = "Unknown Podcast".to_string();
 
-                            if let Ok(show) =
-                                dbqueries::get_podcast_cover_from_id(episode.show_id())
-                            {
+                            if let Ok(show) = dbqueries::get_podcast_cover_from_id(episode.show_id()) {
                                 show_title = show.title().to_string();
                             }
 
@@ -332,11 +349,10 @@ impl ActionWorker {
                             });
                         }
                         Err(error) => {
-                            let _ =
-                                sender.output(ActionWorkerOutput::NotifyError(error.to_string()));
+                            let _ = sender.output(ActionWorkerOutput::NotifyError(error.to_string()));
                         }
                     };
-                };
+                }
             }
             Action::Pause => {
                 self.player.pause();

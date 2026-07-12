@@ -1,8 +1,6 @@
 use adw::prelude::*;
-use log::{error, info};
-use podcasts_data::{FEED_MANAGER, Source, dbqueries, discovery::FoundPodcast};
+use podcasts_data::discovery::FoundPodcast;
 use relm4::prelude::*;
-use std::fs::File;
 
 use crate::util::cover_image::{ImageSize, fetch_cached_image};
 

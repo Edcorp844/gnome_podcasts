@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use gst_play::PlayState;
 use podcasts_data::discovery::{ALL_PLATFORM_IDS, FoundPodcast, SearchError, search};
 use podcasts_data::{EpisodeId, dbqueries};
 use relm4::adw::prelude::*;
@@ -28,13 +29,18 @@ pub enum HomePageInput {
     Subscribe(String),
     PushPage(String),
     OpenPodcast(FoundPodcast),
+    DownloadStarted(EpisodeId),
+    DownloadCancled(EpisodeId),
+    DownloadProgress(EpisodeId, f64),
+    DownloadFinished(EpisodeId),
+    ChangePlayBackState(PlayState, EpisodeId),
 }
 
 #[derive(Debug)]
 pub enum HomPageOutPut {
     ToggleSideBar,
     Subscribe(String),
-    StreamEpisode(EpisodeId),
+    TogglePlay(EpisodeId),
     NotifyError(String),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
@@ -154,7 +160,7 @@ impl Component for HomePage {
     fn update_with_view(
         &mut self,
         widgets: &mut Self::Widgets,
-        message: Self::Input, // Keeps original ownership here
+        message: Self::Input,
         sender: ComponentSender<Self>,
         root: &Self::Root,
     ) {
@@ -203,8 +209,8 @@ impl Component for HomePage {
                 let podcast_page = PodcastPage::builder().launch(podcast.clone()).forward(
                     sender.output_sender(),
                     |msg| match msg {
-                        PodcastPageOutput::StreamEpisode(episode) => {
-                            HomPageOutPut::StreamEpisode(episode)
+                        PodcastPageOutput::TogglePlay(episode) => {
+                            HomPageOutPut::TogglePlay(episode)
                         }
                         PodcastPageOutput::Subscribe(feed) => HomPageOutPut::Subscribe(feed),
                         PodcastPageOutput::NotifyError(error) => HomPageOutPut::NotifyError(error),
@@ -221,12 +227,21 @@ impl Component for HomePage {
                 sender.input(HomePageInput::PushPage(key.to_string()));
             }
             HomePageInput::PushPage(ref page) => {
-                // Use 'ref' to borrow instead of move
                 if let Some(PageController::Podcast(page_ctrl)) = self.active_pages.get(page) {
-                    // .widget() returns an owned GObject pointer, which is cheap to clone
                     widgets.nav_view.push(page_ctrl.widget());
                 }
             }
+            HomePageInput::DownloadStarted(episode_id) => for (key, page) in &self.active_pages {},
+            HomePageInput::DownloadCancled(episode_id) => {}
+            HomePageInput::DownloadProgress(episode_id, _) => {}
+            HomePageInput::DownloadFinished(episode_id) => {
+                for (_, page) in &self.active_pages {
+                    page.notify_download_finished(episode_id);
+                }
+            }
+            HomePageInput::ChangePlayBackState(_, episode_id) => {
+                
+            },
         }
 
         // self.update(message, sender, root);

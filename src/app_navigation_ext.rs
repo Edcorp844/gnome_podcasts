@@ -1,7 +1,13 @@
+use gst_play::PlayState;
+use podcasts_data::EpisodeId;
 use relm4::{ComponentController, Controller};
 
 use crate::pages::{
-    home::HomePage, new::NewPage, podcast::PodcastPage, search::SearchPage, shows::ShowsPage,
+    home::{HomePage, HomePageInput},
+    new::{NewPage, NewPageInput},
+    podcast::{PodcastPage, PodcastPageInput},
+    search::{SearchPage, SearchPageInput},
+    shows::{ShowsPage, ShowsPageInput},
 };
 
 #[derive(Debug)]
@@ -57,6 +63,86 @@ impl PageController {
             Self::New(c) => c.widget(),
             Self::Shows(c) => c.widget(),
             Self::Podcast(c) => c.widget(),
+        }
+    }
+
+    pub(crate) fn notify_download_finished(&self, episode_id: EpisodeId) {
+        match self {
+            Self::Search(c) => {
+                c.emit(SearchPageInput::DownloadFinished(episode_id));
+            }
+            Self::Home(c) => {
+                c.emit(HomePageInput::DownloadFinished(episode_id));
+            }
+            Self::New(c) => {
+                c.emit(NewPageInput::DownloadFinished(episode_id));
+            }
+            Self::Shows(c) => {
+                c.emit(ShowsPageInput::DownloadFinished(episode_id));
+            }
+            Self::Podcast(c) => {
+                c.emit(PodcastPageInput::DownloadFinished(episode_id));
+            }
+        }
+    }
+
+    pub(crate) fn notify_download_started(&self, episode_id: EpisodeId) {
+        match self {
+            Self::Search(c) => {
+                c.emit(SearchPageInput::DownloadStarted(episode_id));
+            }
+            Self::Home(c) => {
+                c.emit(HomePageInput::DownloadStarted(episode_id));
+            }
+            Self::New(c) => {
+                c.emit(NewPageInput::DownloadStarted(episode_id));
+            }
+            Self::Shows(c) => {
+                c.emit(ShowsPageInput::DownloadStarted(episode_id));
+            }
+            Self::Podcast(c) => {
+                c.emit(PodcastPageInput::DownloadStarted(episode_id));
+            }
+        }
+    }
+
+    pub(crate) fn notify_download_progress(&self, episode_id: EpisodeId, fraction: f64) {
+        match self {
+            Self::Search(c) => {
+                c.emit(SearchPageInput::DownloadProgress(episode_id, fraction));
+            }
+            Self::Home(c) => {
+                c.emit(HomePageInput::DownloadProgress(episode_id, fraction));
+            }
+            Self::New(c) => {
+                c.emit(NewPageInput::DownloadProgress(episode_id, fraction));
+            }
+            Self::Shows(c) => {
+                c.emit(ShowsPageInput::DownloadProgress(episode_id, fraction));
+            }
+            Self::Podcast(c) => {
+                c.emit(PodcastPageInput::DownloadProgress(episode_id, fraction));
+            }
+        }
+    }
+
+    pub(crate) fn notify_playing_state(&self, episode_id: EpisodeId, state: PlayState) {
+        match self {
+            Self::Search(c) => {
+                c.emit(SearchPageInput::ChangePlayBackState(state, episode_id));
+            }
+            Self::Home(c) => {
+                c.emit(HomePageInput::ChangePlayBackState(state, episode_id));
+            }
+            Self::New(c) => {
+                c.emit(NewPageInput::ChangePlayBackState(state, episode_id));
+            }
+            Self::Shows(c) => {
+                c.emit(ShowsPageInput::ChangePlayBackState(state, episode_id));
+            }
+            Self::Podcast(c) => {
+                c.emit(PodcastPageInput::ChangePlayBackState(state, episode_id));
+            }
         }
     }
 }

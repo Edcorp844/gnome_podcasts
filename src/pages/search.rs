@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use adw::prelude::*;
 
+use gst_play::PlayState;
 use podcasts_data::{
     EpisodeId, dbqueries,
     discovery::{ALL_PLATFORM_IDS, FoundPodcast, SearchError, search},
@@ -48,12 +49,17 @@ pub enum SearchPageInput {
     UpdateQuery(String),
     TriggerSearch(String),
     Subscribe(String),
+    DownloadStarted(EpisodeId),
+    DownloadCancled(EpisodeId),
+    DownloadProgress(EpisodeId, f64),
+    DownloadFinished(EpisodeId),
+    ChangePlayBackState(PlayState, EpisodeId),
 }
 
 #[derive(Debug)]
 pub enum SearchPageOutput {
     UpdateISSearching(bool),
-    StreamEpisode(EpisodeId),
+    TogglePlay(EpisodeId),
     NotifyError(String),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
@@ -144,8 +150,8 @@ impl Component for SearchPage {
                 let podcast_page = PodcastPage::builder().launch(podcast.clone()).forward(
                     sender.output_sender(),
                     |msg| match msg {
-                        PodcastPageOutput::StreamEpisode(episode) => {
-                            SearchPageOutput::StreamEpisode(episode)
+                        PodcastPageOutput::TogglePlay(episode) => {
+                            SearchPageOutput::TogglePlay(episode)
                         }
                         PodcastPageOutput::Subscribe(feed) => SearchPageOutput::Subscribe(feed),
                         PodcastPageOutput::NotifyError(_) => todo!(),
@@ -171,6 +177,19 @@ impl Component for SearchPage {
             }
             SearchPageInput::SwitchResultCategory(category) => {
                 self.result_category = *category;
+            }
+            SearchPageInput::DownloadStarted(episode_id) => todo!(),
+            SearchPageInput::DownloadCancled(episode_id) => todo!(),
+            SearchPageInput::DownloadProgress(episode_id, _) => todo!(),
+            SearchPageInput::DownloadFinished(episode_id) => {
+                for (_, page) in &self.active_pages {
+                    page.notify_download_finished(episode_id.clone());
+                }
+            }
+            SearchPageInput::ChangePlayBackState(state, episode_id) => {
+                for (_, page) in &self.active_pages {
+                    page.notify_playing_state(episode_id.clone(), state.clone());
+                }
             }
         }
 

@@ -30,7 +30,7 @@ pub enum Action {
     ErrorNotification(String),
     InitEpisode(EpisodeId),
     InitEpisodeAt(EpisodeId, i32),
-    StreamEpisode(EpisodeId),
+    TogglePlay(EpisodeId),
     UpdateCover(ShowId),
     EmptyState,
     PopulatedState,

@@ -33,6 +33,13 @@ fn main() {
             from { background-position: 0% 0%; }
             to { background-position: 200% 10%; }
         }
+
+        .circular-progress-widget {
+            -active-color: @accent_color; 
+            
+            -track-color: alpha(@accent_color, 0.15);
+        }
+
     ";
 
     provider.load_from_string(css_data);

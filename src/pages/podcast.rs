@@ -1,5 +1,6 @@
 use adw::gdk::Texture;
 use adw::prelude::*;
+use gst_play::PlayState;
 use podcasts_data::{
     Episode, EpisodeId, FEED_MANAGER, Show, Source, dbqueries, discovery::FoundPodcast,
 };
@@ -35,11 +36,16 @@ pub enum PodcastPageInput {
     StreamLatestEpisode,
     Subscribe,
     SetSubscriptionStatus(bool),
+    DownloadStarted(EpisodeId),
+    DownloadCancled(EpisodeId),
+    DownloadProgress(EpisodeId, f64),
+    DownloadFinished(EpisodeId),
+    ChangePlayBackState(PlayState, EpisodeId),
 }
 
 #[derive(Debug)]
 pub enum PodcastPageOutput {
-    StreamEpisode(EpisodeId),
+    TogglePlay(EpisodeId),
     NotifyError(String),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
@@ -68,9 +74,7 @@ impl Component for PodcastPage {
             episodes: FactoryVecDeque::builder().launch(episodes_parent).forward(
                 sender.output_sender(),
                 |msg| match msg {
-                    EpisodeListItemOutput::StreamEpisode(id) => {
-                        PodcastPageOutput::StreamEpisode(id)
-                    }
+                    EpisodeListItemOutput::TogglePlay(id) => PodcastPageOutput::TogglePlay(id),
                     EpisodeListItemOutput::RequestDownload(episode_id) => {
                         PodcastPageOutput::RequestDownload(episode_id)
                     }
@@ -152,8 +156,17 @@ impl Component for PodcastPage {
             }
             PodcastPageInput::StreamLatestEpisode => {
                 if let Some(episode) = self.latest_episode {
-                    let _ = sender.output(PodcastPageOutput::StreamEpisode(episode));
+                    let _ = sender.output(PodcastPageOutput::TogglePlay(episode));
                 }
+            }
+            PodcastPageInput::DownloadStarted(episode_id) => todo!(),
+            PodcastPageInput::DownloadCancled(episode_id) => todo!(),
+            PodcastPageInput::DownloadProgress(episode_id, _) => todo!(),
+            PodcastPageInput::DownloadFinished(episode_id) => {}
+            PodcastPageInput::ChangePlayBackState(play_state, episode_id) => {
+                // for (_, page) in &self.pages_cache {
+                //     page.notify_playing_state(episode_id, state);
+                // }
             }
         }
 

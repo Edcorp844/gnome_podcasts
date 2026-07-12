@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use adw::prelude::*;
+use gst_play::PlayState;
 use podcasts_data::{
     EpisodeId, Show, ShowId,
     dbqueries::{self},
@@ -33,17 +34,18 @@ pub enum ShowPageInput {
     GetShow(ShowId),
     ShowGotten(Result<Show, DataError>),
     ImageDownloaded(Option<adw::gdk::Texture>),
-    StreamEpisode(EpisodeId),
+    TogglePlay(EpisodeId),
     DownloadStarted(EpisodeId),
     DownloadCancled(EpisodeId),
     RequestDownload(EpisodeId),
     DownloadProgress(EpisodeId, f64),
     DownloadFinished(EpisodeId),
+    ChangePlayBackState(PlayState, EpisodeId),
 }
 
 #[derive(Debug)]
 pub enum ShowPageOutput {
-    StreamEpisode(EpisodeId),
+    TogglePlay(EpisodeId),
     NotifyError(String),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
@@ -346,7 +348,7 @@ impl Component for ShowPage {
             episodes: FactoryVecDeque::builder().launch(episodes_parent).forward(
                 sender.output_sender(),
                 |msg| match msg {
-                    EpisodeListItemOutput::StreamEpisode(id) => ShowPageOutput::StreamEpisode(id),
+                    EpisodeListItemOutput::TogglePlay(id) => ShowPageOutput::TogglePlay(id),
                     EpisodeListItemOutput::RequestDownload(episode_id) => {
                         ShowPageOutput::RequestDownload(episode_id)
                     }
@@ -430,8 +432,8 @@ impl Component for ShowPage {
             ShowPageInput::ImageDownloaded(opt_texture) => {
                 self.show_image_texture = opt_texture;
             }
-            ShowPageInput::StreamEpisode(id) => {
-                let _ = sender.output(ShowPageOutput::StreamEpisode(id));
+            ShowPageInput::TogglePlay(id) => {
+                let _ = sender.output(ShowPageOutput::TogglePlay(id));
             }
             ShowPageInput::DownloadStarted(episode_id) => {
                 if let Some(index) = self.index_by_id.get(&episode_id) {
@@ -444,6 +446,7 @@ impl Component for ShowPage {
             }
             ShowPageInput::DownloadProgress(episode_id, fraction) => {
                 if let Some(index) = self.index_by_id.get(&episode_id) {
+                    print!("sending {fraction} on show");
                     self.episodes.send(
                         index.current_index(),
                         EpisodeListItemInput::DownloadProgress(fraction),
@@ -461,6 +464,14 @@ impl Component for ShowPage {
                     self.episodes.send(
                         index.current_index(),
                         EpisodeListItemInput::DownloadFinished,
+                    );
+                }
+            }
+            ShowPageInput::ChangePlayBackState(state, episode_id) => {
+                if let Some(index) = self.index_by_id.get(&episode_id) {
+                    self.episodes.send(
+                        index.current_index(),
+                        EpisodeListItemInput::ChangePlayBackState(state),
                     );
                 }
             }

@@ -1,6 +1,7 @@
 use adw::prelude::*;
+use gst_play::PlayState;
 use podcasts_data::{
-    Show,
+    EpisodeId, Show,
     dbqueries::{self, ShowFilter},
     errors::DataError,
 };
@@ -18,6 +19,11 @@ pub struct NewPage {
 pub enum NewPageInput {
     FetchShows,
     ShowsLoaded(Result<Vec<Show>, DataError>),
+    DownloadStarted(EpisodeId),
+    DownloadCancled(EpisodeId),
+    DownloadProgress(EpisodeId, f64),
+    DownloadFinished(EpisodeId),
+    ChangePlayBackState(PlayState, EpisodeId),
 }
 
 #[derive(Debug)]
@@ -109,6 +115,13 @@ impl Component for NewPage {
                 }
                 self.is_loading = false;
             }
+            NewPageInput::DownloadStarted(episode_id) => todo!(),
+            NewPageInput::DownloadCancled(episode_id) => todo!(),
+            NewPageInput::DownloadProgress(episode_id, _) => todo!(),
+            NewPageInput::DownloadFinished(episode_id) => {}
+            NewPageInput::ChangePlayBackState(play_state, episode_id) => {
+                
+            },
         }
     }
 

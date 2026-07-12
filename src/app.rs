@@ -58,10 +58,10 @@ pub enum AppModelInput {
     SetSidebarCollapsed(bool),
     RefreshShowsPage,
     HandleVolumeChange(f64),
-    StreamEpisode(EpisodeId),
+    TogglePlay(EpisodeId),
     NotifyError(String),
     Subscribe(String),
-    ChangePlayBackState(PlayState),
+    ChangePlayBackState(PlayState, EpisodeId),
     SetCurrentEpisode(EpisodeId),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
@@ -240,10 +240,10 @@ impl Component for AppModel {
                             .clone()
                             .input(AppModelInput::NotifyError(error));
                     }
-                    ActionWorkerOutput::StateChanged(state) => {
+                    ActionWorkerOutput::StateChanged(state, episode_id) => {
                         action_sender
                             .clone()
-                            .input(AppModelInput::ChangePlayBackState(state));
+                            .input(AppModelInput::ChangePlayBackState(state, episode_id));
                     }
                     ActionWorkerOutput::SetCurrentEpisode(id) => {
                         action_sender
@@ -252,6 +252,21 @@ impl Component for AppModel {
                     }
                     ActionWorkerOutput::RefreshAllViews => {
                         action_sender.clone().input(AppModelInput::RefreshShowsPage);
+                    }
+                    ActionWorkerOutput::DownloadFinished(episode_id) => {
+                        action_sender
+                            .clone()
+                            .input(AppModelInput::DownloadFinished(episode_id));
+                    }
+                    ActionWorkerOutput::DownloadCancelled(episode_id) => {
+                        action_sender
+                            .clone()
+                            .input(AppModelInput::DownloadCancled(episode_id));
+                    }
+                    ActionWorkerOutput::DownloadProgress { id, fraction }=>{
+                         action_sender
+                            .clone()
+                            .input(AppModelInput::DownloadProgress(id, fraction));
                     }
                     _ => {}
                 });
@@ -360,8 +375,8 @@ impl Component for AppModel {
                                             AppModelInput::StopLoading
                                         }
                                     }
-                                    SearchPageOutput::StreamEpisode(episode) => {
-                                        AppModelInput::StreamEpisode(episode)
+                                    SearchPageOutput::TogglePlay(episode) => {
+                                        AppModelInput::TogglePlay(episode)
                                     }
                                     SearchPageOutput::NotifyError(error) => {
                                         AppModelInput::NotifyError(error)
@@ -391,8 +406,8 @@ impl Component for AppModel {
                                     ShowsPageOutput::NotifyError(error) => {
                                         AppModelInput::NotifyError(error)
                                     }
-                                    ShowsPageOutput::StreamEpisode(id) => {
-                                        AppModelInput::StreamEpisode(id)
+                                    ShowsPageOutput::TogglePlay(id) => {
+                                        AppModelInput::TogglePlay(id)
                                     }
                                     ShowsPageOutput::RequestDownload(episode_id) => {
                                         AppModelInput::RequestDownload(episode_id)
@@ -432,14 +447,17 @@ impl Component for AppModel {
                 self.worker_controller
                     .emit(ActionWorkerInput::Subscirbe(feed));
             }
-            AppModelInput::StreamEpisode(id) => {
+            AppModelInput::TogglePlay(id) => {
                 println!("Streaming: {:?}", id);
                 self.worker_controller
-                    .emit(ActionWorkerInput::Execute(Action::StreamEpisode(id)));
+                    .emit(ActionWorkerInput::Execute(Action::TogglePlay(id)));
             }
-            AppModelInput::ChangePlayBackState(state) => {
+            AppModelInput::ChangePlayBackState(state, episode_id) => {
                 self.miniplayer
                     .emit(MiniplayerModelInput::ChangePlayBackState(state));
+                 for (_, page) in &self.pages_cache {
+                    page.notify_playing_state(episode_id, state);
+                }
             }
             AppModelInput::SetCurrentEpisode(id) => {
                 self.miniplayer
@@ -467,18 +485,25 @@ impl Component for AppModel {
                 self.worker_controller
                     .emit(ActionWorkerInput::CancelDownload(episode_id));
             }
-            AppModelInput::DownloadStarted(episode_id) =>{
-                println!("Download of {:?} started", episode_id);
-            },
+            AppModelInput::DownloadStarted(episode_id) => {
+                for (_, page) in &self.pages_cache {
+                    page.notify_download_started(episode_id);
+                }
+            }
             AppModelInput::DownloadCancled(episode_id) => {
                 println!("Download of {:?} Cancled", episode_id);
-            },
+            }
             AppModelInput::DownloadProgress(episode_id, fraction) => {
-                println!("Download of {:?} Progress {}", episode_id, fraction);
-            },
+                for (_, page) in &self.pages_cache {
+                     print!("sending {fraction} on app");
+                    page.notify_download_progress(episode_id, fraction);
+                }
+            }
             AppModelInput::DownloadFinished(episode_id) => {
-                println!("Download of {:?} Finished", episode_id);
-            },
+                for (_, page) in &self.pages_cache {
+                    page.notify_download_finished(episode_id);
+                }
+            }
         }
 
         self.update_view(widgets, sender);

@@ -59,7 +59,7 @@ impl SimpleComponent for PodcastResults {
         ComponentParts { model, widgets }
     }
 
-    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>) {
+    fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>) {
         match message {
             PodcastResultsInput::SearchBegan => {
                 self.loading = true;

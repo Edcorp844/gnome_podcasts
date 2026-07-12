@@ -1,36 +1,46 @@
 use adw::prelude::*;
-use podcasts_data::{Episode, EpisodeId};
+use gst_play::PlayState;
+use podcasts_data::{Episode, EpisodeId, dbqueries};
 use relm4::{
-    FactorySender, RelmWidgetExt,
+    Component, ComponentController, Controller, FactorySender, RelmWidgetExt,
     factory::{DynamicIndex, FactoryComponent},
 };
 
-use crate::util::{
-    cover_image::{ImageSize, fetch_cached_image},
-    episode_description_parser,
+use crate::{
+    components::{
+        circular_progress::{CircularProgress, CircularProgressInput}, play_button::{self, EpisodePlayingState, PlayButton, PlayButtonInitData, PlayButtonInput, PlayButtonOutput},
+    }, util::{
+        cover_image::{ImageSize, fetch_cached_image},
+        episode_description_parser,
+    },
 };
 
 #[derive(Debug)]
 pub struct EpisodeListItem {
     episode: Episode,
     texture: Option<adw::gdk::Texture>,
+    play_button: Controller<PlayButton>,
+    downloaded: bool,
+    downloading: bool,
+    progress_indicator: Controller<CircularProgress>,
 }
 
 #[derive(Debug)]
 pub enum EpisodeListItemInput {
     ImageDownloaded(Option<adw::gdk::Texture>),
-    StreamEpisode,
+    TogglePlay,
     DownloadStarted,
     DownloadProgress(f64),
     CancleDownload,
     DownloadCancled,
     RequestDownload,
     DownloadFinished,
+    ChangePlayBackState(PlayState),
 }
 
 #[derive(Debug)]
 pub enum EpisodeListItemOutput {
-    StreamEpisode(EpisodeId),
+    TogglePlay(EpisodeId),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
     NotifyError(String),
@@ -62,9 +72,47 @@ impl FactoryComponent for EpisodeListItem {
             });
         }
 
+        let duration_str = match episode.duration() {
+            Some(seconds) if seconds > 0 => {
+                let hours = seconds / 3600;
+                let minutes = (seconds % 3600) / 60;
+
+                if hours > 0 {
+                    format!("{}h {}m", hours, minutes)
+                } else {
+                    format!("{}m", minutes)
+                }
+            }
+            _ => "0m".to_string(),
+        };
+
+        let play_button = PlayButton::builder()
+            .launch(PlayButtonInitData {
+                label: duration_str,
+                state: play_button::EpisodePlayingState::Stopped,
+                progress: 0.0,
+            })
+            .forward(sender.input_sender(), |msg| match msg {
+                PlayButtonOutput::Clicked => EpisodeListItemInput::TogglePlay,
+            });
+
+        let downloaded = {
+            if let Ok(episode_widget) = dbqueries::get_episode_widget_from_id(episode.id()) {
+                episode_widget.local_uri().is_some()
+            } else {
+                false
+            }
+        };
+
+        let progress_indicator = CircularProgress::builder().launch(0.0).detach();
+
         Self {
             episode,
             texture: None,
+            downloaded,
+            downloading: false,
+            progress_indicator,
+            play_button,
         }
     }
 
@@ -73,19 +121,50 @@ impl FactoryComponent for EpisodeListItem {
             EpisodeListItemInput::ImageDownloaded(fetched_texture) => {
                 self.texture = fetched_texture;
             }
-            EpisodeListItemInput::StreamEpisode => {
-                let _ = sender.output(EpisodeListItemOutput::StreamEpisode(self.episode.id()));
+            EpisodeListItemInput::TogglePlay => {
+                let _ = sender.output(EpisodeListItemOutput::TogglePlay(self.episode.id()));
             }
             EpisodeListItemInput::CancleDownload => {
-                 let _ = sender.output(EpisodeListItemOutput::CancleDownload(self.episode.id()));
-            },
+                let _ = sender.output(EpisodeListItemOutput::CancleDownload(self.episode.id()));
+            }
             EpisodeListItemInput::DownloadCancled => todo!(),
             EpisodeListItemInput::RequestDownload => {
-                 let _ = sender.output(EpisodeListItemOutput::RequestDownload(self.episode.id()));
+                let _ = sender.output(EpisodeListItemOutput::RequestDownload(self.episode.id()));
+            }
+            EpisodeListItemInput::DownloadStarted => {
+                self.downloading = true;
+            }
+            EpisodeListItemInput::DownloadProgress(fraction) => {
+                self.downloading = true;
+                let _ = self
+                    .progress_indicator
+                    .sender()
+                    .send(CircularProgressInput::SetFraction(fraction));
+            }
+            EpisodeListItemInput::DownloadFinished => {
+                self.downloading = false;
+                self.downloaded = true;
+            }
+            EpisodeListItemInput::ChangePlayBackState(state) => {
+                match state {
+                    PlayState::Stopped => {
+                         self.play_button.emit(PlayButtonInput::UpdatePlayingState(EpisodePlayingState::Stopped));
+                    },
+                    PlayState::Buffering => {
+                         self.play_button.emit(PlayButtonInput::UpdatePlayingState(EpisodePlayingState::Playing));
+                    },
+                    PlayState::Paused => {
+                         self.play_button.emit(PlayButtonInput::UpdatePlayingState(EpisodePlayingState::Paused));
+                    },
+                    PlayState::Playing => {
+                         self.play_button.emit(PlayButtonInput::UpdatePlayingState(EpisodePlayingState::Playing));
+                    },
+                    _ => {
+                        
+                    },
+                }
+               
             },
-            EpisodeListItemInput::DownloadStarted => todo!(),
-            EpisodeListItemInput::DownloadProgress(fraction) => todo!(),
-            EpisodeListItemInput::DownloadFinished => todo!(),
         }
     }
 
@@ -155,7 +234,7 @@ impl FactoryComponent for EpisodeListItem {
             gtk::Box{
                 set_orientation: gtk::Orientation::Vertical,
                 set_spacing: 8,
-                set_halign: gtk::Align::Start,
+                set_halign: gtk::Align::Fill,
                 set_valign: gtk::Align::Start,
                 set_margin_start: 16,
 
@@ -206,43 +285,40 @@ impl FactoryComponent for EpisodeListItem {
                     add_css_class:"spacer"
                 },
 
-                gtk::Button{
-                    set_label: &{
-                        let duration_str = match self.episode.duration() {
-                            Some(seconds) if seconds > 0 => {
-                                let hours = seconds / 3600;
-                                let minutes = (seconds % 3600) / 60;
+                self.play_button.widget(),
+            },
 
-                                if hours > 0 {
-                                    format!("{}h {}m", hours, minutes)
-                                } else {
-                                    format!("{}m", minutes)
-                                }
-                            }
-                            _ => "0m".to_string(),
-                        };
-                        format!("▶ {}", duration_str)
-                    },
-                    set_css_classes: &vec!["pill"],
-                    set_halign: gtk::Align::Start,
-                    set_valign: gtk::Align::Start,
-
-                   connect_clicked[sender] => move |_| {
-                        sender.input(EpisodeListItemInput::StreamEpisode);
-                    }
-                }
+             gtk::Separator{
+                set_hexpand: true,
+                add_css_class:"spacer"
             },
 
             gtk::Button{
-                    set_label: "Download",
-                    set_css_classes: &vec!["pill"],
-                    set_halign: gtk::Align::Start,
-                    set_valign: gtk::Align::Start,
+                #[watch]
+                set_visible: !self.downloading,
+                #[watch]
+                set_icon_name:if self.downloaded {
+                        "object-select-symbolic"
+                 } else { "download-symbolic"},
+                set_css_classes: &vec!["circular"],
+                set_halign: gtk::Align::Center,
+                set_valign: gtk::Align::Center,
 
-                    connect_clicked[sender] => move |_| {
-                        sender.input(EpisodeListItemInput::RequestDownload);
-                    }
+                connect_clicked[sender] => move |_| {
+                    sender.input(EpisodeListItemInput::RequestDownload);
                 }
+            },
+
+            gtk::Box{
+                #[watch]
+                set_visible: self.downloading,
+                self.progress_indicator.widget() {
+                    set_size_request: (34, 34),
+                    set_halign: gtk::Align::Center,
+                    set_valign: gtk::Align::Center,
+                }
+            }
+
         }
     }
 }

@@ -1,4 +1,5 @@
 use adw::prelude::*;
+use gst_play::PlayState;
 use podcasts_data::{
     EpisodeId, Show, ShowId,
     dbqueries::{self, ShowFilter},
@@ -8,7 +9,7 @@ use relm4::{Component, ComponentParts, ComponentSender, prelude::*};
 
 use crate::{
     components::show_card::{ShowCard, ShowCardOutput},
-    pages::show::{ShowPage, ShowPageOutput},
+    pages::show::{ShowPage, ShowPageInput, ShowPageOutput},
 };
 
 #[derive(Debug)]
@@ -23,12 +24,16 @@ pub enum ShowsPageInput {
     FetchShows,
     ShowsLoaded(Result<Vec<Show>, DataError>),
     GotoShow(ShowId),
-    //StreamEpisode(EpisodeId),
+    DownloadStarted(EpisodeId),
+    DownloadCancled(EpisodeId),
+    DownloadProgress(EpisodeId, f64),
+    DownloadFinished(EpisodeId),
+    ChangePlayBackState(PlayState, EpisodeId),
 }
 
 #[derive(Debug)]
 pub enum ShowsPageOutput {
-    StreamEpisode(EpisodeId),
+    TogglePlay(EpisodeId),
     NotifyError(String),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
@@ -138,7 +143,7 @@ impl Component for ShowsPage {
                             ShowPageOutput::NotifyError(error) => {
                                 ShowsPageOutput::NotifyError(error)
                             }
-                            ShowPageOutput::StreamEpisode(id) => ShowsPageOutput::StreamEpisode(id),
+                            ShowPageOutput::TogglePlay(id) => ShowsPageOutput::TogglePlay(id),
                             ShowPageOutput::RequestDownload(episode_id) => {
                                 ShowsPageOutput::RequestDownload(episode_id)
                             }
@@ -149,6 +154,28 @@ impl Component for ShowsPage {
 
                 widgets.nav_view.push(show_page.widget());
                 self.open_show_pages.push(show_page);
+            }
+            ShowsPageInput::DownloadStarted(episode_id) => {
+                for page in &self.open_show_pages {
+                    page.emit(ShowPageInput::DownloadStarted(episode_id));
+                }
+            }
+            ShowsPageInput::DownloadCancled(episode_id) => todo!(),
+            ShowsPageInput::DownloadProgress(episode_id, fraction) => {
+                for page in &self.open_show_pages {
+                    print!("sending {fraction} on shows");
+                    page.emit(ShowPageInput::DownloadProgress(episode_id, fraction));
+                }
+            }
+            ShowsPageInput::DownloadFinished(episode_id) => {
+                for page in &self.open_show_pages {
+                    page.emit(ShowPageInput::DownloadFinished(episode_id));
+                }
+            }
+            ShowsPageInput::ChangePlayBackState(state, episode_id) => {
+                for page in &self.open_show_pages {
+                    page.emit(ShowPageInput::ChangePlayBackState(state, episode_id));
+                }
             }
         }
 

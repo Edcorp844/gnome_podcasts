@@ -14,8 +14,7 @@ use podcasts_data::{EpisodeId, dbqueries, downloader::DownloadProgress, utils::g
 use crate::workers::action_worker::service::{ActionWorker, ActionWorkerOutput};
 
 // ---------------------------------------------------------------------
-// Progress tracking — identical shape/logic to the original manager.rs,
-// including the debug! calls in get_fraction.
+// Progress tracking — corrected to prevent division by zero (NaN) errors.
 // ---------------------------------------------------------------------
 
 pub(crate) type ActiveProgress = Arc<Mutex<Progress>>;
@@ -33,13 +32,20 @@ pub(crate) struct Progress {
 
 impl Progress {
     pub(crate) fn get_fraction(&self) -> f64 {
+        // FIX: Prevent 0 / 0 division by zero leading to NaN at start of download
+        if self.total_bytes == 0 {
+            println!("{:?}", self);
+            println!("Ratio completed: 0.0 (total_bytes is 0)");
+            return 0.0;
+        }
+
         let ratio = self.downloaded_bytes as f64 / self.total_bytes as f64;
         println!("{:?}", self);
         println!("Ratio completed: {}", ratio);
 
         if ratio >= 1.0 {
             return 1.0;
-        };
+        }
         ratio
     }
 }
@@ -72,10 +78,6 @@ impl DownloadProgress for Progress {
 
 impl ActionWorker {
     pub async fn download_podcast_episode(sender: ComponentSender<Self>, id: EpisodeId) {
-        // `downloader::get_episode` takes `&mut EpisodeWidgetModel`, not
-        // `&mut Episode` — fetch the widget model fresh from the DB here,
-        // exactly like the original manager.rs did with
-        // `dbqueries::get_episode_widget_from_id(id)`.
         let mut episode: EpisodeWidgetModel = match dbqueries::get_episode_widget_from_id(id) {
             Ok(ep) => ep,
             Err(e) => {
@@ -88,7 +90,6 @@ impl ActionWorker {
             }
         };
 
-        // Resolve the podcast + on-disk download directory for this episode.
         let download_dir = match dbqueries::get_podcast_from_id(episode.show_id()) {
             Ok(pd) => match get_download_dir(pd.title()) {
                 Ok(dir) => dir,
@@ -111,8 +112,6 @@ impl ActionWorker {
             }
         };
 
-        // Create a new `Progress` struct to keep track of dl progress and
-        // register it so `CancelDownload` can find it later.
         let prog: ActiveProgress = Arc::new(Mutex::new(Progress::default()));
         match ACTIVE_DOWNLOADS.write() {
             Ok(mut guard) => {
@@ -130,12 +129,9 @@ impl ActionWorker {
 
         sender.output(ActionWorkerOutput::DownloadStarted(id)).ok();
 
-        // Poll the shared `Progress` struct concurrently with the download
-        // itself and stream fraction updates back out through the same
-        // `ComponentSender`, so the UI can drive a progress bar without
-        // any separate channel.
         let poll_prog = prog.clone();
         let poll_sender = sender.clone();
+
         let progress_ticker = relm4::spawn(async move {
             let mut ticker = interval(Duration::from_millis(250));
             loop {
@@ -144,21 +140,45 @@ impl ActionWorker {
                     Ok(p) => p.get_fraction(),
                     Err(_) => break,
                 };
+                
+                // FIX: Guard clause to prevent sending NaN downstream if anything goes wrong
+                if fraction.is_nan() {
+                    continue;
+                }
+
                 if poll_sender
                     .output(ActionWorkerOutput::DownloadProgress { id, fraction })
                     .is_err()
                 {
-                    // Parent dropped its receiving end; stop polling.
-                    break;
-                }
-                if fraction >= 1.0 {
                     break;
                 }
             }
         });
 
-        match get_episode(&mut episode, download_dir.as_str(), Some(prog)).await {
+        // Run the actual download block
+        let download_result = get_episode(&mut episode, download_dir.as_str(), Some(prog)).await;
+
+        // Stop the progress ticker immediately after the download future completes
+        progress_ticker.abort();
+
+        // Explicitly push a final 1.0 fraction update to the UI so the progress bar fills up
+        sender
+            .output(ActionWorkerOutput::DownloadProgress { id, fraction: 1.0 })
+            .ok();
+
+        // Handle results cleanly
+        match download_result {
             Ok(_) => {
+                if let Ok(episode_widget) = dbqueries::get_episode_widget_from_id(id) {
+                    let is_downloaded = episode_widget.local_uri().is_some();
+
+                    if is_downloaded {
+                        println!("This episode is downloaded!");
+                    } else {
+                        println!("This episode is not downloaded yet.");
+                    }
+                }
+
                 sender.output(ActionWorkerOutput::DownloadFinished(id)).ok();
             }
             Err(DownloadError::DownloadCancelled) => {
@@ -174,10 +194,6 @@ impl ActionWorker {
                     .ok();
             }
         }
-
-        // Stop the progress ticker now that the download has settled, then
-        // clean up the registry entry — same as the original manager.rs.
-        progress_ticker.abort();
 
         if let Ok(mut m) = ACTIVE_DOWNLOADS.write() {
             let progress = m.remove(&id);
