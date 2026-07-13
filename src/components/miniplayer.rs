@@ -1,18 +1,14 @@
 use adw::prelude::*;
-use gst::format;
 use gst_play::PlayState;
 use podcasts_data::Episode;
 use podcasts_data::EpisodeId;
-use podcasts_data::EpisodeModel;
 use podcasts_data::dbqueries;
 use relm4::prelude::*;
 
-use crate::app::AppModelOutput;
 use crate::components::progress_bar::ProgressBar;
 use crate::components::progress_bar::ProgressBarInit;
 use crate::components::progress_bar::ProgressBarInput;
 use crate::components::progress_bar::ProgressBarOutput;
-use crate::components::volume_scale::VolumeControlInit;
 use crate::components::volume_scale::VolumeControlModel;
 use crate::components::volume_scale::VolumeControlOutput;
 use crate::util::cover_image::ImageSize;
@@ -28,11 +24,11 @@ pub struct MiniPlayerModel {
 
 #[derive(Debug)]
 pub enum MiniplayerModelInput {
-    HandleVolumeChange(f64),
     ImageDownloaded(Option<adw::gdk::Texture>),
     ChangePlayBackState(PlayState),
     SetCurrentEpisode(EpisodeId),
     UpdateProgress(f64),
+    VolumeValue(f64),
 }
 
 #[derive(Debug)]
@@ -40,6 +36,10 @@ pub enum MiniplayerModelOutput {
     TogglePlay,
     NotifyError(String),
     SeekAudioPosition(f64),
+    SetVolume(f64),
+    RequestMute,
+    RequestUnmute,
+    RequestVolumeValue,
 }
 
 #[derive(Debug)]
@@ -59,15 +59,16 @@ impl Component for MiniPlayerModel {
         _root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let volume_slider = VolumeControlModel::builder()
-            .launch(VolumeControlInit {
-                initial_volume: 0.5,
-            })
-            .forward(sender.input_sender(), |output| match output {
-                VolumeControlOutput::VolumeChanged(new_vol) => {
-                    MiniplayerModelInput::HandleVolumeChange(new_vol)
-                }
-            });
+        let volume_slider =
+            VolumeControlModel::builder()
+                .launch(0.1)
+                .forward(sender.output_sender(), |output| match output {
+                    VolumeControlOutput::VolumeChanged(new_vol) => {
+                        MiniplayerModelOutput::SetVolume(new_vol)
+                    }
+                    VolumeControlOutput::SetMute => MiniplayerModelOutput::RequestMute,
+                    VolumeControlOutput::Unmute => MiniplayerModelOutput::RequestUnmute,
+                });
 
         let play_progress_bar = ProgressBar::builder()
             .launch(ProgressBarInit {
@@ -88,6 +89,7 @@ impl Component for MiniPlayerModel {
             play_progress_bar,
         };
 
+        let _ = sender.output(MiniplayerModelOutput::RequestVolumeValue);
         let widgets = view_output!();
         ComponentParts { model, widgets }
     }
@@ -131,7 +133,10 @@ impl Component for MiniPlayerModel {
                 self.play_progress_bar
                     .emit(ProgressBarInput::SetFraction(fraction));
             }
-            _ => {}
+            MiniplayerModelInput::VolumeValue(val) => {
+                self.play_progress_bar
+                    .emit(ProgressBarInput::SetFraction(val));
+            }
         }
     }
 

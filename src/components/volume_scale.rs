@@ -1,51 +1,56 @@
 use gtk::prelude::*;
 use relm4::prelude::*;
 
-use crate::components::progress_bar::{ProgressBar, ProgressBarInit};
-
-pub struct VolumeControlInit {
-    pub initial_volume: f64,
-}
+use crate::components::progress_bar::{ProgressBar, ProgressBarInit, ProgressBarOutput};
 
 pub struct VolumeControlModel {
     volume_bar: Controller<ProgressBar>,
-    prev_volume: f64,
     is_muted: bool,
+    current_volume: f64,
 }
 
 #[derive(Debug)]
 pub enum VolumeControlInput {
     SetVolume(f64),
-    ToggleMute,
+    IncreaseVolume,
+    DectreaseVolume,
+    Muted,
+    Unmuted,
 }
 
 #[derive(Debug)]
 pub enum VolumeControlOutput {
     VolumeChanged(f64),
+    SetMute,
+    Unmute,
 }
 
 #[relm4::component(pub)]
 impl Component for VolumeControlModel {
-    type Init = VolumeControlInit;
+    type Init = f64;
     type Input = VolumeControlInput;
     type Output = VolumeControlOutput;
     type CommandOutput = ();
 
     fn init(
-        init: Self::Init,
+        initial_volume: Self::Init,
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let volume_bar = ProgressBar::builder()
             .launch(ProgressBarInit {
-                initial_fraction: 0.5,
+                initial_fraction: initial_volume,
                 interactive: true,
             })
-            .detach();
+            .forward(sender.output_sender(), |msg| match msg {
+                ProgressBarOutput::FractionChanged(fraction) => {
+                    VolumeControlOutput::VolumeChanged(fraction)
+                }
+            });
 
         let model = VolumeControlModel {
             volume_bar,
-            prev_volume: 0.5,
+            current_volume: initial_volume,
             is_muted: false,
         };
 
@@ -70,9 +75,18 @@ impl Component for VolumeControlModel {
                         set_spacing: 8,
                         set_margin_all: 4,
 
+                        gtk::Box {
                         gtk::Image{
                             set_icon_name: Some("audio-volume-low-symbolic"),
+                            set_sensitive: model.current_volume <= 0.0, 
+
+                            // add_controller = &gtk::GestureClick {
+                            //     connect_pressed[sender] => move |_gesture, _n_press, _x, _y| {
+                            //         sender.input(VolumeControlInput::DectreaseVolume);
+                            //     }
+                            // }
                         },
+                    },
 
                         model.volume_bar.widget(){
                             set_size_request: (200, 10),
@@ -82,6 +96,13 @@ impl Component for VolumeControlModel {
 
                         gtk::Image{
                             set_icon_name: Some("audio-volume-high-symbolic"),
+                            set_sensitive: model.current_volume >= 1.0, 
+
+                            // add_controller = &gtk::GestureClick {
+                            //     connect_pressed[sender] => move |_gesture, _n_press, _x, _y| {
+                            //         sender.input(VolumeControlInput::IncreaseVolume);
+                            //     }
+                            // }
                         },
                     }
                 }
@@ -91,4 +112,3 @@ impl Component for VolumeControlModel {
         }
     }
 }
-

@@ -56,7 +56,6 @@ pub enum AppModelInput {
     SelectPage(NavigationPage),
     SetSidebarCollapsed(bool),
     RefreshShowsPage,
-    HandleVolumeChange(f64),
     SeekAudioPosition(f64),
     TogglePlay(EpisodeId),
     NotifyError(String),
@@ -70,6 +69,11 @@ pub enum AppModelInput {
     DownloadCancled(EpisodeId),
     DownloadProgress(EpisodeId, f64),
     DownloadFinished(EpisodeId),
+    SetVolume(f64),
+    VolumeValue(f64),
+    RequestMute,
+    RequestUnmute,
+    RequestVolumeValue,
     None,
 }
 
@@ -274,6 +278,9 @@ impl Component for AppModel {
                             .clone()
                             .input(AppModelInput::PlayBackProgress(id, pos));
                     }
+                    ActionWorkerOutput::VolumeValue(val) => {
+                        action_sender.clone().input(AppModelInput::VolumeValue(val));
+                    }
                     _ => {}
                 });
 
@@ -300,6 +307,12 @@ impl Component for AppModel {
                     MiniplayerModelOutput::SeekAudioPosition(pos_fraction) => {
                         AppModelInput::SeekAudioPosition(pos_fraction)
                     }
+                    MiniplayerModelOutput::SetVolume(fraction) => {
+                        AppModelInput::SetVolume(fraction)
+                    }
+                    MiniplayerModelOutput::RequestMute => AppModelInput::RequestMute,
+                    MiniplayerModelOutput::RequestUnmute => AppModelInput::RequestUnmute,
+                    MiniplayerModelOutput::RequestVolumeValue => AppModelInput::RequestVolumeValue,
                 });
 
         let model = AppModel {
@@ -442,7 +455,7 @@ impl Component for AppModel {
             }
 
             AppModelInput::SetSidebarCollapsed(_is_collapsed) => {}
-            AppModelInput::HandleVolumeChange(new_vol) => {}
+
             AppModelInput::NotifyError(error) => {
                 println!("Error: recieved: {}", error);
                 let toast = adw::Toast::builder()
@@ -523,6 +536,23 @@ impl Component for AppModel {
             AppModelInput::SeekAudioPosition(fraction) => {
                 self.worker_controller
                     .emit(ActionWorkerInput::SeekAudioPosition(fraction));
+            }
+            AppModelInput::SetVolume(fraction) => {
+                self.worker_controller
+                    .emit(ActionWorkerInput::SetVolume(fraction));
+            }
+            AppModelInput::RequestMute => {
+                self.worker_controller.emit(ActionWorkerInput::RequestMute);
+            }
+            AppModelInput::RequestUnmute => {
+                self.worker_controller
+                    .emit(ActionWorkerInput::RequestUnmute);
+            }
+            AppModelInput::RequestVolumeValue => {
+                self.worker_controller.emit(ActionWorkerInput::GetVolume);
+            }
+            AppModelInput::VolumeValue(val) => {
+                self.miniplayer.emit(MiniplayerModelInput::VolumeValue(val));
             }
         }
 

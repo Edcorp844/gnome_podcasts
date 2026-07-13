@@ -1,4 +1,4 @@
-use adw::prelude::*;
+use gtk::prelude::*;
 use relm4::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -12,12 +12,12 @@ pub struct ProgressBar {
 #[derive(Debug)]
 pub enum ProgressBarInput {
     SetFraction(f64),
-    HandleScrub(f64),
+    HandleScrub(f64), 
 }
 
 #[derive(Debug)]
 pub enum ProgressBarOutput {
-    FractionChanged(f64),
+    FractionChanged(f64), 
 }
 
 // Initialization parameters configuration struct
@@ -37,7 +37,7 @@ impl Component for ProgressBar {
         gtk::DrawingArea {
             set_hexpand: true,
             set_vexpand: true,
-
+            
             // Attaching gesture controllers right inside the UI layout macro loop
             add_controller = gtk::GestureClick {
                 set_button: gtk::gdk::BUTTON_PRIMARY,
@@ -53,7 +53,7 @@ impl Component for ProgressBar {
                     }
                 }
             },
-
+            
             add_controller = gtk::GestureDrag {
             set_button: gtk::gdk::BUTTON_PRIMARY,
             // Calculates continuous updates while pulling/dragging across the bar width
@@ -61,7 +61,7 @@ impl Component for ProgressBar {
                 if model.interactive {
                     if let Some(widget) = gesture.widget() {
                         let width = widget.width() as f64;
-
+                        
                         if let Some((start_x, _)) = gesture.start_point() {
                             let target_x = start_x + offset_x;
                             if width > 0.0 {
@@ -103,49 +103,20 @@ impl Component for ProgressBar {
             }
 
             // A clean custom helper to trace a rounded rectangle path matching track layout bounds
-            let draw_rounded_rect =
-                |cairo_ctx: &gtk::cairo::Context, x: f64, y: f64, rect_w: f64, rect_h: f64| {
-                    if rect_w <= 0.0 {
-                        return;
-                    }
-                    cairo_ctx.new_sub_path();
-                    // Top Right, Bottom Right, Bottom Left, Top Left corners arc segments tracing loop
-                    cairo_ctx.arc(
-                        x + rect_w - radius,
-                        y + radius,
-                        radius,
-                        -std::f64::consts::PI / 2.0,
-                        0.0,
-                    );
-                    cairo_ctx.arc(
-                        x + rect_w - radius,
-                        y + rect_h - radius,
-                        radius,
-                        0.0,
-                        std::f64::consts::PI / 2.0,
-                    );
-                    cairo_ctx.arc(
-                        x + radius,
-                        y + rect_h - radius,
-                        radius,
-                        std::f64::consts::PI / 2.0,
-                        std::f64::consts::PI,
-                    );
-                    cairo_ctx.arc(
-                        x + radius,
-                        y + radius,
-                        radius,
-                        std::f64::consts::PI,
-                        3.0 * std::f64::consts::PI / 2.0,
-                    );
-                    cairo_ctx.close_path();
-                };
+            let draw_rounded_rect = |cairo_ctx: &gtk::cairo::Context, x: f64, y: f64, rect_w: f64, rect_h: f64| {
+                if rect_w <= 0.0 { return; }
+                cairo_ctx.new_sub_path();
+                // Top Right, Bottom Right, Bottom Left, Top Left corners arc segments tracing loop
+                cairo_ctx.arc(x + rect_w - radius, y + radius, radius, -std::f64::consts::PI / 2.0, 0.0);
+                cairo_ctx.arc(x + rect_w - radius, y + rect_h - radius, radius, 0.0, std::f64::consts::PI / 2.0);
+                cairo_ctx.arc(x + radius, y + rect_h - radius, radius, std::f64::consts::PI / 2.0, std::f64::consts::PI);
+                cairo_ctx.arc(x + radius, y + radius, radius, std::f64::consts::PI, 3.0 * std::f64::consts::PI / 2.0);
+                cairo_ctx.close_path();
+            };
 
             // 1. LOOK UP DYNAMIC SYSTEM ACCENT COLORS
             let context = widget.style_context();
-            let accent_rgba = context
-                .lookup_color("accent_color")
-                .unwrap_or_else(|| context.color());
+            let accent_rgba = context.lookup_color("accent_color").unwrap_or_else(|| context.color());
 
             // 2. DRAW BACKGROUND PROGRESS TRACK BAR (Muted background track rail)
             cr.set_source_rgba(
@@ -185,20 +156,16 @@ impl Component for ProgressBar {
     ) {
         match message {
             ProgressBarInput::SetFraction(f) => {
-                if f.is_nan() || f.is_infinite() {
-                    return;
-                }
+                if f.is_nan() || f.is_infinite() { return; }
                 let clamped = f.clamp(0.0, 1.0);
-
+                
                 if let Ok(mut guard) = self.fraction.try_borrow_mut() {
                     *guard = clamped;
                 }
                 root.queue_draw();
             }
             ProgressBarInput::HandleScrub(pct) => {
-                if pct.is_nan() || pct.is_infinite() {
-                    return;
-                }
+                if pct.is_nan() || pct.is_infinite() { return; }
                 let clamped = pct.clamp(0.0, 1.0);
 
                 if let Ok(mut guard) = self.fraction.try_borrow_mut() {

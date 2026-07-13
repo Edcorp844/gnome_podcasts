@@ -53,6 +53,10 @@ pub enum ActionWorkerInput {
     SeekAudioPosition(f64),
     DurationChanged(u64),
     PositionChanged(u64),
+    SetVolume(f64),
+    GetVolume,
+    RequestMute,
+    RequestUnmute,
 
 }
 
@@ -74,6 +78,7 @@ pub enum ActionWorkerOutput {
     DownloadCancelled(EpisodeId),
     ErrorNotification(String),
     RefreshEpisode(EpisodeId),
+    VolumeValue(f64),
 
 }
 
@@ -310,6 +315,23 @@ impl Worker for ActionWorker {
 
                     self.player.seek(seek_pos);
                 }
+            },
+            ActionWorkerInput::SetVolume(vol) => {
+                if vol.is_nan() || vol.is_infinite() {
+                    return;
+                }
+
+                self.player.set_volume(vol);
+            },
+            ActionWorkerInput::RequestMute => {
+
+            },
+            ActionWorkerInput::RequestUnmute => {
+
+            },
+            ActionWorkerInput::GetVolume => {
+                let volume = self.player.volume();
+                let _ = sender.output(ActionWorkerOutput::VolumeValue(volume));
             },
         }
     }
