@@ -59,16 +59,16 @@ impl Component for CircularProgress {
 
             // 1. LOOK UP SYSTEM ACCENT COLOR
             let context = widget.style_context();
-            let accent_gdk_rgba = context.lookup_color("accent_color").unwrap_or_else(|| {
-                context.color()
-            });
+            let accent_gdk_rgba = context
+                .lookup_color("accent_color")
+                .unwrap_or_else(|| context.color());
 
             // 2. DRAW BACKGROUND RING (Muted track color)
             cr.set_source_rgba(
                 accent_gdk_rgba.red() as f64,
                 accent_gdk_rgba.green() as f64,
                 accent_gdk_rgba.blue() as f64,
-                0.15, 
+                0.15,
             );
             cr.new_sub_path();
             cr.arc(center_x, center_y, radius, 0.0, 2.0 * PI);
@@ -92,10 +92,14 @@ impl Component for CircularProgress {
 
             // 4. DRAW PERCENTAGE TEXT IN THE CENTER (Pure Native Cairo Approach)
             // Define font options inside the core canvas state
-            cr.select_font_face("Sans", gtk::cairo::FontSlant::Normal, gtk::cairo::FontWeight::Bold);
-            
+            cr.select_font_face(
+                "Sans",
+                gtk::cairo::FontSlant::Normal,
+                gtk::cairo::FontWeight::Bold,
+            );
+
             // Set font size dynamically proportional to the widget size
-            let font_size = size * 0.22;
+            let font_size = size * 0.4;
             cr.set_font_size(font_size);
 
             let percentage_text = format!("{:.0}%", fraction * 100.0);
@@ -105,7 +109,7 @@ impl Component for CircularProgress {
                 // Calculate exact tracking position using width and heights bounding box measurements
                 let text_x = center_x - (extents.width() / 2.0) - extents.x_bearing();
                 let text_y = center_y - (extents.height() / 2.0) - extents.y_bearing();
-                
+
                 cr.move_to(text_x, text_y);
 
                 // Inherit standard foreground text color configurations from active skin
