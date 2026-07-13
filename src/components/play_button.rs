@@ -71,15 +71,13 @@ impl Component for PlayButton {
                         EpisodePlayingState::Playing | EpisodePlayingState::Paused => true,
                         EpisodePlayingState::Stopped | EpisodePlayingState::Finished => false,
                     },
-                model.play_progress_bar.widget() {
-                    
-    
-                    set_size_request: (50, 5),
-                    set_halign: gtk::Align::Center,
-                    set_valign: gtk::Align::Center,
-                        
+                    model.play_progress_bar.widget() {
+                        set_size_request: (50, 5),
+                        set_halign: gtk::Align::Center,
+                        set_valign: gtk::Align::Center,
+                            
+                    },
                 },
-            },
 
                 gtk::Label {
                     set_label: &model.label,

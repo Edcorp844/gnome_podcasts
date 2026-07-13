@@ -145,4 +145,24 @@ impl PageController {
             }
         }
     }
+
+     pub(crate) fn notify_playback_progress(&self, episode_id: EpisodeId, fraction: f64) {
+        match self {
+            Self::Search(c) => {
+                c.emit(SearchPageInput::PlayBackProgress(episode_id, fraction));
+            }
+            Self::Home(c) => {
+                c.emit(HomePageInput::PlayBackProgress(episode_id, fraction));
+            }
+            Self::New(c) => {
+                c.emit(NewPageInput::PlayBackProgress(episode_id, fraction));
+            }
+            Self::Shows(c) => {
+                c.emit(ShowsPageInput::PlayBackProgress(episode_id, fraction));
+            }
+            Self::Podcast(c) => {
+                c.emit(PodcastPageInput::PlayBackProgress(episode_id, fraction));
+            }
+        }
+    }
 }

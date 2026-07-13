@@ -20,7 +20,6 @@ use crate::workers::action_worker::service::ActionWorkerOutput;
 use adw::gio;
 use gst_play::PlayState;
 use relm4::ComponentParts;
-use relm4::RelmIterChildrenExt;
 use relm4::adw::prelude::*;
 use relm4::prelude::*;
 
@@ -58,10 +57,12 @@ pub enum AppModelInput {
     SetSidebarCollapsed(bool),
     RefreshShowsPage,
     HandleVolumeChange(f64),
+    SeekAudioPosition(f64),
     TogglePlay(EpisodeId),
     NotifyError(String),
     Subscribe(String),
     ChangePlayBackState(PlayState, EpisodeId),
+    PlayBackProgress(EpisodeId, f64),
     SetCurrentEpisode(EpisodeId),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
@@ -263,10 +264,15 @@ impl Component for AppModel {
                             .clone()
                             .input(AppModelInput::DownloadCancled(episode_id));
                     }
-                    ActionWorkerOutput::DownloadProgress { id, fraction }=>{
-                         action_sender
+                    ActionWorkerOutput::DownloadProgress { id, fraction } => {
+                        action_sender
                             .clone()
                             .input(AppModelInput::DownloadProgress(id, fraction));
+                    }
+                    ActionWorkerOutput::PlayBackProgress(id, pos) => {
+                        action_sender
+                            .clone()
+                            .input(AppModelInput::PlayBackProgress(id, pos));
                     }
                     _ => {}
                 });
@@ -291,6 +297,9 @@ impl Component for AppModel {
                 .forward(sender.input_sender(), |msg| match msg {
                     MiniplayerModelOutput::TogglePlay => AppModelInput::TogglePlayBack,
                     MiniplayerModelOutput::NotifyError(error) => AppModelInput::NotifyError(error),
+                    MiniplayerModelOutput::SeekAudioPosition(pos_fraction) => {
+                        AppModelInput::SeekAudioPosition(pos_fraction)
+                    }
                 });
 
         let model = AppModel {
@@ -455,7 +464,7 @@ impl Component for AppModel {
             AppModelInput::ChangePlayBackState(state, episode_id) => {
                 self.miniplayer
                     .emit(MiniplayerModelInput::ChangePlayBackState(state));
-                 for (_, page) in &self.pages_cache {
+                for (_, page) in &self.pages_cache {
                     page.notify_playing_state(episode_id, state);
                 }
             }
@@ -495,7 +504,7 @@ impl Component for AppModel {
             }
             AppModelInput::DownloadProgress(episode_id, fraction) => {
                 for (_, page) in &self.pages_cache {
-                     print!("sending {fraction} on app");
+                    print!("sending {fraction} on app");
                     page.notify_download_progress(episode_id, fraction);
                 }
             }
@@ -503,6 +512,17 @@ impl Component for AppModel {
                 for (_, page) in &self.pages_cache {
                     page.notify_download_finished(episode_id);
                 }
+            }
+            AppModelInput::PlayBackProgress(episode_id, pos) => {
+                self.miniplayer
+                    .emit(MiniplayerModelInput::UpdateProgress(pos));
+                for (_, page) in &self.pages_cache {
+                    page.notify_playback_progress(episode_id, pos);
+                }
+            }
+            AppModelInput::SeekAudioPosition(fraction) => {
+                self.worker_controller
+                    .emit(ActionWorkerInput::SeekAudioPosition(fraction));
             }
         }
 

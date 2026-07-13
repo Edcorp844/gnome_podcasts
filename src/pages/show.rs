@@ -41,6 +41,7 @@ pub enum ShowPageInput {
     DownloadProgress(EpisodeId, f64),
     DownloadFinished(EpisodeId),
     ChangePlayBackState(PlayState, EpisodeId),
+    PlayBackProgress(EpisodeId, f64),
 }
 
 #[derive(Debug)]
@@ -475,6 +476,14 @@ impl Component for ShowPage {
                     );
                 }
             }
+            ShowPageInput::PlayBackProgress(episode_id, pos) => {
+                if let Some(index) = self.index_by_id.get(&episode_id) {
+                    self.episodes.send(
+                        index.current_index(),
+                        EpisodeListItemInput::PlayBackProgress(pos),
+                    );
+                }
+            },
         }
     }
 

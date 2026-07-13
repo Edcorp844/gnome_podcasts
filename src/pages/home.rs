@@ -34,6 +34,7 @@ pub enum HomePageInput {
     DownloadProgress(EpisodeId, f64),
     DownloadFinished(EpisodeId),
     ChangePlayBackState(PlayState, EpisodeId),
+    PlayBackProgress(EpisodeId, f64),
 }
 
 #[derive(Debug)]
@@ -241,6 +242,9 @@ impl Component for HomePage {
             }
             HomePageInput::ChangePlayBackState(_, episode_id) => {
                 
+            },
+            HomePageInput::PlayBackProgress(episode_id, pos) => {
+
             },
         }
 

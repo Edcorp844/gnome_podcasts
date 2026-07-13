@@ -7,6 +7,11 @@ use podcasts_data::EpisodeModel;
 use podcasts_data::dbqueries;
 use relm4::prelude::*;
 
+use crate::app::AppModelOutput;
+use crate::components::progress_bar::ProgressBar;
+use crate::components::progress_bar::ProgressBarInit;
+use crate::components::progress_bar::ProgressBarInput;
+use crate::components::progress_bar::ProgressBarOutput;
 use crate::components::volume_scale::VolumeControlInit;
 use crate::components::volume_scale::VolumeControlModel;
 use crate::components::volume_scale::VolumeControlOutput;
@@ -18,6 +23,7 @@ pub struct MiniPlayerModel {
     texture: Option<adw::gdk::Texture>,
     current_state: PlayState,
     current_episode: Option<Episode>,
+    play_progress_bar: Controller<ProgressBar>,
 }
 
 #[derive(Debug)]
@@ -26,12 +32,14 @@ pub enum MiniplayerModelInput {
     ImageDownloaded(Option<adw::gdk::Texture>),
     ChangePlayBackState(PlayState),
     SetCurrentEpisode(EpisodeId),
+    UpdateProgress(f64),
 }
 
 #[derive(Debug)]
 pub enum MiniplayerModelOutput {
     TogglePlay,
     NotifyError(String),
+    SeekAudioPosition(f64),
 }
 
 #[derive(Debug)]
@@ -61,11 +69,23 @@ impl Component for MiniPlayerModel {
                 }
             });
 
+        let play_progress_bar = ProgressBar::builder()
+            .launch(ProgressBarInit {
+                initial_fraction: 0.0,
+                interactive: true,
+            })
+            .forward(sender.output_sender(), |msg| match msg {
+                ProgressBarOutput::FractionChanged(fraction) => {
+                    MiniplayerModelOutput::SeekAudioPosition(fraction)
+                }
+            });
+
         let model = Self {
             volume_slider,
             texture: None,
             current_state: PlayState::Stopped,
             current_episode: None,
+            play_progress_bar,
         };
 
         let widgets = view_output!();
@@ -106,6 +126,10 @@ impl Component for MiniPlayerModel {
                         )));
                     }
                 }
+            }
+            MiniplayerModelInput::UpdateProgress(fraction) => {
+                self.play_progress_bar
+                    .emit(ProgressBarInput::SetFraction(fraction));
             }
             _ => {}
         }
@@ -258,8 +282,7 @@ impl Component for MiniPlayerModel {
                     gtk::Box {
                         set_orientation: gtk::Orientation::Vertical,
                         set_halign: gtk::Align::Start,
-                        set_spacing: 4,
-
+                        //set_spacing: 2,
 
                         gtk::Label {
                             #[watch]
@@ -271,14 +294,21 @@ impl Component for MiniPlayerModel {
                             set_lines: 1,
                             set_halign: gtk::Align::Start,
                             set_valign: gtk::Align::Center,
+                            set_css_classes: &vec!["caption"],
                         },
 
                         gtk::Label {
                             set_label: "July 5",
                             set_halign: gtk::Align::Start,
                             set_valign: gtk::Align::Center,
-                            add_css_class: "dimmed",
-                        }
+                            set_css_classes: &vec!["caption", "dimmed"],
+                        },
+
+                        model.play_progress_bar.widget() {
+                            set_height_request: 8,
+                            set_halign: gtk::Align::Fill,
+                            set_valign: gtk::Align::Center,
+                        },
                     },
 
                     gtk::Separator { set_hexpand: true, add_css_class: "spacer" },
@@ -291,8 +321,18 @@ impl Component for MiniPlayerModel {
 
                     gtk::Separator { set_hexpand: true, add_css_class: "spacer" },
 
-                    // Appends the custom volume slider widget controller cleanly
-                    append = model.volume_slider.widget(),
+                    gtk::Button{
+                        set_icon_name: "annotations-text-symbolic",
+                    },
+                    gtk::Separator { set_hexpand: true, add_css_class: "spacer" },
+
+                    gtk::Button{
+                        set_icon_name: "view-list-symbolic",
+                    },
+
+                    gtk::Separator { set_hexpand: true, add_css_class: "spacer" },
+
+                    model.volume_slider.widget(),
 
                     gtk::Separator { set_hexpand: true, add_css_class: "spacer" },
                 }

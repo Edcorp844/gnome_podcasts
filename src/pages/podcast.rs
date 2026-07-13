@@ -41,6 +41,7 @@ pub enum PodcastPageInput {
     DownloadProgress(EpisodeId, f64),
     DownloadFinished(EpisodeId),
     ChangePlayBackState(PlayState, EpisodeId),
+    PlayBackProgress(EpisodeId, f64),
 }
 
 #[derive(Debug)]
@@ -168,6 +169,7 @@ impl Component for PodcastPage {
                 //     page.notify_playing_state(episode_id, state);
                 // }
             }
+            PodcastPageInput::PlayBackProgress(episode_id, pos) => {}
         }
 
         self.update_view(widgets, sender);

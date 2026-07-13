@@ -8,8 +8,13 @@ use relm4::{
 
 use crate::{
     components::{
-        circular_progress::{CircularProgress, CircularProgressInput}, play_button::{self, EpisodePlayingState, PlayButton, PlayButtonInitData, PlayButtonInput, PlayButtonOutput},
-    }, util::{
+        circular_progress::{CircularProgress, CircularProgressInput},
+        play_button::{
+            self, EpisodePlayingState, PlayButton, PlayButtonInitData, PlayButtonInput,
+            PlayButtonOutput,
+        },
+    },
+    util::{
         cover_image::{ImageSize, fetch_cached_image},
         episode_description_parser,
     },
@@ -30,6 +35,7 @@ pub enum EpisodeListItemInput {
     ImageDownloaded(Option<adw::gdk::Texture>),
     TogglePlay,
     DownloadStarted,
+    PlayBackProgress(f64),
     DownloadProgress(f64),
     CancleDownload,
     DownloadCancled,
@@ -145,26 +151,33 @@ impl FactoryComponent for EpisodeListItem {
                 self.downloading = false;
                 self.downloaded = true;
             }
-            EpisodeListItemInput::ChangePlayBackState(state) => {
-                match state {
-                    PlayState::Stopped => {
-                         self.play_button.emit(PlayButtonInput::UpdatePlayingState(EpisodePlayingState::Stopped));
-                    },
-                    PlayState::Buffering => {
-                         self.play_button.emit(PlayButtonInput::UpdatePlayingState(EpisodePlayingState::Playing));
-                    },
-                    PlayState::Paused => {
-                         self.play_button.emit(PlayButtonInput::UpdatePlayingState(EpisodePlayingState::Paused));
-                    },
-                    PlayState::Playing => {
-                         self.play_button.emit(PlayButtonInput::UpdatePlayingState(EpisodePlayingState::Playing));
-                    },
-                    _ => {
-                        
-                    },
+            EpisodeListItemInput::ChangePlayBackState(state) => match state {
+                PlayState::Stopped => {
+                    self.play_button.emit(PlayButtonInput::UpdatePlayingState(
+                        EpisodePlayingState::Stopped,
+                    ));
                 }
-               
+                PlayState::Buffering => {
+                    self.play_button.emit(PlayButtonInput::UpdatePlayingState(
+                        EpisodePlayingState::Playing,
+                    ));
+                }
+                PlayState::Paused => {
+                    self.play_button.emit(PlayButtonInput::UpdatePlayingState(
+                        EpisodePlayingState::Paused,
+                    ));
+                }
+                PlayState::Playing => {
+                    self.play_button.emit(PlayButtonInput::UpdatePlayingState(
+                        EpisodePlayingState::Playing,
+                    ));
+                }
+                _ => {}
             },
+            EpisodeListItemInput::PlayBackProgress(fraction) => {
+                self.play_button
+                    .emit(PlayButtonInput::UpdateProgress(fraction));
+            }
         }
     }
 
@@ -290,6 +303,7 @@ impl FactoryComponent for EpisodeListItem {
 
              gtk::Separator{
                 set_hexpand: true,
+                set_halign: gtk::Align::Fill,
                 add_css_class:"spacer"
             },
 

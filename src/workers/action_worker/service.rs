@@ -50,6 +50,9 @@ pub enum ActionWorkerInput {
     StateChanged(gst_play::PlayState),
     DownloadEpisode(EpisodeId),
     CancelDownload(EpisodeId),
+    SeekAudioPosition(f64),
+    DurationChanged(u64),
+    PositionChanged(u64),
 
 }
 
@@ -57,12 +60,12 @@ pub enum ActionWorkerInput {
 pub enum ActionWorkerOutput {
     Forward(Action),
     SetUpdatingState(bool),
-    EpisodeReady(podcasts_data::EpisodeWidgetModel), // swap for your real type
+    EpisodeReady(podcasts_data::EpisodeWidgetModel),
+    PlayBackProgress(EpisodeId, f64), 
     UriReady(String),
     NotifyError(String),
     SyncFinished,
     StateChanged(gst_play::PlayState, EpisodeId),
-    PositionChanged(u64),
     SetCurrentEpisode(EpisodeId),
     RefreshAllViews,
     DownloadStarted(EpisodeId),
@@ -95,7 +98,8 @@ pub struct ActionWorker {
     _player_signals: gst_play::PlaySignalAdapter,
     current_player_state: gst_play::PlayState,
     current_episode: Option<EpisodeId>,
-     mpris_tx: async_channel::Sender<MprisCommand>,
+    current_duration_ms: u64,
+    mpris_tx: async_channel::Sender<MprisCommand>,
 }
 
 impl Worker for ActionWorker {
@@ -115,10 +119,17 @@ impl Worker for ActionWorker {
 
         let player_signals = gst_play::PlaySignalAdapter::new(&player);
 
+        let duration_sender = sender.clone();
+        player_signals.connect_duration_changed(move |_, duration| {
+            if let Some(dur) = duration {
+                let _ = duration_sender.input(ActionWorkerInput::DurationChanged(dur.mseconds()));
+            }
+        });
+
         let position_sender = sender.clone();
-        player_signals.connect_duration_changed(move |_, position| {
+        player_signals.connect_position_updated(move |_, position| {
             if let Some(pos) = position {
-                let _ = position_sender.output(ActionWorkerOutput::PositionChanged(pos.mseconds()));
+                let _ = position_sender.input(ActionWorkerInput::PositionChanged(pos.mseconds()));
             }
         });
 
@@ -234,6 +245,7 @@ impl Worker for ActionWorker {
             current_player_state: gst_play::PlayState::Stopped,
             _player_signals: player_signals,
             current_episode: None,
+            current_duration_ms: 0,
             mpris_tx, 
         }
     }
@@ -266,7 +278,7 @@ impl Worker for ActionWorker {
                     let _ = sender.output(ActionWorkerOutput::StateChanged(state, id));
                 }
             }
-            
+
             ActionWorkerInput::TogglePlayBack => match self.current_player_state {
                 gst_play::PlayState::Stopped | gst_play::PlayState::Paused => {
                     self.player.play();
@@ -275,6 +287,29 @@ impl Worker for ActionWorker {
                     self.player.pause();
                 }
                 _ => {}
+            },
+            ActionWorkerInput::PositionChanged(position_ms) => {
+                if self.current_duration_ms > 0 {
+                    let ratio = position_ms as f64 / self.current_duration_ms as f64;
+                    if !ratio.is_nan() && !ratio.is_infinite() {
+                        let fraction = ratio.clamp(0.0, 1.0);
+                        if let Some(id) = self.current_episode {
+                            let _ = sender.output(ActionWorkerOutput::PlayBackProgress( id, fraction));
+                        }
+                    }   
+                }
+            },
+            ActionWorkerInput::DurationChanged(ms) => {
+                self.current_duration_ms = ms;
+            },
+            ActionWorkerInput::SeekAudioPosition(pos_fraction) => {
+                if self.current_duration_ms > 0 {
+                    let clamped = pos_fraction.clamp(0.0, 1.0);
+                    let seek_ms = (clamped * self.current_duration_ms as f64) as u64;
+                    let seek_pos = gst::ClockTime::from_mseconds(seek_ms);
+
+                    self.player.seek(seek_pos);
+                }
             },
         }
     }
@@ -313,6 +348,7 @@ impl ActionWorker {
                 } else {
                     self.current_episode = Some(id);
 
+
                     let _ = sender.output(ActionWorkerOutput::SetCurrentEpisode(id));
                     match dbqueries::get_episode_from_id(id) {
                         Ok(episode) => {
@@ -328,6 +364,7 @@ impl ActionWorker {
                             };
 
                             if let Some(stream_url) = uri {
+                                self.current_duration_ms = 0; 
                                 self.player.set_uri(Some(&stream_url));
                                 self.player.play();
                             }

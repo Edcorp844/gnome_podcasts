@@ -54,6 +54,7 @@ pub enum SearchPageInput {
     DownloadProgress(EpisodeId, f64),
     DownloadFinished(EpisodeId),
     ChangePlayBackState(PlayState, EpisodeId),
+    PlayBackProgress(EpisodeId, f64),
 }
 
 #[derive(Debug)]
@@ -189,6 +190,11 @@ impl Component for SearchPage {
             SearchPageInput::ChangePlayBackState(state, episode_id) => {
                 for (_, page) in &self.active_pages {
                     page.notify_playing_state(episode_id.clone(), state.clone());
+                }
+            }
+            SearchPageInput::PlayBackProgress(episode_id, pos) => {
+                for (_, page) in &self.active_pages {
+                    page.notify_playback_progress(episode_id.clone(), pos.clone());
                 }
             }
         }
