@@ -5,13 +5,17 @@ use gst_play::PlayState;
 use podcasts_data::{
     EpisodeId, Show, ShowId,
     dbqueries::{self},
-    discovery::FoundPodcast,
     errors::DataError,
 };
 use relm4::{Component, ComponentParts, ComponentSender, prelude::*};
 
 use crate::{
-    components::episode_list_item::{EpisodeListItem, EpisodeListItemInput, EpisodeListItemOutput},
+    components::{
+        episode_list_item::{EpisodeListItem, EpisodeListItemInput, EpisodeListItemOutput},
+        play_button::{
+            EpisodePlayingState, PlayButton, PlayButtonInitData, PlayButtonInput, PlayButtonOutput,
+        },
+    },
     util::{
         cover_image::{ImageSize, fetch_cached_image},
         episode_description_parser,
@@ -21,7 +25,8 @@ use crate::{
 #[derive(Debug)]
 pub struct ShowPage {
     show: Option<Show>,
-    podcast: Option<FoundPodcast>,
+    latest_episode: Option<EpisodeId>,
+    latest_play_button: Controller<PlayButton>,
     episodes: FactoryVecDeque<EpisodeListItem>,
     index_by_id: HashMap<EpisodeId, relm4::factory::DynamicIndex>,
     episode_count: usize,
@@ -34,14 +39,14 @@ pub enum ShowPageInput {
     GetShow(ShowId),
     ShowGotten(Result<Show, DataError>),
     ImageDownloaded(Option<adw::gdk::Texture>),
-    TogglePlay(EpisodeId),
+    TogglePlayLatest,
     DownloadStarted(EpisodeId),
     DownloadCancled(EpisodeId),
-    RequestDownload(EpisodeId),
     DownloadProgress(EpisodeId, f64),
     DownloadFinished(EpisodeId),
     ChangePlayBackState(PlayState, EpisodeId),
-    PlayBackProgress(EpisodeId, f64),
+    PlayBackProgress(EpisodeId, f64, u64),
+    ChangeEpisodeTo(EpisodeId),
 }
 
 #[derive(Debug)]
@@ -206,10 +211,7 @@ impl Component for ShowPage {
                                         set_spacing: 12,
                                         set_halign: gtk::Align::Start,
 
-                                        gtk::Button {
-                                            set_label: "▶ Latest Episode",
-                                            set_css_classes: &vec!["pill", "suggested-action"],
-                                        },
+                                        model.latest_play_button.widget(),
 
                                         gtk::Separator { set_hexpand: true, add_css_class: "spacer" },
 
@@ -345,6 +347,16 @@ impl Component for ShowPage {
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let episodes_parent = gtk::ListBox::builder().build();
+        let latest_play_button = PlayButton::builder()
+            .launch(PlayButtonInitData {
+                label: "Latest Episode".to_string(),
+                state: EpisodePlayingState::Stopped,
+                progress: 0.0,
+            })
+            .forward(sender.input_sender(), |msg| match msg {
+                PlayButtonOutput::Clicked => ShowPageInput::TogglePlayLatest,
+            });
+
         let model = Self {
             episodes: FactoryVecDeque::builder().launch(episodes_parent).forward(
                 sender.output_sender(),
@@ -361,10 +373,11 @@ impl Component for ShowPage {
             ),
             index_by_id: HashMap::new(),
             episode_count: 0,
-            podcast: None,
+            latest_play_button,
             show: None,
             show_image_texture: None,
             load_error: None,
+            latest_episode: None,
         };
 
         let episodes_container = model.episodes.widget();
@@ -404,6 +417,10 @@ impl Component for ShowPage {
                             Ok(episodes) => {
                                 println!("Episodes Loaded: {:?}", episodes.len());
 
+                                if let Some(episode) = episodes.first() {
+                                    self.latest_episode = Some(episode.clone().id());
+                                };
+
                                 let mut guard = self.episodes.guard();
                                 guard.clear();
 
@@ -433,21 +450,14 @@ impl Component for ShowPage {
             ShowPageInput::ImageDownloaded(opt_texture) => {
                 self.show_image_texture = opt_texture;
             }
-            ShowPageInput::TogglePlay(id) => {
-                let _ = sender.output(ShowPageOutput::TogglePlay(id));
-            }
             ShowPageInput::DownloadStarted(episode_id) => {
                 if let Some(index) = self.index_by_id.get(&episode_id) {
                     self.episodes
                         .send(index.current_index(), EpisodeListItemInput::DownloadStarted);
                 }
             }
-            ShowPageInput::RequestDownload(episode_id) => {
-                let _ = sender.output(ShowPageOutput::RequestDownload(episode_id));
-            }
             ShowPageInput::DownloadProgress(episode_id, fraction) => {
                 if let Some(index) = self.index_by_id.get(&episode_id) {
-                    print!("sending {fraction} on show");
                     self.episodes.send(
                         index.current_index(),
                         EpisodeListItemInput::DownloadProgress(fraction),
@@ -475,15 +485,94 @@ impl Component for ShowPage {
                         EpisodeListItemInput::ChangePlayBackState(state),
                     );
                 }
+
+                if let Some(episode) = self.latest_episode {
+                    if episode == episode_id {
+                        match state {
+                            PlayState::Stopped => {
+                                self.latest_play_button
+                                    .emit(PlayButtonInput::UpdatePlayingState(
+                                        EpisodePlayingState::Stopped,
+                                    ));
+
+                                self.latest_play_button
+                                    .emit(PlayButtonInput::SetLabel("Latest_Episode".to_string()));
+                            }
+                            PlayState::Buffering => {
+                                self.latest_play_button
+                                    .emit(PlayButtonInput::UpdatePlayingState(
+                                        EpisodePlayingState::Playing,
+                                    ));
+                            }
+                            PlayState::Paused => {
+                                self.latest_play_button
+                                    .emit(PlayButtonInput::UpdatePlayingState(
+                                        EpisodePlayingState::Paused,
+                                    ));
+                            }
+                            PlayState::Playing => {
+                                self.latest_play_button
+                                    .emit(PlayButtonInput::UpdatePlayingState(
+                                        EpisodePlayingState::Playing,
+                                    ));
+                            }
+                            _ => {}
+                        }
+                    }
+                }
             }
-            ShowPageInput::PlayBackProgress(episode_id, pos) => {
+            ShowPageInput::PlayBackProgress(episode_id, pos, rem) => {
                 if let Some(index) = self.index_by_id.get(&episode_id) {
                     self.episodes.send(
                         index.current_index(),
-                        EpisodeListItemInput::PlayBackProgress(pos),
+                        EpisodeListItemInput::PlayBackProgress(pos, rem),
                     );
                 }
-            },
+
+                if let Some(episode) = self.latest_episode {
+                    if episode == episode_id {
+                        self.latest_play_button
+                            .emit(PlayButtonInput::UpdateProgress(pos));
+
+                        let duration_str = if rem > 0 {
+                            let hours = rem / 3600;
+                            let minutes = (rem % 3600) / 60;
+                            let seconds = rem % 60;
+
+                            if hours > 0 {
+                                format!("{}h {}m", hours, minutes)
+                            } else if minutes > 0 {
+                                format!("{}m", minutes)
+                            } else {
+                                format!("{}s", seconds)
+                            }
+                        } else {
+                            "0s".to_string()
+                        };
+
+                        self.latest_play_button
+                            .emit(PlayButtonInput::SetLabel(duration_str));
+                    }
+                }
+            }
+            ShowPageInput::TogglePlayLatest => {
+                if let Some(episode) = self.latest_episode {
+                    let _ = sender.output(ShowPageOutput::TogglePlay(episode));
+                }
+            }
+            ShowPageInput::ChangeEpisodeTo(episode_id) => {
+                if let Some(episode) = self.latest_episode {
+                    if episode != episode_id {
+                        sender.input(ShowPageInput::ChangePlayBackState(
+                                PlayState::Stopped,
+                                episode,
+                            ));
+                    }
+                }
+
+                self.episodes
+                    .broadcast(EpisodeListItemInput::ChangeEpisodeTo(episode_id));
+            }
         }
     }
 

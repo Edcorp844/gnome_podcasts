@@ -1,5 +1,4 @@
-use crate::app::AppModel;
-use gtk::prelude::*; // Required for StyleContext and Display traits
+use crate::{app::AppModel, components::app_menu::AppMenu};
 use relm4::RelmApp;
 use std::sync::LazyLock;
 
@@ -13,7 +12,6 @@ mod pages;
 mod util;
 mod workers;
 
-// === THE FIX: Define the missing local Tokio runtime ===
 pub static RUNTIME: LazyLock<tokio::runtime::Runtime> =
     LazyLock::new(|| tokio::runtime::Runtime::new().unwrap());
 
@@ -24,6 +22,8 @@ fn main() {
 
     gst::init().expect("Error initializing gstreamer");
 
+    AppMenu::register();
+
     let app = RelmApp::new("org.flame.podcasts");
 
     let provider = gtk::CssProvider::new();
@@ -33,13 +33,6 @@ fn main() {
             from { background-position: 0% 0%; }
             to { background-position: 200% 10%; }
         }
-
-        .circular-progress-widget {
-            -active-color: @accent_color; 
-            
-            -track-color: alpha(@accent_color, 0.15);
-        }
-
     ";
 
     provider.load_from_string(css_data);

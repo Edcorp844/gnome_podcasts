@@ -8,3 +8,5 @@ pub mod show_card;
 pub mod volume_scale;
 pub mod progress_bar;
 pub mod play_button;
+pub mod app_menu;
+pub mod main_menu_button;

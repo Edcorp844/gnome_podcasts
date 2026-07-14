@@ -54,7 +54,8 @@ pub enum SearchPageInput {
     DownloadProgress(EpisodeId, f64),
     DownloadFinished(EpisodeId),
     ChangePlayBackState(PlayState, EpisodeId),
-    PlayBackProgress(EpisodeId, f64),
+    PlayBackProgress(EpisodeId, f64, u64),
+    ChangeEpisodeTo(EpisodeId),
 }
 
 #[derive(Debug)]
@@ -192,11 +193,16 @@ impl Component for SearchPage {
                     page.notify_playing_state(episode_id.clone(), state.clone());
                 }
             }
-            SearchPageInput::PlayBackProgress(episode_id, pos) => {
+            SearchPageInput::PlayBackProgress(episode_id, pos, rem) => {
                 for (_, page) in &self.active_pages {
-                    page.notify_playback_progress(episode_id.clone(), pos.clone());
+                    page.notify_playback_progress(episode_id.clone(), pos.clone(), rem.clone());
                 }
             }
+            SearchPageInput::ChangeEpisodeTo(episode_id) => {
+                for (_, page) in &self.active_pages {
+                    page.notify_current_episode(episode_id.clone());
+                }
+            },
         }
 
         self.update(message, sender, root);

@@ -99,7 +99,7 @@ impl Component for CircularProgress {
             );
 
             // Set font size dynamically proportional to the widget size
-            let font_size = size * 0.4;
+            let font_size = size * 0.35;
             cr.set_font_size(font_size);
 
             let percentage_text = format!("{:.0}%", fraction * 100.0);

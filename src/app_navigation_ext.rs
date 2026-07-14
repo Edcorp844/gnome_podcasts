@@ -146,22 +146,67 @@ impl PageController {
         }
     }
 
-     pub(crate) fn notify_playback_progress(&self, episode_id: EpisodeId, fraction: f64) {
+    pub(crate) fn notify_playback_progress(
+        &self,
+        episode_id: EpisodeId,
+        fraction: f64,
+        remaining_sec: u64,
+    ) {
         match self {
             Self::Search(c) => {
-                c.emit(SearchPageInput::PlayBackProgress(episode_id, fraction));
+                c.emit(SearchPageInput::PlayBackProgress(
+                    episode_id,
+                    fraction,
+                    remaining_sec,
+                ));
             }
             Self::Home(c) => {
-                c.emit(HomePageInput::PlayBackProgress(episode_id, fraction));
+                c.emit(HomePageInput::PlayBackProgress(
+                    episode_id,
+                    fraction,
+                    remaining_sec,
+                ));
             }
             Self::New(c) => {
-                c.emit(NewPageInput::PlayBackProgress(episode_id, fraction));
+                c.emit(NewPageInput::PlayBackProgress(
+                    episode_id,
+                    fraction,
+                    remaining_sec,
+                ));
             }
             Self::Shows(c) => {
-                c.emit(ShowsPageInput::PlayBackProgress(episode_id, fraction));
+                c.emit(ShowsPageInput::PlayBackProgress(
+                    episode_id,
+                    fraction,
+                    remaining_sec,
+                ));
             }
             Self::Podcast(c) => {
-                c.emit(PodcastPageInput::PlayBackProgress(episode_id, fraction));
+                c.emit(PodcastPageInput::PlayBackProgress(
+                    episode_id,
+                    fraction,
+                    remaining_sec,
+                ));
+            }
+        }
+    }
+
+    pub(crate) fn notify_current_episode(&self, episode_id: EpisodeId) {
+        match self {
+            Self::Search(c) => {
+                c.emit(SearchPageInput::ChangeEpisodeTo(episode_id));
+            }
+            Self::Home(c) => {
+                c.emit(HomePageInput::ChangeEpisodeTo(episode_id));
+            }
+            Self::New(c) => {
+                c.emit(NewPageInput::ChangeEpisodeTo(episode_id));
+            }
+            Self::Shows(c) => {
+                c.emit(ShowsPageInput::ChangeEpisodeTo(episode_id));
+            }
+            Self::Podcast(c) => {
+                c.emit(PodcastPageInput::ChangeEpisodeTo(episode_id));
             }
         }
     }

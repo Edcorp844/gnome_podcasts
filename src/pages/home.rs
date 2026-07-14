@@ -34,7 +34,8 @@ pub enum HomePageInput {
     DownloadProgress(EpisodeId, f64),
     DownloadFinished(EpisodeId),
     ChangePlayBackState(PlayState, EpisodeId),
-    PlayBackProgress(EpisodeId, f64),
+    PlayBackProgress(EpisodeId, f64, u64),
+    ChangeEpisodeTo(EpisodeId),
 }
 
 #[derive(Debug)]
@@ -240,12 +241,9 @@ impl Component for HomePage {
                     page.notify_download_finished(episode_id);
                 }
             }
-            HomePageInput::ChangePlayBackState(_, episode_id) => {
-                
-            },
-            HomePageInput::PlayBackProgress(episode_id, pos) => {
-
-            },
+            HomePageInput::ChangePlayBackState(_, episode_id) => {}
+            HomePageInput::PlayBackProgress(episode_id, pos, rem) => {}
+            HomePageInput::ChangeEpisodeTo(episode_id) => {}
         }
 
         // self.update(message, sender, root);

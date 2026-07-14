@@ -1,6 +1,8 @@
 use crate::action::Action;
 use crate::app_navigation_ext::NavigationPage;
 use crate::app_navigation_ext::PageController;
+use crate::components::main_menu_button;
+use crate::components::main_menu_button::MainMenuButton;
 use crate::components::miniplayer::MiniPlayerModel;
 
 use crate::components::miniplayer::MiniplayerModelInput;
@@ -30,11 +32,13 @@ use std::collections::HashSet;
 use podcasts_data::{EpisodeId, EpisodeWidgetModel, ShowId};
 
 pub struct AppModel {
-    pub is_sidebar_visible: bool,
+    is_sidebar_visible: bool,
+    main_menu_button: Controller<MainMenuButton>,
     pages_cache: HashMap<String, PageController>,
     current_page_key: String,
     miniplayer: Controller<MiniPlayerModel>,
     worker_controller: Controller<ActionWorker>,
+
     pub is_loading: bool,
     pub updating: bool,
     pub active_show_id: Option<ShowId>,
@@ -61,7 +65,7 @@ pub enum AppModelInput {
     NotifyError(String),
     Subscribe(String),
     ChangePlayBackState(PlayState, EpisodeId),
-    PlayBackProgress(EpisodeId, f64),
+    PlayBackProgress(EpisodeId, f64, u64),
     SetCurrentEpisode(EpisodeId),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
@@ -74,6 +78,8 @@ pub enum AppModelInput {
     RequestMute,
     RequestUnmute,
     RequestVolumeValue,
+    Seekforward,
+    SeekBakward,
     None,
 }
 
@@ -123,14 +129,7 @@ impl Component for AppModel {
                         },
 
 
-                        pack_end = &gtk::Button {
-                            set_icon_name: "open-menu-symbolic",
-                            set_tooltip: "Main Menu",
-                            add_css_class: "flat",
-                            connect_clicked[sender] => move |_| {
-                                //let _ = sender.output(AudioBibleOutput::ToggleSidebar);
-                            }
-                        }
+                        pack_end = model.main_menu_button.widget(),
                     },
 
                     #[wrap(Some)]
@@ -273,10 +272,10 @@ impl Component for AppModel {
                             .clone()
                             .input(AppModelInput::DownloadProgress(id, fraction));
                     }
-                    ActionWorkerOutput::PlayBackProgress(id, pos) => {
+                    ActionWorkerOutput::PlayBackProgress(id, pos, remaining) => {
                         action_sender
                             .clone()
-                            .input(AppModelInput::PlayBackProgress(id, pos));
+                            .input(AppModelInput::PlayBackProgress(id, pos, remaining));
                     }
                     ActionWorkerOutput::VolumeValue(val) => {
                         action_sender.clone().input(AppModelInput::VolumeValue(val));
@@ -284,7 +283,8 @@ impl Component for AppModel {
                     _ => {}
                 });
 
-        // Create HomePage and subscribe it to worker output
+        let main_menu_button = MainMenuButton::builder().launch(()).detach();
+
         let homepage =
             HomePage::builder()
                 .launch(())
@@ -313,10 +313,13 @@ impl Component for AppModel {
                     MiniplayerModelOutput::RequestMute => AppModelInput::RequestMute,
                     MiniplayerModelOutput::RequestUnmute => AppModelInput::RequestUnmute,
                     MiniplayerModelOutput::RequestVolumeValue => AppModelInput::RequestVolumeValue,
+                    MiniplayerModelOutput::Seekforward => AppModelInput::Seekforward,
+                    MiniplayerModelOutput::SeekBakward => AppModelInput::SeekBakward,
                 });
 
         let model = AppModel {
             is_sidebar_visible: true,
+            main_menu_button,
             pages_cache: initial_cache,
             current_page_key: key,
             miniplayer,
@@ -441,7 +444,7 @@ impl Component for AppModel {
                             );
                             PageController::Shows(page_instance)
                         }
-                        _ => return, // Early exit if page is unsupported to avoid broken state
+                        _ => return,
                     };
 
                     self.pages_cache.insert(key.clone(), controller);
@@ -484,6 +487,9 @@ impl Component for AppModel {
             AppModelInput::SetCurrentEpisode(id) => {
                 self.miniplayer
                     .emit(MiniplayerModelInput::SetCurrentEpisode(id));
+                for (_, page) in &self.pages_cache {
+                    page.notify_current_episode(id);
+                }
             }
             AppModelInput::TogglePlayBack => {
                 self.worker_controller
@@ -526,11 +532,11 @@ impl Component for AppModel {
                     page.notify_download_finished(episode_id);
                 }
             }
-            AppModelInput::PlayBackProgress(episode_id, pos) => {
+            AppModelInput::PlayBackProgress(episode_id, pos, remaining) => {
                 self.miniplayer
                     .emit(MiniplayerModelInput::UpdateProgress(pos));
                 for (_, page) in &self.pages_cache {
-                    page.notify_playback_progress(episode_id, pos);
+                    page.notify_playback_progress(episode_id, pos, remaining);
                 }
             }
             AppModelInput::SeekAudioPosition(fraction) => {
@@ -553,6 +559,12 @@ impl Component for AppModel {
             }
             AppModelInput::VolumeValue(val) => {
                 self.miniplayer.emit(MiniplayerModelInput::VolumeValue(val));
+            }
+            AppModelInput::Seekforward => {
+                self.worker_controller.emit(ActionWorkerInput::SeekFoward);
+            }
+            AppModelInput::SeekBakward => {
+                self.worker_controller.emit(ActionWorkerInput::SeekBackward);
             }
         }
 

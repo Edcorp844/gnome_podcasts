@@ -1,13 +1,7 @@
 use std::path::Path;
-use std::sync::Arc;
 
-use gst::glib::object::ObjectExt;
-use gst_play::PlayState;
 use gtk::gio::File;
 use gtk::gio::prelude::FileExt;
-use gst::prelude::*;
-use mpris_player::{Metadata, MprisPlayer, PlaybackStatus};
-use podcasts_data::Episode;
 use podcasts_data::EpisodeModel;
 use podcasts_data::FEED_MANAGER;
 use podcasts_data::nextcloud_sync;
@@ -17,34 +11,17 @@ use podcasts_data::nextcloud_sync::SyncResult;
 use relm4::{ComponentSender, Worker};
 
 use podcasts_data::EpisodeId;
-use podcasts_data::dbqueries; // adjust import path/name if yours differs
+use podcasts_data::dbqueries;
 
 use crate::action::Action;
 use crate::util::gst_errors::handel_gst_core_error;
 use crate::util::gst_errors::handel_gst_resource_error;
 use crate::util::gst_errors::handel_gst_stream_error;
-use crate::workers::action_worker::service::ActionWorkerInput::Execute;
-
-// -----------------------------------------------------------------------
-// NOTE ON TYPES: this file assumes `Action` (and every payload it carries —
-// Podcast, Show, Episode/EpisodeWidgetModel, FoundPodcast, Chapters, etc.)
-// already derives `Clone` + `Debug`, since it now travels across a channel
-// to a background thread and gets broadcast to possibly many subscribers.
-// If any of those types currently don't derive Clone, that's the first
-// compile error you'll hit — add `#[derive(Clone)]` to them (they're likely
-// already cheap: Arc<Podcast>, ids, small structs).
-// -----------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
 pub enum ActionWorkerInput {
     Subscirbe(String),
-    /// Run an action. This takes the exact same `Action` enum you already
-    /// have — no call sites need to change, they just send here instead of
-    /// calling `self.do_action(...)` directly.
     Execute(Action),
-    /// Sent by the worker's own spawned tasks back into itself, to flip
-    /// internal flags (like "sync in progress") from the worker's own
-    /// thread instead of racing with it from inside a spawned future.
     SyncFinished,
     TogglePlayBack,
     StateChanged(gst_play::PlayState),
@@ -57,6 +34,8 @@ pub enum ActionWorkerInput {
     GetVolume,
     RequestMute,
     RequestUnmute,
+    SeekFoward,
+    SeekBackward,
 
 }
 
@@ -65,7 +44,7 @@ pub enum ActionWorkerOutput {
     Forward(Action),
     SetUpdatingState(bool),
     EpisodeReady(podcasts_data::EpisodeWidgetModel),
-    PlayBackProgress(EpisodeId, f64), 
+    PlayBackProgress(EpisodeId, f64, u64), 
     UriReady(String),
     NotifyError(String),
     SyncFinished,
@@ -82,10 +61,7 @@ pub enum ActionWorkerOutput {
 
 }
 
-#[derive(Debug, Clone)]
-pub enum ActionWorkerCmd {}
 
-// --- Thread Communication Commands ---
 #[derive(Debug)]
 pub enum MprisCommand {
     ChangePlaybackState(gst_play::PlayState),
@@ -295,11 +271,15 @@ impl Worker for ActionWorker {
             },
             ActionWorkerInput::PositionChanged(position_ms) => {
                 if self.current_duration_ms > 0 {
+
+                    let remaining_ms = self.current_duration_ms.saturating_sub(position_ms);
+                    let remaining_secs = remaining_ms / 1000;
+
                     let ratio = position_ms as f64 / self.current_duration_ms as f64;
                     if !ratio.is_nan() && !ratio.is_infinite() {
                         let fraction = ratio.clamp(0.0, 1.0);
                         if let Some(id) = self.current_episode {
-                            let _ = sender.output(ActionWorkerOutput::PlayBackProgress( id, fraction));
+                            let _ = sender.output(ActionWorkerOutput::PlayBackProgress( id, fraction, remaining_secs));
                         }
                     }   
                 }
@@ -333,6 +313,25 @@ impl Worker for ActionWorker {
                 let volume = self.player.volume();
                 let _ = sender.output(ActionWorkerOutput::VolumeValue(volume));
             },
+            ActionWorkerInput::SeekFoward => {
+                if let Some(current_pos) = self.player.position(){
+                    if let Some(total_duration ) = self.player.duration(){
+
+                        let ten_seconds_in_ns = 30 * gst::ClockTime::SECOND;
+
+                        let target_pos = (current_pos + ten_seconds_in_ns).min(total_duration);
+
+                        self.player.seek(target_pos);
+                    }
+                }
+            },
+            ActionWorkerInput::SeekBackward => {
+                 if let Some(current_pos) = self.player.position(){
+                        let target_pos = current_pos.saturating_sub(15 * gst::ClockTime::SECOND);
+
+                        self.player.seek(target_pos);
+                }
+            },
         }
     }
 }
@@ -340,10 +339,6 @@ impl Worker for ActionWorker {
 impl ActionWorker {
     fn execute(&mut self, action: Action, sender: ComponentSender<Self>) {
         match action {
-            // ----------------------------------------------------------
-            // Background-work actions: the worker does something real
-            // here (DB read/write, network call) before broadcasting.
-            // ----------------------------------------------------------
             Action::RefreshEpisode(id) => self.refresh_episode(id, sender.clone()),
             
             Action::RefreshAllViews => {
@@ -400,7 +395,6 @@ impl ActionWorker {
 
                             let art_url = episode.image_uri().map(|uri| uri.to_string());
 
-                            // Dispatch metadata down the channel line
                             let _ = self.mpris_tx.try_send(MprisCommand::UpdateMetadata {
                                 title,
                                 show_title,
@@ -420,14 +414,6 @@ impl ActionWorker {
                 self.player.play();
             }
 
-            // ----------------------------------------------------------
-            // Pure UI actions: no background work exists to do. These are
-            // navigation, toasts, window chrome, or app-level state
-            // (inhibit/uninhibit) that only make sense on the main thread
-            // where `window`/`self: &Application` actually live. Forward
-            // them unchanged so the subscriber runs the exact same widget
-            // code your original `do_action` had.
-            // ----------------------------------------------------------
             other @ (Action::RefreshShowsView
             | Action::RefreshEpisodesView
             | Action::ReplaceWidget(_)
@@ -454,10 +440,6 @@ impl ActionWorker {
             }
         }
     }
-
-    // -------------------------------------------------------------
-    // Background-work implementations
-    // -------------------------------------------------------------
 
     fn refresh_episode(&self, id: EpisodeId, sender: ComponentSender<Self>) {
         match dbqueries::get_episode_widget_from_id(id) {
@@ -519,7 +501,6 @@ impl ActionWorker {
 
     fn quick_sync_nextcloud(&mut self, sender: ComponentSender<Self>) {
         if self.syncing {
-            // mirrors the old `window.updating()` guard
             return;
         }
         self.syncing = true;
@@ -564,14 +545,11 @@ impl ActionWorker {
 
             let _ = sender.output(ActionWorkerOutput::SetUpdatingState(false));
 
-            // flip `syncing` back off on the worker's own thread instead
-            // of racing with it from here
             sender.input(ActionWorkerInput::SyncFinished);
         });
     }
 
-    // The mpris-player crate allows you to process incoming hardware keys
-    // like this inside your event loop or an async task thread:
+    
     fn handle_hardware_keys(&self) {
         let player_handle = self.player.clone();
 

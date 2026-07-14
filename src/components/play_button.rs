@@ -1,5 +1,4 @@
 use adw::prelude::*;
-use podcasts_data::discovery::FoundPodcast;
 use relm4::{Component, prelude::*};
 
 use crate::components::progress_bar::{ProgressBar, ProgressBarInit, ProgressBarInput};
@@ -80,6 +79,7 @@ impl Component for PlayButton {
                 },
 
                 gtk::Label {
+                    #[watch]
                     set_label: &model.label,
                 },
             },
@@ -114,7 +114,7 @@ impl Component for PlayButton {
         ComponentParts { model, widgets }
     }
 
-    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
+    fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>, _root: &Self::Root) {
         match message {
             PlayButtonInput::SetLabel(label) => self.label = label,
             PlayButtonInput::UpdateProgress(fraction) => self

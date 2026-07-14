@@ -24,7 +24,8 @@ pub enum NewPageInput {
     DownloadProgress(EpisodeId, f64),
     DownloadFinished(EpisodeId),
     ChangePlayBackState(PlayState, EpisodeId),
-    PlayBackProgress(EpisodeId, f64),
+    PlayBackProgress(EpisodeId, f64, u64),
+    ChangeEpisodeTo(EpisodeId),
 }
 
 #[derive(Debug)]
@@ -116,16 +117,13 @@ impl Component for NewPage {
                 }
                 self.is_loading = false;
             }
-            NewPageInput::DownloadStarted(episode_id) => todo!(),
-            NewPageInput::DownloadCancled(episode_id) => todo!(),
-            NewPageInput::DownloadProgress(episode_id, _) => todo!(),
+            NewPageInput::DownloadStarted(episode_id) => {}
+            NewPageInput::DownloadCancled(episode_id) => {}
+            NewPageInput::DownloadProgress(episode_id, _) => {}
             NewPageInput::DownloadFinished(episode_id) => {}
-            NewPageInput::ChangePlayBackState(play_state, episode_id) => {
-
-            },
-            NewPageInput::PlayBackProgress(episode_id, pos) =>{
-
-            },
+            NewPageInput::ChangePlayBackState(play_state, episode_id) => {}
+            NewPageInput::PlayBackProgress(episode_id, pos, rem) => {}
+            NewPageInput::ChangeEpisodeTo(episode_id) => {}
         }
     }
 

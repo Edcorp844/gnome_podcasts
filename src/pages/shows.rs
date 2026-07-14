@@ -29,7 +29,8 @@ pub enum ShowsPageInput {
     DownloadProgress(EpisodeId, f64),
     DownloadFinished(EpisodeId),
     ChangePlayBackState(PlayState, EpisodeId),
-    PlayBackProgress(EpisodeId, f64),
+    PlayBackProgress(EpisodeId, f64, u64),
+    ChangeEpisodeTo(EpisodeId),
 }
 
 #[derive(Debug)]
@@ -178,11 +179,16 @@ impl Component for ShowsPage {
                     page.emit(ShowPageInput::ChangePlayBackState(state, episode_id));
                 }
             }
-            ShowsPageInput::PlayBackProgress(episode_id, pos) => {
+            ShowsPageInput::PlayBackProgress(episode_id, pos, rem) => {
                 for page in &self.open_show_pages {
-                    page.emit(ShowPageInput::PlayBackProgress(episode_id, pos));
+                    page.emit(ShowPageInput::PlayBackProgress(episode_id, pos, rem));
                 }
-            },
+            }
+            ShowsPageInput::ChangeEpisodeTo(episode_id) => {
+                for page in &self.open_show_pages {
+                    page.emit(ShowPageInput::ChangeEpisodeTo(episode_id));
+                }
+            }
         }
 
         self.update_view(widgets, sender.clone());

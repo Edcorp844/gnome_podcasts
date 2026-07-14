@@ -40,6 +40,8 @@ pub enum MiniplayerModelOutput {
     RequestMute,
     RequestUnmute,
     RequestVolumeValue,
+    Seekforward,
+    SeekBakward
 }
 
 #[derive(Debug)]
@@ -90,6 +92,7 @@ impl Component for MiniPlayerModel {
         };
 
         let _ = sender.output(MiniplayerModelOutput::RequestVolumeValue);
+        
         let widgets = view_output!();
         ComponentParts { model, widgets }
     }
@@ -175,12 +178,16 @@ impl Component for MiniPlayerModel {
 
                     gtk::Button {
                         set_icon_name: "media-seek-backward-symbolic",
-                        set_tooltip_text: Some("Rewind 10 seconds"),
+                        set_tooltip_text: Some("Rewind 15 seconds"),
                         set_valign: gtk::Align::Center,
                         set_css_classes: &["circular", "flat"],
 
                         #[watch]
                         set_sensitive: model.current_state != gst_play::PlayState::Stopped,
+
+                        connect_clicked[sender]=>move |_| {
+                            let _  = sender.output(MiniplayerModelOutput::SeekBakward);
+                        }
                     },
 
                      match model.current_state {
@@ -220,12 +227,16 @@ impl Component for MiniPlayerModel {
 
                     gtk::Button {
                         set_icon_name: "media-seek-forward-symbolic",
-                        set_tooltip_text: Some("Fast forward 10 seconds"),
+                        set_tooltip_text: Some("Fast forward 30 seconds"),
                         set_valign: gtk::Align::Center,
                         set_css_classes: &["circular", "flat"],
 
                         #[watch]
                         set_sensitive: model.current_state != gst_play::PlayState::Stopped,
+
+                        connect_clicked[sender]=>move |_| {
+                            let _  = sender.output(MiniplayerModelOutput::Seekforward);
+                        }
                     },
 
 

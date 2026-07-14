@@ -30,18 +30,19 @@ pub struct EpisodeListItem {
     progress_indicator: Controller<CircularProgress>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum EpisodeListItemInput {
     ImageDownloaded(Option<adw::gdk::Texture>),
     TogglePlay,
     DownloadStarted,
-    PlayBackProgress(f64),
+    PlayBackProgress(f64, u64),
     DownloadProgress(f64),
     CancleDownload,
     DownloadCancled,
     RequestDownload,
     DownloadFinished,
     ChangePlayBackState(PlayState),
+    ChangeEpisodeTo(EpisodeId),
 }
 
 #[derive(Debug)]
@@ -156,6 +157,23 @@ impl FactoryComponent for EpisodeListItem {
                     self.play_button.emit(PlayButtonInput::UpdatePlayingState(
                         EpisodePlayingState::Stopped,
                     ));
+
+                    let duration_str = match self.episode.duration() {
+                        Some(seconds) if seconds > 0 => {
+                            let hours = seconds / 3600;
+                            let minutes = (seconds % 3600) / 60;
+
+                            if hours > 0 {
+                                format!("{}h {}m", hours, minutes)
+                            } else {
+                                format!("{}m", minutes)
+                            }
+                        }
+                        _ => "0m".to_string(),
+                    };
+
+                    self.play_button
+                        .emit(PlayButtonInput::SetLabel(duration_str));
                 }
                 PlayState::Buffering => {
                     self.play_button.emit(PlayButtonInput::UpdatePlayingState(
@@ -174,9 +192,34 @@ impl FactoryComponent for EpisodeListItem {
                 }
                 _ => {}
             },
-            EpisodeListItemInput::PlayBackProgress(fraction) => {
+            EpisodeListItemInput::PlayBackProgress(fraction, rem) => {
                 self.play_button
                     .emit(PlayButtonInput::UpdateProgress(fraction));
+                let duration_str = if rem > 0 {
+                    let hours = rem / 3600;
+                    let minutes = (rem % 3600) / 60;
+                    let seconds = rem % 60;
+
+                    if hours > 0 {
+                        format!("{}h {}m", hours, minutes)
+                    } else if minutes > 0 {
+                        format!("{}m", minutes)
+                    } else {
+                        format!("{}s", seconds)
+                    }
+                } else {
+                    "0s".to_string()
+                };
+
+                self.play_button
+                    .emit(PlayButtonInput::SetLabel(duration_str));
+            }
+            EpisodeListItemInput::ChangeEpisodeTo(episode_id) => {
+                if episode_id != self.episode.id() {
+                    sender.input(EpisodeListItemInput::ChangePlayBackState(
+                        PlayState::Stopped,
+                    ));
+                }
             }
         }
     }
@@ -193,7 +236,7 @@ impl FactoryComponent for EpisodeListItem {
         gtk::Box{
             set_orientation: gtk::Orientation::Horizontal,
             set_margin_all: 16,
-            set_halign: gtk::Align::Start,
+            set_halign: gtk::Align::Fill,
 
             gtk::Overlay {
                 set_height_request: 150,
@@ -247,7 +290,7 @@ impl FactoryComponent for EpisodeListItem {
             gtk::Box{
                 set_orientation: gtk::Orientation::Vertical,
                 set_spacing: 8,
-                set_halign: gtk::Align::Fill,
+                set_halign: gtk::Align::Start,
                 set_valign: gtk::Align::Start,
                 set_margin_start: 16,
 
@@ -301,7 +344,7 @@ impl FactoryComponent for EpisodeListItem {
                 self.play_button.widget(),
             },
 
-             gtk::Separator{
+             gtk::Box{
                 set_hexpand: true,
                 set_halign: gtk::Align::Fill,
                 add_css_class:"spacer"

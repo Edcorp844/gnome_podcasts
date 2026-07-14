@@ -41,7 +41,8 @@ pub enum PodcastPageInput {
     DownloadProgress(EpisodeId, f64),
     DownloadFinished(EpisodeId),
     ChangePlayBackState(PlayState, EpisodeId),
-    PlayBackProgress(EpisodeId, f64),
+    PlayBackProgress(EpisodeId, f64, u64),
+    ChangeEpisodeTo(EpisodeId),
 }
 
 #[derive(Debug)]
@@ -160,16 +161,17 @@ impl Component for PodcastPage {
                     let _ = sender.output(PodcastPageOutput::TogglePlay(episode));
                 }
             }
-            PodcastPageInput::DownloadStarted(episode_id) => todo!(),
-            PodcastPageInput::DownloadCancled(episode_id) => todo!(),
-            PodcastPageInput::DownloadProgress(episode_id, _) => todo!(),
+            PodcastPageInput::DownloadStarted(episode_id) => {}
+            PodcastPageInput::DownloadCancled(episode_id) => {},
+            PodcastPageInput::DownloadProgress(episode_id, _) => {},
             PodcastPageInput::DownloadFinished(episode_id) => {}
             PodcastPageInput::ChangePlayBackState(play_state, episode_id) => {
                 // for (_, page) in &self.pages_cache {
                 //     page.notify_playing_state(episode_id, state);
                 // }
             }
-            PodcastPageInput::PlayBackProgress(episode_id, pos) => {}
+            PodcastPageInput::PlayBackProgress(episode_id, pos, rem) => {}
+            PodcastPageInput::ChangeEpisodeTo(episode_id) => {}
         }
 
         self.update_view(widgets, sender);
