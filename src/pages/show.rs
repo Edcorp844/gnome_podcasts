@@ -496,7 +496,7 @@ impl Component for ShowPage {
                                     ));
 
                                 self.latest_play_button
-                                    .emit(PlayButtonInput::SetLabel("Latest_Episode".to_string()));
+                                    .emit(PlayButtonInput::SetLabel("Latest Episode".to_string()));
                             }
                             PlayState::Buffering => {
                                 self.latest_play_button
