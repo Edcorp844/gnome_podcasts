@@ -211,7 +211,9 @@ impl Component for ShowPage {
                                         set_spacing: 12,
                                         set_halign: gtk::Align::Start,
 
-                                        model.latest_play_button.widget(),
+                                        model.latest_play_button.widget(){
+                                            add_css_class: "suggested-action"
+                                        },
 
                                         gtk::Separator { set_hexpand: true, add_css_class: "spacer" },
 
