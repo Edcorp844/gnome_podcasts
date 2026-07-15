@@ -1,6 +1,6 @@
 use adw::prelude::*;
 use gst_play::PlayState;
-use podcasts_data::{Episode, EpisodeId, dbqueries};
+use podcasts_data::{Episode, EpisodeId, EpisodeModel, EpisodeWidgetModel, dbqueries};
 use relm4::{
     Component, ComponentController, Controller, FactorySender, RelmWidgetExt,
     factory::{DynamicIndex, FactoryComponent},
@@ -14,15 +14,12 @@ use crate::{
             PlayButtonOutput,
         },
     },
-    util::{
-        cover_image::{ImageSize, fetch_cached_image},
-        episode_description_parser,
-    },
+    util::cover_image::{ImageSize, fetch_cached_image},
 };
 
 #[derive(Debug)]
-pub struct EpisodeListItem {
-    episode: Episode,
+pub struct DownloadedEpisodeListItem {
+    episode: EpisodeWidgetModel,
     texture: Option<adw::gdk::Texture>,
     play_button: Controller<PlayButton>,
     downloaded: bool,
@@ -31,7 +28,7 @@ pub struct EpisodeListItem {
 }
 
 #[derive(Debug, Clone)]
-pub enum EpisodeListItemInput {
+pub enum DownloadedEpisodeListItemInput {
     ImageDownloaded(Option<adw::gdk::Texture>),
     TogglePlay,
     DownloadStarted,
@@ -46,7 +43,7 @@ pub enum EpisodeListItemInput {
 }
 
 #[derive(Debug)]
-pub enum EpisodeListItemOutput {
+pub enum DownloadedEpisodeListItemOutput {
     TogglePlay(EpisodeId),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
@@ -54,29 +51,35 @@ pub enum EpisodeListItemOutput {
 }
 
 #[derive(Debug)]
-pub enum EpisodeListItemCmdInput {
+pub enum DownloadedEpisodeListItemCmdInput {
     DownloadImage(Option<adw::gdk::Texture>),
 }
 
 #[relm4::factory(pub)]
-impl FactoryComponent for EpisodeListItem {
-    type Init = Episode;
-    type Input = EpisodeListItemInput;
-    type Output = EpisodeListItemOutput;
-    type CommandOutput = EpisodeListItemCmdInput;
+impl FactoryComponent for DownloadedEpisodeListItem {
+    type Init = EpisodeWidgetModel;
+    type Input = DownloadedEpisodeListItemInput;
+    type Output = DownloadedEpisodeListItemOutput;
+    type CommandOutput = DownloadedEpisodeListItemCmdInput;
     type ParentWidget = gtk::ListBox;
 
     fn init_model(episode: Self::Init, _index: &DynamicIndex, sender: FactorySender<Self>) -> Self {
-        let clone = episode.clone();
+        match dbqueries::get_episode_from_id(episode.id()) {
+            Ok(ep) => {
+                if let Some(image_url_ref) = ep.uri() {
+                    let image_url = image_url_ref.to_string();
 
-        if let Some(image_url_ref) = clone.image_uri() {
-            let image_url = image_url_ref.to_string();
+                    sender.oneshot_command(async move {
+                        let downloaded_texture =
+                            fetch_cached_image(&image_url, ImageSize::default()).await;
 
-            sender.oneshot_command(async move {
-                let downloaded_texture = fetch_cached_image(&image_url, ImageSize::default()).await;
-
-                EpisodeListItemCmdInput::DownloadImage(downloaded_texture)
-            });
+                        DownloadedEpisodeListItemCmdInput::DownloadImage(downloaded_texture)
+                    });
+                }
+            }
+            Err(e) => {
+                let _ = sender.output(DownloadedEpisodeListItemOutput::NotifyError(e.to_string()));
+            }
         }
 
         let duration_str = match episode.duration() {
@@ -100,7 +103,7 @@ impl FactoryComponent for EpisodeListItem {
                 progress: 0.0,
             })
             .forward(sender.input_sender(), |msg| match msg {
-                PlayButtonOutput::Clicked => EpisodeListItemInput::TogglePlay,
+                PlayButtonOutput::Clicked => DownloadedEpisodeListItemInput::TogglePlay,
             });
 
         let downloaded = {
@@ -125,34 +128,40 @@ impl FactoryComponent for EpisodeListItem {
 
     fn update(&mut self, message: Self::Input, sender: FactorySender<Self>) {
         match message {
-            EpisodeListItemInput::ImageDownloaded(fetched_texture) => {
+            DownloadedEpisodeListItemInput::ImageDownloaded(fetched_texture) => {
                 self.texture = fetched_texture;
             }
-            EpisodeListItemInput::TogglePlay => {
-                let _ = sender.output(EpisodeListItemOutput::TogglePlay(self.episode.id()));
+            DownloadedEpisodeListItemInput::TogglePlay => {
+                let _ = sender.output(DownloadedEpisodeListItemOutput::TogglePlay(
+                    self.episode.id(),
+                ));
             }
-            EpisodeListItemInput::CancleDownload => {
-                let _ = sender.output(EpisodeListItemOutput::CancleDownload(self.episode.id()));
+            DownloadedEpisodeListItemInput::CancleDownload => {
+                let _ = sender.output(DownloadedEpisodeListItemOutput::CancleDownload(
+                    self.episode.id(),
+                ));
             }
-            EpisodeListItemInput::DownloadCancled => todo!(),
-            EpisodeListItemInput::RequestDownload => {
-                let _ = sender.output(EpisodeListItemOutput::RequestDownload(self.episode.id()));
+            DownloadedEpisodeListItemInput::DownloadCancled => todo!(),
+            DownloadedEpisodeListItemInput::RequestDownload => {
+                let _ = sender.output(DownloadedEpisodeListItemOutput::RequestDownload(
+                    self.episode.id(),
+                ));
             }
-            EpisodeListItemInput::DownloadStarted => {
+            DownloadedEpisodeListItemInput::DownloadStarted => {
                 self.downloading = true;
             }
-            EpisodeListItemInput::DownloadProgress(fraction) => {
+            DownloadedEpisodeListItemInput::DownloadProgress(fraction) => {
                 self.downloading = true;
                 let _ = self
                     .progress_indicator
                     .sender()
                     .send(CircularProgressInput::SetFraction(fraction));
             }
-            EpisodeListItemInput::DownloadFinished => {
+            DownloadedEpisodeListItemInput::DownloadFinished => {
                 self.downloading = false;
                 self.downloaded = true;
             }
-            EpisodeListItemInput::ChangePlayBackState(state) => match state {
+            DownloadedEpisodeListItemInput::ChangePlayBackState(state) => match state {
                 PlayState::Stopped => {
                     self.play_button.emit(PlayButtonInput::UpdatePlayingState(
                         EpisodePlayingState::Stopped,
@@ -192,7 +201,7 @@ impl FactoryComponent for EpisodeListItem {
                 }
                 _ => {}
             },
-            EpisodeListItemInput::PlayBackProgress(fraction, rem) => {
+            DownloadedEpisodeListItemInput::PlayBackProgress(fraction, rem) => {
                 self.play_button
                     .emit(PlayButtonInput::UpdateProgress(fraction));
                 let duration_str = if rem > 0 {
@@ -214,9 +223,9 @@ impl FactoryComponent for EpisodeListItem {
                 self.play_button
                     .emit(PlayButtonInput::SetLabel(duration_str));
             }
-            EpisodeListItemInput::ChangeEpisodeTo(episode_id) => {
+            DownloadedEpisodeListItemInput::ChangeEpisodeTo(episode_id) => {
                 if episode_id != self.episode.id() {
-                    sender.input(EpisodeListItemInput::ChangePlayBackState(
+                    sender.input(DownloadedEpisodeListItemInput::ChangePlayBackState(
                         PlayState::Stopped,
                     ));
                 }
@@ -226,8 +235,8 @@ impl FactoryComponent for EpisodeListItem {
 
     fn update_cmd(&mut self, message: Self::CommandOutput, sender: FactorySender<Self>) {
         match message {
-            EpisodeListItemCmdInput::DownloadImage(opt_texture) => {
-                sender.input(EpisodeListItemInput::ImageDownloaded(opt_texture));
+            DownloadedEpisodeListItemCmdInput::DownloadImage(opt_texture) => {
+                sender.input(DownloadedEpisodeListItemInput::ImageDownloaded(opt_texture));
             }
         }
     }
@@ -236,7 +245,7 @@ impl FactoryComponent for EpisodeListItem {
         gtk::Box{
             set_orientation: gtk::Orientation::Horizontal,
             set_margin_all: 16,
-            set_halign: gtk::Align::Fill,
+            set_halign: gtk::Align::Start,
 
             gtk::Overlay {
                 set_height_request: 150,
@@ -295,48 +304,40 @@ impl FactoryComponent for EpisodeListItem {
                 set_margin_start: 16,
 
                 gtk::Label{
-                    set_label:  &self.episode.epoch().format("%e %b").to_string(),
-                    add_css_class: "caption",
-                    set_halign: gtk::Align::Start,
-                    set_xalign: 0.0,
-                    set_wrap: true
-                },
-
-                gtk::Label{
                     set_label:  self.episode.title(),
-                    add_css_class: "heading",
+                    add_css_class: "title-4",
                     set_halign: gtk::Align::Start,
-                    set_xalign: 0.0,
                     set_wrap: true
                 },
 
-
-                gtk::Label {
-                    #[watch]
-                    set_use_markup: true,
-                   #[watch]
-                 set_markup: &{
-                        let raw_markup = if let Some(desc) = self.episode.description() {
-                            let markup = episode_description_parser::html2pango_markup(desc);
-
-                            if markup.is_empty() && !desc.is_empty() {
-                                html2text::config::plain()
-                                    .string_from_read(desc.as_bytes(), desc.len())
-                                    .unwrap_or_else(|_| desc.to_string())
-                            } else {
-                                markup
-                            }
-                        } else {
-                            "".to_string()
-                        };
-                        raw_markup.replace('\n', " ").replace('\r', " ")
-                    },
+                gtk::Box{
+                    set_orientation: gtk::Orientation::Horizontal,
                     set_halign: gtk::Align::Start,
-                    set_wrap: true,
-                    set_lines: 3,
-                    set_xalign: 0.0,
-                    set_ellipsize: gtk::pango::EllipsizeMode::End,
-                    set_css_classes: &vec!["dimmed", "body"]
+                    set_spacing:2,
+
+                    gtk::Image{
+                        set_icon_name: Some("drive-harddisk-symbolic"),
+                        inline_css: "color: oklab(from var(--accent-color) calc(l - 0.10) a b);",
+                    },
+
+                    gtk::Label{
+                        set_label:  &Self::format_file_size(self.episode.length()),
+                        set_halign: gtk::Align::Start,
+                        inline_css: "color: oklab(from var(--accent-color) calc(l - 0.10) a b);",
+                    },
+
+                    gtk::Separator{
+                        set_hexpand: true,
+                        add_css_class:"spacer"
+                    },
+
+                    gtk::Label{
+                        set_label:  &self.episode.epoch().format("%e %b").to_string(),
+                        add_css_class: "caption",
+                        set_halign: gtk::Align::Start,
+                        set_wrap: true
+                    },
+
                 },
 
                 gtk::Separator{
@@ -365,7 +366,7 @@ impl FactoryComponent for EpisodeListItem {
                 set_valign: gtk::Align::Center,
 
                 connect_clicked[sender] => move |_| {
-                    sender.input(EpisodeListItemInput::RequestDownload);
+                    sender.input(DownloadedEpisodeListItemInput::RequestDownload);
                 }
             },
 
@@ -379,6 +380,31 @@ impl FactoryComponent for EpisodeListItem {
                 }
             }
 
+        }
+    }
+}
+
+impl DownloadedEpisodeListItem {
+    pub fn format_file_size(bytes: Option<i32>) -> String {
+        match bytes {
+            Some(b) if b > 0 => {
+                let b_f64 = b as f64;
+                // Define metric base-1024 units
+                let kilo = 1024.0;
+                let mega = kilo * 1024.0;
+                let giga = mega * 1024.0;
+
+                if b_f64 >= giga {
+                    format!("{:.1} GB", b_f64 / giga)
+                } else if b_f64 >= mega {
+                    format!("{:.1} MB", b_f64 / mega)
+                } else if b_f64 >= kilo {
+                    format!("{:.1} KB", b_f64 / kilo)
+                } else {
+                    format!("{} Bytes", b)
+                }
+            }
+            _ => "0 Bytes".to_string(),
         }
     }
 }

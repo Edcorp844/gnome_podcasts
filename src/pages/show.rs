@@ -218,7 +218,7 @@ impl Component for ShowPage {
                                         gtk::Separator { set_hexpand: true, add_css_class: "spacer" },
 
                                         gtk::Button {
-                                            set_label: "+ Follow",
+                                            set_label: "Following",
                                             add_css_class: "pill",
                                             inline_css: "
                                                 background-color: rgba(255, 255, 255, 0.1); 
@@ -410,6 +410,7 @@ impl Component for ShowPage {
                                         .await;
 
                                 ShowPageCmdInput::DownloadImage(downloaded_texture)
+              
                             });
                         }
                     }

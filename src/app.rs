@@ -1,12 +1,12 @@
 use crate::action::Action;
 use crate::app_navigation_ext::NavigationPage;
 use crate::app_navigation_ext::PageController;
-use crate::components::main_menu_button;
 use crate::components::main_menu_button::MainMenuButton;
 use crate::components::miniplayer::MiniPlayerModel;
 
 use crate::components::miniplayer::MiniplayerModelInput;
 use crate::components::miniplayer::MiniplayerModelOutput;
+use crate::pages::downloads::DownloadsPage;
 use crate::pages::home::HomPageOutPut;
 use crate::pages::home::HomePage;
 use crate::pages::new::NewPage;
@@ -18,18 +18,12 @@ use crate::pages::shows::ShowsPageOutput;
 use crate::workers::action_worker::service::ActionWorker;
 use crate::workers::action_worker::service::ActionWorkerInput;
 use crate::workers::action_worker::service::ActionWorkerOutput;
-
-use adw::gio;
 use gst_play::PlayState;
+use podcasts_data::EpisodeId;
 use relm4::ComponentParts;
 use relm4::adw::prelude::*;
 use relm4::prelude::*;
-
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::collections::HashSet;
-
-use podcasts_data::{EpisodeId, EpisodeWidgetModel, ShowId};
 
 pub struct AppModel {
     is_sidebar_visible: bool,
@@ -38,16 +32,7 @@ pub struct AppModel {
     current_page_key: String,
     miniplayer: Controller<MiniPlayerModel>,
     worker_controller: Controller<ActionWorker>,
-
-    pub is_loading: bool,
-    pub updating: bool,
-    pub active_show_id: Option<ShowId>,
-    pub active_show_title: String,
-    on_search_page: bool,
-    settings: RefCell<Option<gio::Settings>>,
-    inhibit_cookie: RefCell<u32>,
-    todo_unsub_ids: RefCell<HashSet<ShowId>>,
-    undo_marked_ids: RefCell<Vec<ShowId>>,
+    is_loading: bool,
 }
 
 #[derive(Debug)]
@@ -290,7 +275,15 @@ impl Component for AppModel {
                 .launch(())
                 .forward(sender.input_sender(), |msg| match msg {
                     HomPageOutPut::Subscribe(feed) => AppModelInput::Subscribe(feed),
-                    _ => AppModelInput::None,
+                    HomPageOutPut::ToggleSideBar => AppModelInput::ToggleSidebar,
+                    HomPageOutPut::TogglePlay(episode_id) => AppModelInput::TogglePlay(episode_id),
+                    HomPageOutPut::NotifyError(error) => AppModelInput::NotifyError(error),
+                    HomPageOutPut::RequestDownload(episode_id) => {
+                        AppModelInput::RequestDownload(episode_id)
+                    }
+                    HomPageOutPut::CancleDownload(episode_id) => {
+                        AppModelInput::CancleDownload(episode_id)
+                    }
                 });
 
         let mut initial_cache = HashMap::new();
@@ -325,14 +318,6 @@ impl Component for AppModel {
             miniplayer,
             worker_controller,
             is_loading: false,
-            updating: false,
-            on_search_page: false,
-            active_show_id: None,
-            active_show_title: String::new(),
-            settings: RefCell::new(None),
-            inhibit_cookie: RefCell::new(0),
-            todo_unsub_ids: RefCell::new(HashSet::default()),
-            undo_marked_ids: RefCell::new(vec![]),
         };
 
         // Generates the correct modern auto-derived struct layout type
@@ -417,7 +402,27 @@ impl Component for AppModel {
                             PageController::Search(page_instance)
                         }
                         NavigationPage::Home => {
-                            let page_instance = HomePage::builder().launch(()).detach();
+                            let page_instance = HomePage::builder().launch(()).forward(
+                                sender.input_sender(),
+                                |msg| match msg {
+                                    HomPageOutPut::Subscribe(feed) => {
+                                        AppModelInput::Subscribe(feed)
+                                    }
+                                    HomPageOutPut::ToggleSideBar => AppModelInput::ToggleSidebar,
+                                    HomPageOutPut::TogglePlay(episode_id) => {
+                                        AppModelInput::TogglePlay(episode_id)
+                                    }
+                                    HomPageOutPut::NotifyError(error) => {
+                                        AppModelInput::NotifyError(error)
+                                    }
+                                    HomPageOutPut::RequestDownload(episode_id) => {
+                                        AppModelInput::RequestDownload(episode_id)
+                                    }
+                                    HomPageOutPut::CancleDownload(episode_id) => {
+                                        AppModelInput::CancleDownload(episode_id)
+                                    }
+                                },
+                            );
                             PageController::Home(page_instance)
                         }
                         NavigationPage::New => {
@@ -443,6 +448,11 @@ impl Component for AppModel {
                                 },
                             );
                             PageController::Shows(page_instance)
+                        }
+
+                        NavigationPage::Downloads => {
+                            let page_instance = DownloadsPage::builder().launch(()).detach();
+                            PageController::Downloads(page_instance)
                         }
                         _ => return,
                     };

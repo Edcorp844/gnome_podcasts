@@ -91,7 +91,11 @@ impl AppModel {
         layout_box.set_margin_top(8);
         layout_box.set_margin_bottom(8);
 
-        let icon = gtk::Image::from_icon_name(icon_name);
+        let icon = gtk::Image::builder()
+            .icon_name(icon_name)
+            .css_classes(vec!["accent"])
+            .icon_size(gtk::IconSize::Inherit)
+            .build();
         layout_box.append(&icon);
 
         let label = gtk::Label::new(Some(label_text));

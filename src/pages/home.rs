@@ -164,7 +164,7 @@ impl Component for HomePage {
         widgets: &mut Self::Widgets,
         message: Self::Input,
         sender: ComponentSender<Self>,
-        root: &Self::Root,
+        _root: &Self::Root,
     ) {
         match message {
             HomePageInput::FetchPodcasts => {
@@ -190,7 +190,6 @@ impl Component for HomePage {
             HomePageInput::Subscribe(feed) => {
                 let _ = sender.output(HomPageOutPut::Subscribe(feed));
             }
-            // Captures background thread work payload safely
             HomePageInput::PodcastsLoaded(podcasts) => {
                 match podcasts {
                     Ok(data) => {
@@ -202,6 +201,7 @@ impl Component for HomePage {
                     }
                     Err(e) => {
                         println!("Error: {}", e);
+                        let _ = sender.output(HomPageOutPut::NotifyError(format!("Podcast Search Error: {}", e.to_string())));
                     }
                 }
                 self.is_loading = false;
@@ -233,17 +233,39 @@ impl Component for HomePage {
                     widgets.nav_view.push(page_ctrl.widget());
                 }
             }
-            HomePageInput::DownloadStarted(episode_id) => for (key, page) in &self.active_pages {},
-            HomePageInput::DownloadCancled(episode_id) => {}
-            HomePageInput::DownloadProgress(episode_id, _) => {}
+            HomePageInput::DownloadStarted(episode_id) => {
+                for (_, page) in &self.active_pages {
+                    page.notify_download_started(episode_id.clone());
+                }
+            }
+            HomePageInput::DownloadCancled(episode_id) => {
+                println!("Cancle Donwload for {:?} reached home page", episode_id);
+            }
+            HomePageInput::DownloadProgress(episode_id, fraction) => {
+                for (_, page) in &self.active_pages {
+                    page.notify_download_progress(episode_id, fraction);
+                }
+            }
             HomePageInput::DownloadFinished(episode_id) => {
                 for (_, page) in &self.active_pages {
                     page.notify_download_finished(episode_id);
                 }
             }
-            HomePageInput::ChangePlayBackState(_, episode_id) => {}
-            HomePageInput::PlayBackProgress(episode_id, pos, rem) => {}
-            HomePageInput::ChangeEpisodeTo(episode_id) => {}
+            HomePageInput::ChangePlayBackState(state, episode_id) => {
+                for (_, page) in &self.active_pages {
+                    page.notify_playing_state(episode_id, state);
+                }
+            }
+            HomePageInput::PlayBackProgress(episode_id, pos, rem) => {
+                for (_, page) in &self.active_pages {
+                    page.notify_playback_progress(episode_id, pos, rem);
+                }
+            }
+            HomePageInput::ChangeEpisodeTo(episode_id) => {
+                for (_, page) in &self.active_pages {
+                    page.notify_current_episode(episode_id);
+                }
+            }
         }
 
         // self.update(message, sender, root);

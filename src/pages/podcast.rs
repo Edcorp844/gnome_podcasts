@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use adw::gdk::Texture;
 use adw::prelude::*;
 use gst_play::PlayState;
@@ -7,7 +9,12 @@ use podcasts_data::{
 use relm4::{Component, prelude::*};
 
 use crate::{
-    components::episode_list_item::{EpisodeListItem, EpisodeListItemOutput},
+    components::{
+        episode_list_item::{EpisodeListItem, EpisodeListItemInput, EpisodeListItemOutput},
+        play_button::{
+            EpisodePlayingState, PlayButton, PlayButtonInitData, PlayButtonInput, PlayButtonOutput,
+        },
+    },
     util::{
         cover_image::{ImageSize, fetch_cached_image},
         episode_description_parser,
@@ -19,11 +26,13 @@ pub struct PodcastPage {
     podcast: FoundPodcast,
     cover_texture: Option<Texture>,
     episodes: FactoryVecDeque<EpisodeListItem>,
+    latest_play_button: Controller<PlayButton>,
     loading_episodes: bool,
     latest_episode: Option<EpisodeId>,
     show: Option<Show>,
     episode_count: usize,
     subscribed: Option<bool>,
+    index_by_id: HashMap<EpisodeId, relm4::factory::DynamicIndex>,
 }
 
 #[derive(Debug)]
@@ -71,6 +80,16 @@ impl Component for PodcastPage {
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
+        let latest_play_button = PlayButton::builder()
+            .launch(PlayButtonInitData {
+                label: "Latest Episode".to_string(),
+                state: EpisodePlayingState::Stopped,
+                progress: 0.0,
+            })
+            .forward(sender.input_sender(), |msg| match msg {
+                PlayButtonOutput::Clicked => PodcastPageInput::StreamLatestEpisode,
+            });
+
         let episodes_parent = gtk::ListBox::builder().build();
         let model = PodcastPage {
             episodes: FactoryVecDeque::builder().launch(episodes_parent).forward(
@@ -94,7 +113,9 @@ impl Component for PodcastPage {
             show: None,
             episode_count: 0,
             latest_episode: None,
+            latest_play_button,
             subscribed: None,
+            index_by_id: HashMap::new(),
         };
 
         let episodes_container = model.episodes.widget();
@@ -149,7 +170,9 @@ impl Component for PodcastPage {
                 }
 
                 for episode in episodes.iter().take(10) {
-                    guard.push_back(episode.clone());
+                    let index = guard.push_back(episode.clone());
+
+                    self.index_by_id.insert(episode.id(), index);
                 }
                 self.episode_count = episodes.len();
             }
@@ -161,17 +184,125 @@ impl Component for PodcastPage {
                     let _ = sender.output(PodcastPageOutput::TogglePlay(episode));
                 }
             }
-            PodcastPageInput::DownloadStarted(episode_id) => {}
-            PodcastPageInput::DownloadCancled(episode_id) => {},
-            PodcastPageInput::DownloadProgress(episode_id, _) => {},
-            PodcastPageInput::DownloadFinished(episode_id) => {}
-            PodcastPageInput::ChangePlayBackState(play_state, episode_id) => {
-                // for (_, page) in &self.pages_cache {
-                //     page.notify_playing_state(episode_id, state);
-                // }
+            PodcastPageInput::DownloadStarted(episode_id) => {
+                if let Some(index) = self.index_by_id.get(&episode_id) {
+                    self.episodes
+                        .send(index.current_index(), EpisodeListItemInput::DownloadStarted);
+                }
             }
-            PodcastPageInput::PlayBackProgress(episode_id, pos, rem) => {}
-            PodcastPageInput::ChangeEpisodeTo(episode_id) => {}
+            PodcastPageInput::DownloadCancled(episode_id) => {
+                if let Some(index) = self.index_by_id.get(&episode_id) {
+                    self.episodes
+                        .send(index.current_index(), EpisodeListItemInput::DownloadCancled);
+                }
+            }
+            PodcastPageInput::DownloadProgress(episode_id, fraction) => {
+                if let Some(index) = self.index_by_id.get(&episode_id) {
+                    self.episodes.send(
+                        index.current_index(),
+                        EpisodeListItemInput::DownloadProgress(fraction),
+                    );
+                }
+            }
+            PodcastPageInput::DownloadFinished(episode_id) => {
+                if let Some(index) = self.index_by_id.get(&episode_id) {
+                    self.episodes.send(
+                        index.current_index(),
+                        EpisodeListItemInput::DownloadFinished,
+                    );
+                }
+            }
+            PodcastPageInput::ChangePlayBackState(state, episode_id) => {
+                if let Some(index) = self.index_by_id.get(&episode_id) {
+                    self.episodes.send(
+                        index.current_index(),
+                        EpisodeListItemInput::ChangePlayBackState(state),
+                    );
+                }
+
+                if let Some(episode) = self.latest_episode {
+                    if episode == episode_id {
+                        match state {
+                            PlayState::Stopped => {
+                                self.latest_play_button
+                                    .emit(PlayButtonInput::UpdatePlayingState(
+                                        EpisodePlayingState::Stopped,
+                                    ));
+
+                                self.latest_play_button
+                                    .emit(PlayButtonInput::SetLabel("Latest Episode".to_string()));
+                            }
+                            PlayState::Buffering => {
+                                self.latest_play_button
+                                    .emit(PlayButtonInput::UpdatePlayingState(
+                                        EpisodePlayingState::Playing,
+                                    ));
+                            }
+                            PlayState::Paused => {
+                                self.latest_play_button
+                                    .emit(PlayButtonInput::UpdatePlayingState(
+                                        EpisodePlayingState::Paused,
+                                    ));
+                            }
+                            PlayState::Playing => {
+                                self.latest_play_button
+                                    .emit(PlayButtonInput::UpdatePlayingState(
+                                        EpisodePlayingState::Playing,
+                                    ));
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+
+            PodcastPageInput::PlayBackProgress(episode_id, pos, rem) => {
+                if let Some(index) = self.index_by_id.get(&episode_id) {
+                    self.episodes.send(
+                        index.current_index(),
+                        EpisodeListItemInput::PlayBackProgress(pos, rem),
+                    );
+                }
+
+                if let Some(episode) = self.latest_episode {
+                    if episode == episode_id {
+                        self.latest_play_button
+                            .emit(PlayButtonInput::UpdateProgress(pos));
+
+                        let duration_str = if rem > 0 {
+                            let hours = rem / 3600;
+                            let minutes = (rem % 3600) / 60;
+                            let seconds = rem % 60;
+
+                            if hours > 0 {
+                                format!("{}h {}m", hours, minutes)
+                            } else if minutes > 0 {
+                                format!("{}m", minutes)
+                            } else {
+                                format!("{}s", seconds)
+                            }
+                        } else {
+                            "0s".to_string()
+                        };
+
+                        self.latest_play_button
+                            .emit(PlayButtonInput::SetLabel(duration_str));
+                    }
+                }
+            }
+            PodcastPageInput::ChangeEpisodeTo(episode_id) => {
+                if let Some(episode) = self.latest_episode {
+                    if episode != episode_id {
+                        sender.input(PodcastPageInput::ChangePlayBackState(
+                            PlayState::Stopped,
+                            episode,
+                        ));
+                    }
+                }
+
+                self.episodes
+                    .broadcast(EpisodeListItemInput::ChangeEpisodeTo(episode_id));
+            }
         }
 
         self.update_view(widgets, sender);
@@ -318,17 +449,11 @@ impl Component for PodcastPage {
                                         set_spacing: 12,
                                         set_halign: gtk::Align::Start,
 
-                                        gtk::Button {
-                                            set_label: "▶ Latest Episode",
-                                            set_css_classes: &vec!["pill",],
+                                        gtk::Box{
                                             #[watch]
-                                            set_sensitive: model.latest_episode.is_some(),
-
-                                            connect_clicked[sender]=>move|_|{
-                                                sender.input(PodcastPageInput::StreamLatestEpisode)
-                                            }
+                                            set_visible: model.latest_episode.is_some(),
+                                            model.latest_play_button.widget(),
                                         },
-
 
                                         gtk::Separator { set_hexpand: true, add_css_class: "spacer" },
 
@@ -336,11 +461,11 @@ impl Component for PodcastPage {
                                             #[watch]
                                             set_label: {
                                                 match model.subscribed {
-                                                        Some(true) => "Following",
-                                                        Some(false) => "+ Follow",
-                                                        None => "Loading...",
-                                                    }
-                                                },
+                                                    Some(true) => "Following",
+                                                    Some(false) => "+ Follow",
+                                                    None => "Loading...",
+                                                }
+                                            },
                                             set_css_classes: &vec!["pill", "suggested-action"],
                                             #[watch]
                                             set_visible: model.subscribed.is_some(),
@@ -387,6 +512,18 @@ impl Component for PodcastPage {
                                 #[watch]
                                 set_visible: model.episode_count > 0,
                                 add_css_class: "boxed-list",
+                            },
+
+                            gtk::Box{
+                                set_halign: gtk::Align::Fill,
+                                set_valign: gtk::Align::Fill,
+                                #[watch]
+                                set_visible: model.loading_episodes,
+
+                                adw::Spinner{
+                                    set_halign: gtk::Align::Center,
+                                    set_valign: gtk::Align::Center,
+                                }
                             },
 
                             gtk::Box {
@@ -561,8 +698,6 @@ impl PodcastPage {
     pub async fn get_episodes(sender: ComponentSender<Self>, feed: String) {
         let mut temporary_cleanup_needed = false;
 
-        // --- STAGE 1: Instant Metadata Emit ---
-        // Try a lightning-fast local lookup just for basic details first
         if let Ok(source) = dbqueries::get_source_from_uri(&feed) {
             if let Ok(show) = dbqueries::get_podcast_from_source_id(source.id()) {
                 sender.input(PodcastPageInput::Show(show.clone()));
@@ -587,18 +722,13 @@ impl PodcastPage {
             };
 
             let source_id = source.id();
-
-            // Inform the UI to keep showing a spinner for the episode list row stack
             sender.input(PodcastPageInput::SetLoadingEpisodes(true));
 
-            // Heavy operation: Network block + SQLite Bulk Write
             let _ = FEED_MANAGER.refresh(vec![source]).await;
 
-            // Fetch freshly generated entries
             let show = dbqueries::get_podcast_from_source_id(source_id)?;
             let episodes = dbqueries::get_pd_episodes(&show)?;
 
-            // Update UI with the final parsed list
             sender.input(PodcastPageInput::Show(show));
             sender.input(PodcastPageInput::Episoded(episodes));
             sender.input(PodcastPageInput::SetSubscriptionStatus(
@@ -611,6 +741,7 @@ impl PodcastPage {
         .await
         {
             println!("error: {}", e);
+            let _ = sender.output(PodcastPageOutput::NotifyError(e.to_string()));
             sender.input(PodcastPageInput::SetLoadingEpisodes(false));
         }
     }

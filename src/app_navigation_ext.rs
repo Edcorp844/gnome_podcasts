@@ -3,6 +3,7 @@ use podcasts_data::EpisodeId;
 use relm4::{ComponentController, Controller};
 
 use crate::pages::{
+    downloads::{DownloadsPage, DownloadsPageInput},
     home::{HomePage, HomePageInput},
     new::{NewPage, NewPageInput},
     podcast::{PodcastPage, PodcastPageInput},
@@ -18,6 +19,7 @@ pub enum NavigationPage {
     Shows,
     Library(String),
     Podcast,
+    Downloads,
 }
 
 impl NavigationPage {
@@ -28,6 +30,7 @@ impl NavigationPage {
             "New" => Self::New,
             "Shows" => Self::Shows,
             "Podcast" => Self::Podcast,
+            "Downloaded" => Self::Downloads,
             other => Self::Library(other.to_string()),
         }
     }
@@ -39,6 +42,7 @@ impl NavigationPage {
             Self::New => "New".to_string(),
             Self::Shows => "Shows".to_string(),
             Self::Podcast => "Podcast".to_string(),
+            Self::Downloads => "Downloaded".to_string(),
             Self::Library(sub) => format!("Library_{}", sub),
         }
     }
@@ -52,6 +56,7 @@ pub enum PageController {
     New(Controller<NewPage>),
     Shows(Controller<ShowsPage>),
     Podcast(Controller<PodcastPage>),
+    Downloads(Controller<DownloadsPage>),
     //Library(Controller<LibraryPage>),
 }
 
@@ -63,6 +68,7 @@ impl PageController {
             Self::New(c) => c.widget(),
             Self::Shows(c) => c.widget(),
             Self::Podcast(c) => c.widget(),
+            Self::Downloads(c) => c.widget(),
         }
     }
 
@@ -82,6 +88,9 @@ impl PageController {
             }
             Self::Podcast(c) => {
                 c.emit(PodcastPageInput::DownloadFinished(episode_id));
+            }
+            Self::Downloads(c) => {
+                c.emit(DownloadsPageInput::DownloadFinished(episode_id));
             }
         }
     }
@@ -103,6 +112,9 @@ impl PageController {
             Self::Podcast(c) => {
                 c.emit(PodcastPageInput::DownloadStarted(episode_id));
             }
+            Self::Downloads(c) => {
+                c.emit(DownloadsPageInput::DownloadStarted(episode_id));
+            }
         }
     }
 
@@ -123,6 +135,9 @@ impl PageController {
             Self::Podcast(c) => {
                 c.emit(PodcastPageInput::DownloadProgress(episode_id, fraction));
             }
+            Self::Downloads(c) => {
+                c.emit(DownloadsPageInput::DownloadProgress(episode_id, fraction));
+            }
         }
     }
 
@@ -142,6 +157,9 @@ impl PageController {
             }
             Self::Podcast(c) => {
                 c.emit(PodcastPageInput::ChangePlayBackState(state, episode_id));
+            }
+            Self::Downloads(c) => {
+                c.emit(DownloadsPageInput::ChangePlayBackState(state, episode_id));
             }
         }
     }
@@ -188,6 +206,13 @@ impl PageController {
                     remaining_sec,
                 ));
             }
+            Self::Downloads(c) => {
+                c.emit(DownloadsPageInput::PlayBackProgress(
+                    episode_id,
+                    fraction,
+                    remaining_sec,
+                ));
+            }
         }
     }
 
@@ -207,6 +232,9 @@ impl PageController {
             }
             Self::Podcast(c) => {
                 c.emit(PodcastPageInput::ChangeEpisodeTo(episode_id));
+            }
+            Self::Downloads(c) => {
+                c.emit(DownloadsPageInput::ChangeEpisodeTo(episode_id));
             }
         }
     }

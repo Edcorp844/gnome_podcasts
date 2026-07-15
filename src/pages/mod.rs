@@ -4,3 +4,4 @@ pub mod podcast;
 pub mod search;
 pub mod show;
 pub mod shows;
+pub mod downloads;

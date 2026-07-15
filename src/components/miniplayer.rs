@@ -321,7 +321,7 @@ impl Component for MiniPlayerModel {
                         },
 
                         model.play_progress_bar.widget() {
-                            set_height_request: 8,
+                            set_height_request: 2,
                             set_halign: gtk::Align::Fill,
                             set_valign: gtk::Align::Center,
                         },
