@@ -58,6 +58,8 @@ pub enum AppModelInput {
     DownloadCancled(EpisodeId),
     DownloadProgress(EpisodeId, f64),
     DownloadFinished(EpisodeId),
+    RequestDeleteEpisode(EpisodeId),
+    EpisodeDeleted(EpisodeId),
     SetVolume(f64),
     VolumeValue(f64),
     RequestMute,
@@ -265,6 +267,11 @@ impl Component for AppModel {
                     ActionWorkerOutput::VolumeValue(val) => {
                         action_sender.clone().input(AppModelInput::VolumeValue(val));
                     }
+                    ActionWorkerOutput::EpisodeDeleted(episode_id) => {
+                        action_sender
+                            .clone()
+                            .input(AppModelInput::EpisodeDeleted(episode_id));
+                    }
                     _ => {}
                 });
 
@@ -451,7 +458,13 @@ impl Component for AppModel {
                         }
 
                         NavigationPage::Downloads => {
-                            let page_instance = DownloadsPage::builder().launch(()).detach();
+                            let page_instance = DownloadsPage::builder().launch(()).forward(sender.input_sender(), |msg| match msg {
+                                crate::pages::downloads::DownloadsPageOutput::TogglePlay(episode_id) => AppModelInput::TogglePlay(episode_id),
+                                crate::pages::downloads::DownloadsPageOutput::NotifyError(error) => AppModelInput::NotifyError(error),
+                                crate::pages::downloads::DownloadsPageOutput::RequestDeleteEpisode(episode_id) => AppModelInput::RequestDeleteEpisode(episode_id),
+                                crate::pages::downloads::DownloadsPageOutput::StartLoading => AppModelInput::StartLoading,
+                                crate::pages::downloads::DownloadsPageOutput::StopLoading => AppModelInput::StopLoading,
+                            });
                             PageController::Downloads(page_instance)
                         }
                         _ => return,
@@ -470,10 +483,10 @@ impl Component for AppModel {
             AppModelInput::SetSidebarCollapsed(_is_collapsed) => {}
 
             AppModelInput::NotifyError(error) => {
-                println!("Error: recieved: {}", error);
+                
                 let toast = adw::Toast::builder()
                     .title(error)
-                    .action_name("Subsricption")
+                    .action_name("Action")
                     .build();
                 widgets.toast_overlay.add_toast(toast);
             }
@@ -533,7 +546,6 @@ impl Component for AppModel {
             }
             AppModelInput::DownloadProgress(episode_id, fraction) => {
                 for (_, page) in &self.pages_cache {
-                    print!("sending {fraction} on app");
                     page.notify_download_progress(episode_id, fraction);
                 }
             }
@@ -575,6 +587,15 @@ impl Component for AppModel {
             }
             AppModelInput::SeekBakward => {
                 self.worker_controller.emit(ActionWorkerInput::SeekBackward);
+            }
+            AppModelInput::RequestDeleteEpisode(episode_id) => {
+                self.worker_controller
+                    .emit(ActionWorkerInput::DeleteEpisode(episode_id));
+            }
+            AppModelInput::EpisodeDeleted(episode_id) => {
+                for (_, page) in &self.pages_cache {
+                    page.notify_episode_deleted(episode_id);
+                }
             }
         }
 

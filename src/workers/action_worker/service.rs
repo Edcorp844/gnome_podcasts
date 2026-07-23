@@ -1,13 +1,16 @@
+use std::fs;
 use std::path::Path;
 
 use gtk::gio::File;
 use gtk::gio::prelude::FileExt;
+use podcasts_data::EpisodeCleanerModel;
 use podcasts_data::EpisodeModel;
 use podcasts_data::FEED_MANAGER;
 use podcasts_data::nextcloud_sync;
 use podcasts_data::nextcloud_sync::SyncError;
 use podcasts_data::nextcloud_sync::SyncPolicy;
 use podcasts_data::nextcloud_sync::SyncResult;
+use podcasts_data::utils::delete_local_content;
 use relm4::{ComponentSender, Worker};
 
 use podcasts_data::EpisodeId;
@@ -27,6 +30,7 @@ pub enum ActionWorkerInput {
     StateChanged(gst_play::PlayState),
     DownloadEpisode(EpisodeId),
     CancelDownload(EpisodeId),
+    DeleteEpisode(EpisodeId),
     SeekAudioPosition(f64),
     DurationChanged(u64),
     PositionChanged(u64),
@@ -57,8 +61,8 @@ pub enum ActionWorkerOutput {
     DownloadCancelled(EpisodeId),
     ErrorNotification(String),
     RefreshEpisode(EpisodeId),
+    EpisodeDeleted(EpisodeId),
     VolumeValue(f64),
-
 }
 
 
@@ -331,6 +335,23 @@ impl Worker for ActionWorker {
 
                         self.player.seek(target_pos);
                 }
+            },
+            ActionWorkerInput::DeleteEpisode(episode_id) => {
+               match dbqueries::get_episode_from_id(episode_id){
+                Ok(ep)=> {
+                    match delete_local_content(&mut EpisodeCleanerModel::from(ep)){
+                        Ok(_) => {
+                            let _ = sender.output(ActionWorkerOutput::EpisodeDeleted(episode_id));
+                        },
+                        Err(error) => {
+                            let _ = sender.output(ActionWorkerOutput::NotifyError(error.to_string()));
+                        },
+                    }                   
+                }
+                Err(error)=> {
+                    let _ = sender.output(ActionWorkerOutput::NotifyError(error.to_string()));
+                }
+               }
             },
         }
     }

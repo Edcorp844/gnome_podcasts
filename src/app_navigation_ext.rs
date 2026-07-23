@@ -238,4 +238,13 @@ impl PageController {
             }
         }
     }
+
+    pub(crate) fn notify_episode_deleted(&self, episode_id: EpisodeId) {
+        match self {
+            Self::Downloads(c) => {
+                c.emit(DownloadsPageInput::EpisodeDeleted(episode_id));
+            }
+            _ => {}
+        }
+    }
 }

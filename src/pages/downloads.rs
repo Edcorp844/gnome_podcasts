@@ -1,18 +1,21 @@
+use std::collections::HashMap;
+
 use adw::prelude::*;
 use gst_play::PlayState;
 use podcasts_data::{
-    EpisodeId, EpisodeWidgetModel,
+    EpisodeId, EpisodeModel, EpisodeWidgetModel,
     dbqueries::{self, ShowFilter},
 };
 use relm4::{Component, prelude::*};
 
 use crate::components::downloaded_episode_list_item::{
-    DownloadedEpisodeListItem, DownloadedEpisodeListItemOutput,
+    DownloadedEpisodeListItem, DownloadedEpisodeListItemInput, DownloadedEpisodeListItemOutput,
 };
 
 #[derive(Debug)]
 pub struct DownloadsPage {
     episodes: FactoryVecDeque<DownloadedEpisodeListItem>,
+    index_by_id: HashMap<EpisodeId, relm4::factory::DynamicIndex>,
     is_loading: bool,
 }
 
@@ -27,14 +30,16 @@ pub enum DownloadsPageInput {
     ChangePlayBackState(PlayState, EpisodeId),
     PlayBackProgress(EpisodeId, f64, u64),
     ChangeEpisodeTo(EpisodeId),
+    EpisodeDeleted(EpisodeId),
 }
 
 #[derive(Debug, Clone)]
 pub enum DownloadsPageOutput {
     TogglePlay(EpisodeId),
     NotifyError(String),
-    RequestDownload(EpisodeId),
-    CancleDownload(EpisodeId),
+    RequestDeleteEpisode(EpisodeId),
+    StartLoading,
+    StopLoading,
 }
 
 #[relm4::component(pub)]
@@ -46,13 +51,10 @@ impl Component for DownloadsPage {
 
     view! {
         adw::NavigationPage {
-            set_title: "Podcast Details",
+            set_title: "Downloads Page",
 
            #[wrap(Some)]
             set_child = &adw::ToolbarView {
-                 add_top_bar=&adw::HeaderBar {
-                    set_show_title: false,
-                 },
 
                #[wrap(Some)]
                 set_content= &gtk::ScrolledWindow {
@@ -68,9 +70,33 @@ impl Component for DownloadsPage {
                             set_margin_all: 12,
                             set_spacing: 6,
 
+                             gtk::Label {
+                                set_margin_top: 40,
+                                set_margin_horizontal: 20,
+                                set_label: "Downloads",
+                                set_halign:gtk::Align::Start,
+
+                                add_css_class: "title-1"
+                            },
+
                             #[local_ref]
                             episodes_container -> gtk::ListBox {
+                                #[watch]
+                                set_visible: !model.episodes.is_empty(),
+                                set_margin_all: 20,
                                 add_css_class: "boxed-list",
+                            },
+
+                           adw::StatusPage {
+                                #[watch]
+                                set_visible: model.episodes.is_empty(),
+                                
+                                set_title: "You downloaded episodes will appear here",
+                                //set_description: Some("You downloaded episodes will appear here"),
+                                set_icon_name: Some("media-optical-symbolic"), 
+                                
+                                set_vexpand: true,
+                                set_hexpand: true,
                             },
                         }
                     }
@@ -92,11 +118,8 @@ impl Component for DownloadsPage {
                     DownloadedEpisodeListItemOutput::TogglePlay(id) => {
                         DownloadsPageOutput::TogglePlay(id)
                     }
-                    DownloadedEpisodeListItemOutput::RequestDownload(episode_id) => {
-                        DownloadsPageOutput::RequestDownload(episode_id)
-                    }
-                    DownloadedEpisodeListItemOutput::CancleDownload(episode_id) => {
-                        DownloadsPageOutput::CancleDownload(episode_id)
+                    DownloadedEpisodeListItemOutput::RequestDeleteEpisode(episode_id) => {
+                        DownloadsPageOutput::RequestDeleteEpisode(episode_id)
                     }
                     DownloadedEpisodeListItemOutput::NotifyError(error) => {
                         DownloadsPageOutput::NotifyError(error)
@@ -104,6 +127,7 @@ impl Component for DownloadsPage {
                 },
             ),
             is_loading: true,
+            index_by_id: HashMap::new(),
         };
 
         let episodes_container = model.episodes.widget();
@@ -115,9 +139,11 @@ impl Component for DownloadsPage {
         ComponentParts { model, widgets }
     }
 
-    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
+    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, _root: &Self::Root) {
         match message {
             DownloadsPageInput::FetchDownloads => {
+                self.is_loading = true;
+                let _ = sender.output(DownloadsPageOutput::StartLoading);
                 let filter = ShowFilter {
                     any_downloaded: Some(true),
                     completed: None,
@@ -139,15 +165,20 @@ impl Component for DownloadsPage {
                                     sender.input(DownloadsPageInput::GottenEpisodes(episodes));
                                 }
                                 Err(error) => {
-                                    println!("Episode Error: {:?}", error);
+                                    let _ = sender.output(DownloadsPageOutput::NotifyError(
+                                        error.to_string(),
+                                    ));
                                 }
                             }
                         }
                     }
                     Err(error) => {
-                        println!("Error: {:?}", error);
+                        let _ = sender.output(DownloadsPageOutput::NotifyError(error.to_string()));
                     }
                 }
+
+                self.is_loading = false;
+                let _ = sender.output(DownloadsPageOutput::StopLoading);
             }
             DownloadsPageInput::GottenEpisodes(episodes) => {
                 let mut guard = self.episodes.guard();
@@ -155,15 +186,41 @@ impl Component for DownloadsPage {
 
                 for episode in episodes.iter() {
                     let index = guard.push_back(episode.clone());
+                    self.index_by_id.insert(episode.id(), index);
                 }
             }
-            DownloadsPageInput::DownloadStarted(episode_id) => {}
+            DownloadsPageInput::DownloadStarted(episode_id) => {
+                dbg!(episode_id);
+            }
             DownloadsPageInput::DownloadCancled(episode_id) => {}
             DownloadsPageInput::DownloadProgress(episode_id, _) => {}
             DownloadsPageInput::DownloadFinished(episode_id) => {}
-            DownloadsPageInput::ChangePlayBackState(play_state, episode_id) => {}
-            DownloadsPageInput::PlayBackProgress(episode_id, _, _) => {}
-            DownloadsPageInput::ChangeEpisodeTo(episode_id) => {}
+            DownloadsPageInput::ChangePlayBackState(play_state, episode_id) => {
+                if let Some(index) = self.index_by_id.get(&episode_id) {
+                    self.episodes.send(
+                        index.current_index(),
+                        DownloadedEpisodeListItemInput::ChangePlayBackState(play_state),
+                    );
+                }
+            }
+            DownloadsPageInput::PlayBackProgress(episode_id, pos, rem) => {
+                if let Some(index) = self.index_by_id.get(&episode_id) {
+                    self.episodes.send(
+                        index.current_index(),
+                        DownloadedEpisodeListItemInput::PlayBackProgress(pos, rem),
+                    );
+                }
+            }
+            DownloadsPageInput::ChangeEpisodeTo(episode_id) => {
+                self.episodes
+                    .broadcast(DownloadedEpisodeListItemInput::ChangeEpisodeTo(episode_id));
+            }
+            DownloadsPageInput::EpisodeDeleted(episode_id) => {
+                if let Some(index) = self.index_by_id.get(&episode_id) {
+                    let mut guard = self.episodes.guard();
+                    guard.remove(index.current_index());
+                }
+            }
         }
     }
 }

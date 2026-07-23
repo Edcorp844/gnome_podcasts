@@ -34,14 +34,10 @@ impl Progress {
     pub(crate) fn get_fraction(&self) -> f64 {
         // FIX: Prevent 0 / 0 division by zero leading to NaN at start of download
         if self.total_bytes == 0 {
-            println!("{:?}", self);
-            println!("Ratio completed: 0.0 (total_bytes is 0)");
             return 0.0;
         }
 
         let ratio = self.downloaded_bytes as f64 / self.total_bytes as f64;
-        println!("{:?}", self);
-        println!("Ratio completed: {}", ratio);
 
         if ratio >= 1.0 {
             return 1.0;
@@ -140,7 +136,7 @@ impl ActionWorker {
                     Ok(p) => p.get_fraction(),
                     Err(_) => break,
                 };
-                
+
                 // FIX: Guard clause to prevent sending NaN downstream if anything goes wrong
                 if fraction.is_nan() {
                     continue;

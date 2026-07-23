@@ -39,14 +39,12 @@ impl FactoryComponent for FoundPodcastsCard {
     type ParentWidget = gtk::FlowBox;
 
     view! {
-
         gtk::Box {
             set_orientation: gtk::Orientation::Vertical,
             set_spacing: 6,
             set_hexpand: true,
             set_halign: gtk::Align::Fill,
             set_width_request: 100,
-
 
             gtk::Overlay {
                 set_hexpand: true,
@@ -82,17 +80,12 @@ impl FactoryComponent for FoundPodcastsCard {
                     }
                 },
 
-                // PRIMARY IMAGE: gtk::Picture gives real aspect-ratio-aware
-                // scaling via content-fit, instead of a fixed pixel box
-                // that ignores the source image's proportions.
                 add_overlay = &gtk::Picture {
                     #[watch]
                     set_paintable: self.texture.as_ref().map(|t| t.upcast_ref::<adw::gdk::Paintable>()),
                     #[watch]
                     set_visible: self.texture.is_some(),
 
-                    // Fill whatever space the Overlay above ends up with,
-                    // rather than requesting a fixed size.
                     set_hexpand: true,
                     set_vexpand: true,
                     set_halign: gtk::Align::Fill,
@@ -107,23 +100,23 @@ impl FactoryComponent for FoundPodcastsCard {
                 }
             },
 
-            // 2. CARD METADATA BLOCK
-            // Horizontal container tracking Rank Index alongside Title/Author info
+            // 2. CARD METADATA BLOCK (Strictly 3 direct components: Content -> Spacer -> Button)
             gtk::Box {
                 set_orientation: gtk::Orientation::Horizontal,
                 set_halign: gtk::Align::Fill,
                 set_spacing: 8,
                 set_margin_top: 2,
 
+                // CHILD 1: Holds your typography tightly on the left
                 gtk::Box {
                     set_orientation: gtk::Orientation::Vertical,
                     set_spacing: 1,
-                    set_hexpand: true,
-                    set_halign: gtk::Align::Start,
+                    set_halign: gtk::Align::Start, // Anchors the text content to the left
 
                     gtk::Label {
                         set_label: &self.podcast.title,
                         set_halign: gtk::Align::Start,
+                        set_xalign: 0.0,
                         set_ellipsize: gtk::pango::EllipsizeMode::End,
                         set_lines: 1,
 
@@ -137,6 +130,7 @@ impl FactoryComponent for FoundPodcastsCard {
                     gtk::Label {
                         set_label: &self.podcast.author,
                         set_halign: gtk::Align::Start,
+                        set_xalign: 0.0,
                         set_ellipsize: gtk::pango::EllipsizeMode::End,
                         set_lines: 1,
                         add_css_class: "dim-label",
@@ -148,21 +142,23 @@ impl FactoryComponent for FoundPodcastsCard {
                     }
                 },
 
-                gtk::Separator { set_hexpand: true , add_css_class: "spacer"},
+                // CHILD 2: THE STRUCTURAL HACK (Claims 100% of horizontal middle room)
+                gtk::Box {
+                    set_hexpand: true, 
+                },
 
+                // CHILD 3: The follow action button pins smoothly to the far right
                 gtk::Button {
                     set_icon_name: "list-add-symbolic",
                     set_tooltip_text: Some("Follow"),
-                    set_css_classes: &vec!["circular", "suggestted-action"],
+                    set_css_classes: &vec!["circular", "suggested-action"], // Fixed typo in suggested-action
                     set_valign: gtk::Align::Center,
+                    set_halign: gtk::Align::End,
 
                     connect_clicked[sender] => move |_| {
                         sender.input(FoundCardInput::Subscribe);
                     }
                 },
-
-
-
             },
 
             add_controller = gtk::GestureClick {
@@ -172,6 +168,7 @@ impl FactoryComponent for FoundPodcastsCard {
             }
         }
     }
+
 
     fn init_model(podcast: Self::Init, _index: &DynamicIndex, sender: FactorySender<Self>) -> Self {
         let url_string = podcast.art.clone();

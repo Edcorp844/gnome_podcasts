@@ -130,8 +130,8 @@ impl Component for ShowsPage {
                             guard.push_back(show);
                         }
                     }
-                    Err(e) => {
-                        println!("Error loading shows: {}", e.to_string());
+                    Err(error) => {
+                        let _ = sender.output(ShowsPageOutput::NotifyError(error.to_string()));
                     }
                 }
                 self.is_loading = false;
@@ -165,7 +165,6 @@ impl Component for ShowsPage {
             ShowsPageInput::DownloadCancled(episode_id) => todo!(),
             ShowsPageInput::DownloadProgress(episode_id, fraction) => {
                 for page in &self.open_show_pages {
-                    print!("sending {fraction} on shows");
                     page.emit(ShowPageInput::DownloadProgress(episode_id, fraction));
                 }
             }
@@ -208,23 +207,6 @@ impl Component for ShowsPage {
                         #[wrap(Some)]
                         set_content = &gtk::Box{
                             set_orientation: gtk::Orientation::Vertical,
-                            gtk::Separator {
-                                add_css_class: "tahoe-shimmer-line",
-                                #[watch]
-                                set_visible: model.is_loading,
-                                set_halign: gtk::Align::Fill,
-                                inline_css: " min-height: 2px;
-                                    border: none;  background: linear-gradient(90deg, 
-                                        rgba(0, 122, 255, 0) 0%, 
-                                        #007AFF 25%, 
-                                        #AF52DE 50%, 
-                                        #FF2D55 75%, 
-                                        rgba(255, 45, 85, 0) 100%
-                                    );
-                                    background-size: 200% 100%; animation: s from { background-position: 0% 0%; }
-                                    to { background-position: 200% 0%; }"
-
-                            },
 
                             gtk::ScrolledWindow {
                                 set_vexpand : true,

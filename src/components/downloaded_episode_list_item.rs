@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use adw::prelude::*;
 use gst_play::PlayState;
 use podcasts_data::{Episode, EpisodeId, EpisodeModel, EpisodeWidgetModel, dbqueries};
@@ -22,7 +24,6 @@ pub struct DownloadedEpisodeListItem {
     episode: EpisodeWidgetModel,
     texture: Option<adw::gdk::Texture>,
     play_button: Controller<PlayButton>,
-    downloaded: bool,
     downloading: bool,
     progress_indicator: Controller<CircularProgress>,
 }
@@ -31,13 +32,9 @@ pub struct DownloadedEpisodeListItem {
 pub enum DownloadedEpisodeListItemInput {
     ImageDownloaded(Option<adw::gdk::Texture>),
     TogglePlay,
-    DownloadStarted,
     PlayBackProgress(f64, u64),
-    DownloadProgress(f64),
-    CancleDownload,
-    DownloadCancled,
-    RequestDownload,
-    DownloadFinished,
+    RequestDelete,
+    ConfirmDelete,
     ChangePlayBackState(PlayState),
     ChangeEpisodeTo(EpisodeId),
 }
@@ -45,8 +42,7 @@ pub enum DownloadedEpisodeListItemInput {
 #[derive(Debug)]
 pub enum DownloadedEpisodeListItemOutput {
     TogglePlay(EpisodeId),
-    RequestDownload(EpisodeId),
-    CancleDownload(EpisodeId),
+    RequestDeleteEpisode(EpisodeId),
     NotifyError(String),
 }
 
@@ -66,7 +62,7 @@ impl FactoryComponent for DownloadedEpisodeListItem {
     fn init_model(episode: Self::Init, _index: &DynamicIndex, sender: FactorySender<Self>) -> Self {
         match dbqueries::get_episode_from_id(episode.id()) {
             Ok(ep) => {
-                if let Some(image_url_ref) = ep.uri() {
+                if let Some(image_url_ref) = ep.image_uri() {
                     let image_url = image_url_ref.to_string();
 
                     sender.oneshot_command(async move {
@@ -106,20 +102,11 @@ impl FactoryComponent for DownloadedEpisodeListItem {
                 PlayButtonOutput::Clicked => DownloadedEpisodeListItemInput::TogglePlay,
             });
 
-        let downloaded = {
-            if let Ok(episode_widget) = dbqueries::get_episode_widget_from_id(episode.id()) {
-                episode_widget.local_uri().is_some()
-            } else {
-                false
-            }
-        };
-
         let progress_indicator = CircularProgress::builder().launch(0.0).detach();
 
         Self {
             episode,
             texture: None,
-            downloaded,
             downloading: false,
             progress_indicator,
             play_button,
@@ -136,31 +123,39 @@ impl FactoryComponent for DownloadedEpisodeListItem {
                     self.episode.id(),
                 ));
             }
-            DownloadedEpisodeListItemInput::CancleDownload => {
-                let _ = sender.output(DownloadedEpisodeListItemOutput::CancleDownload(
+
+            DownloadedEpisodeListItemInput::RequestDelete => {
+                let root_window = relm4::main_adw_application()
+                    .active_window()
+                    .and_downcast::<gtk::Window>();
+
+                let dialog = adw::AlertDialog::builder()
+                    .heading("Delete Downloaded Episode?")
+                    .body("This will remove the downloaded file from your device.")
+                    .default_response("cancel")
+                    .build();
+
+                dialog.add_response("cancel", "Cancel");
+                dialog.add_response("delete", "Delete");
+                dialog.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
+
+                let sender_clone = sender.clone();
+                dialog.choose(
+                    root_window.as_ref(),
+                    None::<&gtk::gio::Cancellable>,
+                    move |response| {
+                        if response == "delete" {
+                            sender_clone.input(DownloadedEpisodeListItemInput::ConfirmDelete);
+                        }
+                    },
+                );
+            }
+            DownloadedEpisodeListItemInput::ConfirmDelete => {
+                let _ = sender.output(DownloadedEpisodeListItemOutput::RequestDeleteEpisode(
                     self.episode.id(),
                 ));
             }
-            DownloadedEpisodeListItemInput::DownloadCancled => todo!(),
-            DownloadedEpisodeListItemInput::RequestDownload => {
-                let _ = sender.output(DownloadedEpisodeListItemOutput::RequestDownload(
-                    self.episode.id(),
-                ));
-            }
-            DownloadedEpisodeListItemInput::DownloadStarted => {
-                self.downloading = true;
-            }
-            DownloadedEpisodeListItemInput::DownloadProgress(fraction) => {
-                self.downloading = true;
-                let _ = self
-                    .progress_indicator
-                    .sender()
-                    .send(CircularProgressInput::SetFraction(fraction));
-            }
-            DownloadedEpisodeListItemInput::DownloadFinished => {
-                self.downloading = false;
-                self.downloaded = true;
-            }
+
             DownloadedEpisodeListItemInput::ChangePlayBackState(state) => match state {
                 PlayState::Stopped => {
                     self.play_button.emit(PlayButtonInput::UpdatePlayingState(
@@ -241,12 +236,20 @@ impl FactoryComponent for DownloadedEpisodeListItem {
         }
     }
 
-    view! {
-        gtk::Box{
-            set_orientation: gtk::Orientation::Horizontal,
-            set_margin_all: 16,
-            set_halign: gtk::Align::Start,
+  view! {
+    // 1. MAIN OUTER ROW (Spans full width)
+    gtk::Box {
+        set_halign: gtk::Align::Fill,
+        set_orientation: gtk::Orientation::Horizontal,
+        set_margin_all: 16,
 
+        // 2. LEFT SIDE CONTENT CONTAINER (Strictly forced to the left)
+        gtk::Box {
+            set_orientation: gtk::Orientation::Horizontal,
+            set_halign: gtk::Align::Start, // Locks the content layout to the left
+            set_spacing: 16,
+
+            // --- Left Column: Album/Episode Cover Art Stack ---
             gtk::Overlay {
                 set_height_request: 150,
                 set_width_request: 150,
@@ -260,7 +263,6 @@ impl FactoryComponent for DownloadedEpisodeListItem {
                     set_vexpand: true,
                     set_halign: gtk::Align::Fill,
                     set_valign: gtk::Align::Fill,
-
                     inline_css: "
                         background-color: mix(@window_bg_color, @card_fg_color, 0.1);
                         border-radius: 16px;
@@ -285,103 +287,129 @@ impl FactoryComponent for DownloadedEpisodeListItem {
                     set_paintable: self.texture.as_ref().map(|t| t.upcast_ref::<adw::gdk::Paintable>()),
                     #[watch]
                     set_visible: self.texture.is_some(),
-
                     set_hexpand: true,
                     set_vexpand: true,
                     set_halign: gtk::Align::Fill,
                     set_valign: gtk::Align::Fill,
                     set_content_fit: gtk::ContentFit::Cover,
                     set_can_shrink: true,
-                    inline_css: "border-radius: 16px; overflow: hidden;",
+                    inline_css: "border-radius: 16px;",
                 }
             },
 
-            gtk::Box{
+            // --- Middle Column: Text metadata (Stays close to the image) ---
+            gtk::Box {
                 set_orientation: gtk::Orientation::Vertical,
                 set_spacing: 8,
                 set_halign: gtk::Align::Start,
                 set_valign: gtk::Align::Start,
-                set_margin_start: 16,
 
-                gtk::Label{
-                    set_label:  self.episode.title(),
+                gtk::Label {
+                    set_label: self.episode.title(),
                     add_css_class: "title-4",
                     set_halign: gtk::Align::Start,
+                    set_xalign: 0.0,
                     set_wrap: true
                 },
 
-                gtk::Box{
+                gtk::Box {
                     set_orientation: gtk::Orientation::Horizontal,
                     set_halign: gtk::Align::Start,
-                    set_spacing:2,
+                    set_spacing: 12,
 
-                    gtk::Image{
+                    gtk::Image {
                         set_icon_name: Some("drive-harddisk-symbolic"),
                         inline_css: "color: oklab(from var(--accent-color) calc(l - 0.10) a b);",
                     },
 
-                    gtk::Label{
-                        set_label:  &Self::format_file_size(self.episode.length()),
+                    gtk::Label {
+                        set_label: &Self::format_file_size(self.episode.length()),
                         set_halign: gtk::Align::Start,
                         inline_css: "color: oklab(from var(--accent-color) calc(l - 0.10) a b);",
                     },
 
-                    gtk::Separator{
-                        set_hexpand: true,
-                        add_css_class:"spacer"
-                    },
-
-                    gtk::Label{
-                        set_label:  &self.episode.epoch().format("%e %b").to_string(),
+                    gtk::Label {
+                        set_label: &self.episode.epoch().format("%e %b").to_string(),
                         add_css_class: "caption",
                         set_halign: gtk::Align::Start,
                         set_wrap: true
                     },
-
                 },
 
-                gtk::Separator{
+                gtk::Separator {
                     set_vexpand: true,
-                    add_css_class:"spacer"
+                    add_css_class: "spacer",
+                    set_halign: gtk::Align::Start,
                 },
 
                 self.play_button.widget(),
             },
+        },
 
-             gtk::Box{
-                set_hexpand: true,
-                set_halign: gtk::Align::Fill,
-                add_css_class:"spacer"
-            },
+        // 3. THE STRUCTURAL HACK: This empty box expands to take up all middle space
+        gtk::Box {
+            set_hexpand: true, 
+        },
 
-            gtk::Button{
+        // 4. RIGHT SIDE MENU CONTAINER (Strictly forced to the right end)
+        gtk::Box {
+            set_halign: gtk::Align::End,
+            set_valign: gtk::Align::Center,
+
+            gtk::MenuButton {
                 #[watch]
                 set_visible: !self.downloading,
-                #[watch]
-                set_icon_name:if self.downloaded {
-                        "object-select-symbolic"
-                 } else { "download-symbolic"},
+
+                set_icon_name: "view-more-symbolic",
                 set_css_classes: &vec!["circular"],
                 set_halign: gtk::Align::Center,
                 set_valign: gtk::Align::Center,
 
-                connect_clicked[sender] => move |_| {
-                    sender.input(DownloadedEpisodeListItemInput::RequestDownload);
-                }
+                #[wrap(Some)]
+                #[name="popover"]
+                set_popover = &gtk::Popover {
+                    set_autohide: true,
+
+                    #[wrap(Some)]
+                    set_child = &gtk::Box {
+                        set_orientation: gtk::Orientation::Vertical,
+                        set_margin_start: 6,
+                        set_margin_end: 6,
+                        set_margin_top: 6,
+                        set_margin_bottom: 6,
+                        set_spacing: 2,
+
+                        gtk::Button {
+                            set_css_classes: &vec!["flat"],
+                            #[wrap(Some)]
+                            set_child = &adw::ButtonContent {
+                                set_icon_name: "display-projector-symbolic",
+                                set_label: "Go to show",
+                                set_halign: gtk::Align::Start,
+                            },
+                        },
+
+                        gtk::Button {
+                            set_css_classes: &vec!["flat", "destructive-action"],
+                            #[wrap(Some)]
+                            set_child = &adw::ButtonContent {
+                                set_icon_name: "user-trash-symbolic",
+                                set_label: "Delete Episode",
+                                set_halign: gtk::Align::Start,
+                            },
+                            connect_clicked[sender, popover] => move |_| {
+                                popover.popdown();
+                                sender.input(DownloadedEpisodeListItemInput::RequestDelete);
+                            },
+                        },
+                    },
+                },
             },
-
-            gtk::Box{
-                #[watch]
-                set_visible: self.downloading,
-                self.progress_indicator.widget() {
-                    set_size_request: (34, 34),
-                    set_halign: gtk::Align::Center,
-                    set_valign: gtk::Align::Center,
-                }
-            }
-
-        }
+        },
     }
+}
+
+
 }
 
 impl DownloadedEpisodeListItem {
@@ -389,7 +417,6 @@ impl DownloadedEpisodeListItem {
         match bytes {
             Some(b) if b > 0 => {
                 let b_f64 = b as f64;
-                // Define metric base-1024 units
                 let kilo = 1024.0;
                 let mega = kilo * 1024.0;
                 let giga = mega * 1024.0;

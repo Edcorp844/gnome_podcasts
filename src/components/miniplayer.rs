@@ -252,8 +252,9 @@ impl Component for MiniPlayerModel {
                     set_halign: gtk::Align::Fill,
                     set_hexpand: true,
                     set_vexpand: false,
+                    add_css_class: "frame",
 
-                    gtk::Separator { set_hexpand: true, add_css_class: "spacer" },
+                   // gtk::Separator { set_hexpand: true, add_css_class: "spacer" },
 
                     gtk::Box {
                         set_width_request: 50,
@@ -263,9 +264,9 @@ impl Component for MiniPlayerModel {
                         set_hexpand: false,
                         set_vexpand: false,
                         add_css_class: "suggested-action",
+                        // border-radius: 8px;
                         inline_css: "
                             background: rgba(255, 255, 255, 0.7);
-                            border-radius: 8px;
                             min-width: 50px;
                             max-width: 50px;
                             min-height: 50px;
@@ -283,9 +284,9 @@ impl Component for MiniPlayerModel {
                             set_valign: gtk::Align::Fill,
                             set_content_fit: gtk::ContentFit::Cover,
                             set_can_shrink: true,
-
+                            //  border-radius: 8px;
                             inline_css: "
-                                border-radius: 8px;
+                              
                                 overflow: hidden;
                                 min-width: 50px;
                                 max-width: 50px;
@@ -327,7 +328,7 @@ impl Component for MiniPlayerModel {
                         },
                     },
 
-                    gtk::Separator { set_hexpand: true, add_css_class: "spacer" },
+                    //gtk::Separator { set_hexpand: true, add_css_class: "spacer" },
                 },
 
                 // --- Volume Slider on the Right End ---
