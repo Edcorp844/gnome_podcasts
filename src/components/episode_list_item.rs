@@ -233,20 +233,17 @@ impl FactoryComponent for EpisodeListItem {
     }
 
     view! {
-        // 1. MAIN OUTER ROW (Spans full width)
         gtk::Box {
             set_halign: gtk::Align::Fill,
             set_orientation: gtk::Orientation::Horizontal,
             set_margin_all: 16,
 
-            // 2. LEFT SIDE CONTENT CONTAINER (Strictly forced to the left)
             gtk::Box {
                 set_orientation: gtk::Orientation::Horizontal,
                 set_halign: gtk::Align::Start, // Locks the content layout tightly to the left
                 set_spacing: 16,
 
-                // --- Left Column: Album/Episode Cover Art Stack ---
-                gtk::Overlay {
+                 gtk::Overlay {
                     set_height_request: 150,
                     set_width_request: 150,
                     set_halign: gtk::Align::Start,
@@ -293,7 +290,6 @@ impl FactoryComponent for EpisodeListItem {
                     }
                 },
 
-                // --- Middle Column: Text metadata (Stays close to the image) ---
                 gtk::Box {
                     set_orientation: gtk::Orientation::Vertical,
                     set_spacing: 8,
@@ -354,18 +350,15 @@ impl FactoryComponent for EpisodeListItem {
                 },
             },
 
-            // 3. THE STRUCTURAL HACK: This empty box expands to take up all middle space
             gtk::Box {
                 set_hexpand: true,
             },
 
-            // 4. RIGHT SIDE ACTIONS CONTAINER (Strictly forced to the right end)
             gtk::Box {
                 set_halign: gtk::Align::End,
                 set_valign: gtk::Align::Center,
 
-                // Stack download controls inside a layout box to prevent horizontal shifting
-                gtk::Box {
+               gtk::Box {
                     set_orientation: gtk::Orientation::Horizontal,
 
                     gtk::Button {

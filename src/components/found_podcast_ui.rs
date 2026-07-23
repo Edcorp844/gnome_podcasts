@@ -100,14 +100,12 @@ impl FactoryComponent for FoundPodcastsCard {
                 }
             },
 
-            // 2. CARD METADATA BLOCK (Strictly 3 direct components: Content -> Spacer -> Button)
             gtk::Box {
                 set_orientation: gtk::Orientation::Horizontal,
                 set_halign: gtk::Align::Fill,
                 set_spacing: 8,
                 set_margin_top: 2,
 
-                // CHILD 1: Holds your typography tightly on the left
                 gtk::Box {
                     set_orientation: gtk::Orientation::Vertical,
                     set_spacing: 1,
@@ -142,12 +140,10 @@ impl FactoryComponent for FoundPodcastsCard {
                     }
                 },
 
-                // CHILD 2: THE STRUCTURAL HACK (Claims 100% of horizontal middle room)
                 gtk::Box {
                     set_hexpand: true, 
                 },
 
-                // CHILD 3: The follow action button pins smoothly to the far right
                 gtk::Button {
                     set_icon_name: "list-add-symbolic",
                     set_tooltip_text: Some("Follow"),
