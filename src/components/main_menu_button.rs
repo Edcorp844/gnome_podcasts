@@ -1,7 +1,7 @@
 use adw::prelude::*;
 use relm4::{Component, prelude::*};
 
-pub struct MainMenuButton ;
+pub struct MainMenuButton;
 
 #[relm4::component(pub)]
 impl Component for MainMenuButton {
@@ -21,9 +21,16 @@ impl Component for MainMenuButton {
                 let menu = gtk::gio::Menu::new();
 
                 let window_section = gtk::gio::Menu::new();
-                let new_window_item = gtk::gio::MenuItem::new(Some("New Window"), Some("app.new_window"));
-                new_window_item.set_attribute_value("accel", Some(&"<Primary>N".to_variant()));
-                window_section.append_item(&new_window_item);
+
+                let refresh_item = gtk::gio::MenuItem::new(Some("Refresh"), Some("app.refresh"));
+                refresh_item.set_attribute_value("accel", Some(&"<Primary>R".to_variant()));
+
+                let refresh_episodes_item = gtk::gio::MenuItem::new(Some("Refresh Episodes"), Some("app.refresh_episodes"));
+                refresh_episodes_item.set_attribute_value("accel", Some(&"<Primary><Shift>N".to_variant()));
+
+                window_section.append_item(&refresh_item);
+                window_section.append_item(&refresh_episodes_item);
+
                 menu.append_section(None, &window_section);
 
                 let section = gtk::gio::Menu::new();
@@ -48,7 +55,7 @@ impl Component for MainMenuButton {
 
                 menu
             })) {}
-        },          
+        },
     }
 
     fn init(

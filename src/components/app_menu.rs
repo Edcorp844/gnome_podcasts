@@ -8,41 +8,45 @@ impl AppMenu {
     pub(crate) fn register() {
         let app = relm4::main_application();
 
-        // --- 1. About Action ---
+        let refresh_action = gtk::gio::SimpleAction::new("refresh", None);
+        refresh_action.connect_activate(move |_, _| {
+            println!("Refresh requested");
+        });
+        app.add_action(&refresh_action);
+        app.set_accels_for_action("app.refresh", &["<Primary>r"]);
+
+        let refresh_episodes_action = gtk::gio::SimpleAction::new("refresh_episodes", None);
+        refresh_episodes_action.connect_activate(move |_, _| {
+            println!("Refresh episodes requested");
+        });
+        app.add_action(&refresh_episodes_action);
+        app.set_accels_for_action("app.refresh_episodes", &["<Primary><Shift>r"]);
+
+        let preferences_action = gtk::gio::SimpleAction::new("preferences", None);
+        preferences_action.connect_activate(move |_, _| {
+            println!("Preferences requested");
+        });
+        app.add_action(&preferences_action);
+        app.set_accels_for_action("app.preferences", &["<Primary>comma"]);
+
+        let shortcuts_action = gtk::gio::SimpleAction::new("shortcuts", None);
+        shortcuts_action.connect_activate(move |_, _| {
+            Self::show_shortcuts_window();
+        });
+        app.add_action(&shortcuts_action);
+        app.set_accels_for_action("app.shortcuts", &["<Primary>question"]);
+
         let about_action = gtk::gio::SimpleAction::new("about", None);
         about_action.connect_activate(move |_, _| {
             Self::show_about_window();
         });
         app.add_action(&about_action);
 
-        // --- 2. New Window Action (Ctrl+N) ---
-        let new_window_action = gtk::gio::SimpleAction::new("new_window", None);
-        new_window_action.connect_activate(move |_, _| {
-            // Logic to launch a new instance of your main Relm4 window
-            //relm4::main_application().activate();
-            println!("New window requested");
-        });
-        app.add_action(&new_window_action);
-        app.set_accels_for_action("app.new_window", &["<Primary>n"]);
-
-        // 3. Shortcuts Action (Ctrl + ?)
-        let shortcuts_action = gtk::gio::SimpleAction::new("shortcuts", None);
-        shortcuts_action.connect_activate(move |_, _| {
-            Self::show_shortcuts_window();
-        });
-        app.add_action(&shortcuts_action);
-
-        // Primary+question is the standard "Ctrl + ?" shortcut
-        app.set_accels_for_action("app.shortcuts", &["<Primary>question"]);
-
-        // --- 4. Quit Action (Ctrl+Q) ---
         let quit_action = gtk::gio::SimpleAction::new("quit", None);
         let app_clone = app.clone();
         quit_action.connect_activate(move |_, _| {
-            // Now you can call quit directly on the cloned app
             app_clone.quit();
         });
-
         app.add_action(&quit_action);
         app.set_accels_for_action("app.quit", &["<Primary>q"]);
     }
@@ -102,9 +106,13 @@ impl AppMenu {
             // --- SECTION: Window ---
             let window_section = adw::ShortcutsSection::new(Some("Window"));
 
-            let new_win = adw::ShortcutsItem::new("New Window", "<Primary>n");
-            new_win.set_subtitle("Opens a new window");
-            window_section.add(new_win);
+            let refresh = adw::ShortcutsItem::new("Refresh", "<Primary>r");
+            refresh.set_subtitle("Refresh all views content");
+
+            let refresh_episodes = adw::ShortcutsItem::new("Refresh Episodes", "<Primary><Shift>r");
+            refresh_episodes.set_subtitle("Refresh the database and new episodes");
+            window_section.add(refresh);
+            window_section.add(refresh_episodes);
 
             let quit = adw::ShortcutsItem::new("Quit", "<Primary>q");
             quit.set_subtitle("Close the application");
@@ -121,12 +129,11 @@ impl AppMenu {
             shorts.set_subtitle("Shows shortcuts window");
             application_section.add(shorts);
 
-
             // --- SECTION: Navigation ---
             let nav_section = adw::ShortcutsSection::new(Some("Navigation"));
 
-            let search = adw::ShortcutsItem::new("Search Scriptures", "<Primary>f");
-            search.set_subtitle("Find verses or keywords");
+            let search = adw::ShortcutsItem::new("Search", "<Primary>f");
+            search.set_subtitle("Search Podcasts, Episodes, Shows");
             nav_section.add(search);
 
             // Add sections to the dialog

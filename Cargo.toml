@@ -50,6 +50,7 @@ markup5ever_rcdom = "0.39.0"
 gettext-rs = {version = "0.7.7", features = ["gettext-system"]}
 html2text = "0.17.1"
 mpris-player = "0.6.3"
+image = "0.25.10"
 
 
 # --- OPTIMIZATION PROFILES ---

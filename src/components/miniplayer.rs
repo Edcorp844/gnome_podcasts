@@ -14,6 +14,13 @@ use crate::components::volume_scale::VolumeControlOutput;
 use crate::util::cover_image::ImageSize;
 use crate::util::cover_image::fetch_cached_image;
 
+#[derive(Debug)]
+pub enum PlayerPageView {
+    Lyrics,
+    PlayList,
+    None,
+}
+
 pub struct MiniPlayerModel {
     pub volume_slider: Controller<VolumeControlModel>,
     texture: Option<adw::gdk::Texture>,
@@ -37,11 +44,12 @@ pub enum MiniplayerModelOutput {
     NotifyError(String),
     SeekAudioPosition(f64),
     SetVolume(f64),
+    ShowPlayerPage(PlayerPageView),
     RequestMute,
     RequestUnmute,
     RequestVolumeValue,
     Seekforward,
-    SeekBakward
+    SeekBakward,
 }
 
 #[derive(Debug)]
@@ -92,7 +100,7 @@ impl Component for MiniPlayerModel {
         };
 
         let _ = sender.output(MiniplayerModelOutput::RequestVolumeValue);
-        
+
         let widgets = view_output!();
         ComponentParts { model, widgets }
     }
@@ -340,11 +348,23 @@ impl Component for MiniPlayerModel {
 
                     gtk::Button{
                         set_icon_name: "annotations-text-symbolic",
+                        set_tooltip_text: Some("Lyrics"),
+
+
+                        connect_clicked[sender]=>move |_| {
+                            let _  = sender.output(MiniplayerModelOutput::ShowPlayerPage(PlayerPageView::Lyrics));
+                        }
                     },
                     gtk::Separator { set_hexpand: true, add_css_class: "spacer" },
 
                     gtk::Button{
                         set_icon_name: "view-list-symbolic",
+                        set_tooltip_text: Some("Play List"),
+
+
+                        connect_clicked[sender]=>move |_| {
+                            let _  = sender.output(MiniplayerModelOutput::ShowPlayerPage(PlayerPageView::PlayList));
+                        }
                     },
 
                     gtk::Separator { set_hexpand: true, add_css_class: "spacer" },

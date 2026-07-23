@@ -5,3 +5,4 @@ pub mod search;
 pub mod show;
 pub mod shows;
 pub mod downloads;
+pub mod player_page;

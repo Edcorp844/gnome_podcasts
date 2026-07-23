@@ -27,8 +27,8 @@ impl AppModel {
             ("emoji-recent-symbolic", "Recently updated"),
             ("display-projector-symbolic", "Shows"),
             ("folder-download-symbolic", "Downloaded"),
-            ("preferences-system-time-symbolic", "History"),
-            ("view-list-symbolic", "Channels"),
+          //  ("preferences-system-time-symbolic", "History"),
+           // ("view-list-symbolic", "Channels"),
         ];
 
         // 1. Clean dynamic population using a unified helper function

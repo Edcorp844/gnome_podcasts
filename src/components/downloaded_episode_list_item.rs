@@ -367,11 +367,6 @@ impl FactoryComponent for DownloadedEpisodeListItem {
                     #[wrap(Some)]
                     set_child = &gtk::Box {
                         set_orientation: gtk::Orientation::Vertical,
-                        set_margin_start: 6,
-                        set_margin_end: 6,
-                        set_margin_top: 6,
-                        set_margin_bottom: 6,
-                        set_spacing: 2,
 
                         gtk::Button {
                             set_css_classes: &vec!["flat"],
@@ -384,7 +379,7 @@ impl FactoryComponent for DownloadedEpisodeListItem {
                         },
 
                         gtk::Button {
-                            set_css_classes: &vec!["flat", "destructive-action"],
+                            set_css_classes: &vec!["flat"],
                             #[wrap(Some)]
                             set_child = &adw::ButtonContent {
                                 set_icon_name: "user-trash-symbolic",
