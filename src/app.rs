@@ -38,7 +38,6 @@ pub struct AppModel {
     miniplayer: Controller<MiniPlayerModel>,
     worker_controller: Controller<ActionWorker>,
     is_loading: bool,
-    show_full_player: bool,
 }
 
 #[derive(Debug)]
@@ -324,6 +323,10 @@ impl Component for AppModel {
             sender.input_sender(),
             |message| match message {
                 PlayerPageOutput::NotifyError(error) => AppModelInput::NotifyError(error),
+                PlayerPageOutput::TogglePlay => AppModelInput::TogglePlayBack,
+                PlayerPageOutput::SeekAudioPosition(pos) => AppModelInput::SeekAudioPosition(pos),
+                PlayerPageOutput::Seekforward => AppModelInput::Seekforward,
+                PlayerPageOutput::SeekBakward => AppModelInput::SeekBakward,
             },
         );
 
@@ -336,7 +339,6 @@ impl Component for AppModel {
             miniplayer,
             worker_controller,
             is_loading: false,
-            show_full_player: false,
         };
 
         // Generates the correct modern auto-derived struct layout type

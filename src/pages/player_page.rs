@@ -1,10 +1,10 @@
 use adw::prelude::*;
 use gst_play::PlayState;
-use podcasts_data::{Episode, EpisodeId, dbqueries};
+use podcasts_data::{EpisodeId, dbqueries};
 use relm4::{Component, prelude::*};
 
 use crate::{
-    components::player_controls::{PlayerControls, PlayerControlsInput},
+    components::player_controls::{PlayerControls, PlayerControlsInput, PlayerControlsOutput},
     util::{
         cover_image::{ImageSize, fetch_cached_image},
         gradient_extractor::GradientColorExtractor,
@@ -28,6 +28,10 @@ pub enum PlayerPageInput {
 #[derive(Debug)]
 pub enum PlayerPageOutput {
     NotifyError(String),
+    TogglePlay,
+    SeekAudioPosition(f64),
+    Seekforward,
+    SeekBakward,
 }
 
 #[derive(Debug)]
@@ -78,7 +82,17 @@ impl Component for PlayerPage {
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let player_controls = PlayerControls::builder().launch(()).detach();
+        let player_controls =
+            PlayerControls::builder()
+                .launch(())
+                .forward(sender.output_sender(), |msg| match msg {
+                    PlayerControlsOutput::TogglePlay => PlayerPageOutput::TogglePlay,
+                    PlayerControlsOutput::SeekAudioPosition(pos) => {
+                        PlayerPageOutput::SeekAudioPosition(pos)
+                    }
+                    PlayerControlsOutput::Seekforward => PlayerPageOutput::Seekforward,
+                    PlayerControlsOutput::SeekBakward => PlayerPageOutput::SeekBakward,
+                });
         let model = PlayerPage { player_controls };
 
         let widgets = view_output!();
@@ -124,13 +138,12 @@ impl Component for PlayerPage {
                         if let Some(image_uri) = image_uri_opt {
                             sender.oneshot_command(async move {
                                 let downloaded_texture =
-                                    fetch_cached_image(&image_uri, ImageSize::from_dimesion(300))
+                                    fetch_cached_image(&image_uri, ImageSize::from_dimesion(450))
                                         .await;
 
                                 PlayerPageCmdInput::DownloadImage(downloaded_texture)
                             });
                         } else {
-                           
                         }
                     }
                     Err(error) => {

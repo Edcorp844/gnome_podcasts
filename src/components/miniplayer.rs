@@ -301,6 +301,14 @@ impl Component for MiniPlayerModel {
                                 min-height: 50px;
                                 max-height: 50px;
                             ",
+
+
+                        },
+
+                        add_controller = gtk::GestureClick {
+                            connect_released[sender] => move |_, _, _, _| {
+                                let _ = sender.output(MiniplayerModelOutput::ShowPlayerPage(PlayerPageView::None));
+                            }
                         }
                     },
 
@@ -313,7 +321,7 @@ impl Component for MiniPlayerModel {
                             #[watch]
                             set_label:match &model.current_episode {
                                 Some(episode) => episode.title(),
-                                None => "No Track Selected",
+                                None => "",
                             },
                             set_ellipsize: gtk::pango::EllipsizeMode::End,
                             set_lines: 1,
