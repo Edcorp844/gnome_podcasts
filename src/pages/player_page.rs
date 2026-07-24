@@ -3,19 +3,22 @@ use gst_play::PlayState;
 use podcasts_data::{Episode, EpisodeId, dbqueries};
 use relm4::{Component, prelude::*};
 
-use crate::util::cover_image::{ImageSize, fetch_cached_image_with_gradient};
+use crate::{
+    components::player_controls::{PlayerControls, PlayerControlsInput},
+    util::{
+        cover_image::{ImageSize, fetch_cached_image},
+        gradient_extractor::GradientColorExtractor,
+    },
+};
 
 #[derive(Debug)]
 pub struct PlayerPage {
-    dynamic_gradient_css: String,
-    current_episode: Option<Episode>,
-    current_state: PlayState,
-    texture: Option<adw::gdk::Texture>,
+    player_controls: Controller<PlayerControls>,
 }
 
 #[derive(Debug)]
 pub enum PlayerPageInput {
-    ImageDownloaded(Option<(adw::gdk::Texture, String)>),
+    ImageDownloaded(Option<adw::gdk::Texture>),
     ChangePlayBackState(PlayState),
     SetCurrentEpisode(EpisodeId),
     UpdateProgress(f64, u64),
@@ -24,13 +27,12 @@ pub enum PlayerPageInput {
 
 #[derive(Debug)]
 pub enum PlayerPageOutput {
-    ClosePlayer,
     NotifyError(String),
 }
 
 #[derive(Debug)]
 pub enum PlayerPageCmdInput {
-    DownloadImage(Option<(adw::gdk::Texture, String)>),
+    DownloadImage(Option<adw::gdk::Texture>),
 }
 
 #[relm4::component(pub)]
@@ -41,36 +43,31 @@ impl Component for PlayerPage {
     type CommandOutput = PlayerPageCmdInput;
 
     view! {
+        #[name="page"]
         adw::NavigationPage {
-            // Set the title displayed in the navigation stack
-            set_title: "Podcast Details",
-             #[watch]
-            inline_css: &model.dynamic_gradient_css,
+            inline_css: "background: rgba(0,0,0,1);",
 
-           #[wrap(Some)]
+            #[wrap(Some)]
             set_child = &adw::ToolbarView {
 
                  add_top_bar=&adw::HeaderBar {
                     set_show_title: false,
                     add_css_class: "flat",
                     inline_css: "background: transparent; box-shadow: none;",
-
-                    pack_end=&gtk::Button {
-                        set_tooltip_text: Some("Close"),
-                        set_icon_name: "close-symbolic",
-
-                        connect_clicked[sender]=> move |_| {
-                            let _ = sender.output(PlayerPageOutput::ClosePlayer);
-                        }
-                    }
                  },
 
                #[wrap(Some)]
                 set_content=&gtk::Box {
-                    set_orientation: gtk::Orientation::Vertical,
+                    set_orientation: gtk::Orientation::Horizontal,
                     set_hexpand: true,
                     set_vexpand: true,
-                   
+
+
+
+                    model.player_controls.widget(){
+
+                    }
+
                 }
             }
         }
@@ -81,12 +78,8 @@ impl Component for PlayerPage {
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let model = PlayerPage {
-            texture: None,
-            current_episode: None,
-            current_state: PlayState::Stopped,
-            dynamic_gradient_css: "background: rgba(0,0,0,1);".to_string(),
-        };
+        let player_controls = PlayerControls::builder().launch(()).detach();
+        let model = PlayerPage { player_controls };
 
         let widgets = view_output!();
 
@@ -98,48 +91,60 @@ impl Component for PlayerPage {
         widgets: &mut Self::Widgets,
         message: Self::Input,
         sender: ComponentSender<Self>,
-        root: &Self::Root,
+        _root: &Self::Root,
     ) {
         match message {
-            PlayerPageInput::ImageDownloaded(pair) => {
-                if let Some((texture, css)) = pair {
-                    self.texture = Some(texture);
-                    self.dynamic_gradient_css = css;
+            PlayerPageInput::ImageDownloaded(texture) => match texture {
+                Some(texture) => {
+                    self.player_controls
+                        .emit(PlayerControlsInput::SetTexture(Some(texture.clone())));
+
+                    widgets.page.inline_css(
+                        &GradientColorExtractor::extract_css_gradient_from_texture(&texture),
+                    );
                 }
-            }
+                None => {
+                    let _ = sender.output(PlayerPageOutput::NotifyError(format!(
+                        "Player Error: Failed to Load Image texture",
+                    )));
+                }
+            },
             PlayerPageInput::ChangePlayBackState(play_state) => {
-                self.current_state = play_state;
+                self.player_controls
+                    .emit(PlayerControlsInput::ChangePlayBackState(play_state));
             }
             PlayerPageInput::SetCurrentEpisode(episode_id) => {
                 match dbqueries::get_episode_from_id(episode_id) {
                     Ok(episode) => {
                         let image_uri_opt = episode.image_uri().map(|s| s.to_string());
-                        self.current_episode = Some(episode);
+
+                        self.player_controls
+                            .emit(PlayerControlsInput::SetCurrentEpisode(episode));
 
                         if let Some(image_uri) = image_uri_opt {
                             sender.oneshot_command(async move {
-                                let downloaded_texture = fetch_cached_image_with_gradient(
-                                    &image_uri,
-                                    ImageSize::from_dimesion(500),
-                                )
-                                .await;
+                                let downloaded_texture =
+                                    fetch_cached_image(&image_uri, ImageSize::from_dimesion(300))
+                                        .await;
 
                                 PlayerPageCmdInput::DownloadImage(downloaded_texture)
                             });
                         } else {
-                            self.texture = None;
+                           
                         }
                     }
                     Err(error) => {
-                        // Forward the database infrastructure errors up to the application logger
-                        // let _ = sender.output(MiniplayerModelOutput::NotifyError(format!(
-                        //     "Failed to resolve episode metadata: {:?}",
-                        //     error
-                        // )));
+                        let _ = sender.output(PlayerPageOutput::NotifyError(format!(
+                            "Failed to resolve episode metadata: {:?}",
+                            error
+                        )));
                     }
                 }
             }
-            PlayerPageInput::UpdateProgress(pos, rem) => {}
+            PlayerPageInput::UpdateProgress(pos, rem) => {
+                self.player_controls
+                    .emit(PlayerControlsInput::UpdateProgress(pos, rem));
+            }
             PlayerPageInput::VolumeValue(val) => {}
         }
     }

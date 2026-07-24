@@ -43,7 +43,6 @@ pub struct AppModel {
 
 #[derive(Debug)]
 pub enum AppModelInput {
-    ClosePlayer,
     ToggleSidebar,
     StartLoading,
     StopLoading,
@@ -94,13 +93,11 @@ impl Component for AppModel {
 
             #[wrap(Some)]
             #[name = "nav_view"]
-            set_content = &gtk::Stack {
+            set_content = &adw::NavigationView {
                 // Watch the model state to automatically flip between pages
-                #[watch]
-                set_visible_child_name: if model.show_full_player { "player_page" } else { "main_view" },
-
-                // PAGE 1: Your original split-view application layout
-                add_named[Some("main_view")] = &adw::OverlaySplitView {
+                add=&adw::NavigationPage {
+                    #[wrap(Some)]
+                    set_child=&adw::OverlaySplitView {
                     #[watch]
                     set_show_sidebar: model.is_sidebar_visible,
 
@@ -214,9 +211,7 @@ impl Component for AppModel {
                         }
                     },
                 },
-
-                // PAGE 2: The player view injected into the stack
-                add_named[Some("player_page")] = model.player_page.widget(){}
+            },
             }
         }
     }
@@ -328,7 +323,6 @@ impl Component for AppModel {
         let player_page = PlayerPage::builder().launch(()).forward(
             sender.input_sender(),
             |message| match message {
-                PlayerPageOutput::ClosePlayer => AppModelInput::ClosePlayer,
                 PlayerPageOutput::NotifyError(error) => AppModelInput::NotifyError(error),
             },
         );
@@ -527,6 +521,7 @@ impl Component for AppModel {
                 }
             }
             AppModelInput::SetCurrentEpisode(id) => {
+                print!("episode");
                 self.miniplayer
                     .emit(MiniplayerModelInput::SetCurrentEpisode(id));
                 self.player_page
@@ -624,10 +619,7 @@ impl Component for AppModel {
                 }
             }
             AppModelInput::ShowPlayerPage(player_page_view) => {
-                self.show_full_player = true;
-            }
-            AppModelInput::ClosePlayer => {
-                self.show_full_player = false;
+                widgets.nav_view.push(self.player_page.widget());
             }
         }
 

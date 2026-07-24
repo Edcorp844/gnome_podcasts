@@ -11,3 +11,4 @@ pub mod podcats_list_item;
 pub mod progress_bar;
 pub mod show_card;
 pub mod volume_scale;
+pub mod player_controls;
