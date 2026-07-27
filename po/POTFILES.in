@@ -1,0 +1,6 @@
+# List of source files containing translatable strings.
+# Please keep this file sorted alphabetically.
+data/org.flame.podcasts.desktop.in
+data/org.flame.podcasts.metainfo.xml.in
+data/org.flame.podcasts.gschema.xml
+src/window.ui

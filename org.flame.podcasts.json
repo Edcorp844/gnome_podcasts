@@ -1,0 +1,68 @@
+{
+    "id" : "org.flame.podcasts",
+    "runtime" : "org.gnome.Platform",
+    "runtime-version" : "50",
+    "sdk" : "org.gnome.Sdk",
+    "sdk-extensions" : [
+	"org.freedesktop.Sdk.Extension.rust-stable"
+    ],
+    "command" : "xpodcasts",
+    "finish-args" : [
+	    "--socket=pulseaudio",
+	"--share=network",
+	"--share=ipc",
+	"--socket=fallback-x11",
+	"--device=dri",
+	"--socket=wayland",
+	"--socket=session-bus",
+	"--env=RUST_BACKTRACE=1",
+	"--env=RUST_LOG=xpodcasts=debug,podcasts_data=debug,glib=debug",
+	"--env=G_ENABLE_DIAGNOSTIC=1"
+    ],
+    "build-options" : {
+	"append-path" : "/usr/lib/sdk/rust-stable/bin",
+	"build-args" : [
+	    "--share=network"
+	],
+	"env" : {
+	    "RUST_BACKTRACE" : "1",
+	    "RUST_LOG" : "xpodcasts=debug",
+	    "CARGO_HOME" : "/run/build/xpodcasts/cargo-cache",
+	    "CARGO_TARGET_DIR" : "/run/build/xpodcasts/target"
+	}
+    },
+    "cleanup" : [
+	"/include",
+	"/lib/pkgconfig",
+	"/man",
+	"/share/doc",
+	"/share/gtk-doc",
+	"*.la",
+	"*.a"
+    ],
+    "modules" : [
+	{
+	    "name" : "xpodcasts",
+	    "builddir" : true,
+	    "buildsystem" : "meson",
+	"config-opts": [
+		"-Dprofile=development"
+	    ],
+	    "build-options": {
+		"test-args": [
+		    "--device=dri",
+		    "--share=ipc",
+		    "--socket=fallback-x11",
+		    "--socket=wayland",
+		    "--share=network"
+		]
+	    },
+	    "sources" : [
+		{
+		    "type" : "dir",
+		    "path" : "/home/frost/Projects/rust"
+		}
+	    ]
+	}
+    ]
+}

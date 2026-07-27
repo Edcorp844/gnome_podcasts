@@ -1,0 +1,4 @@
+pub static APP_ID: &str = @APP_ID@;
+pub static VERSION: &str = @VERSION@;
+pub static LOCALEDIR: &str = @LOCALEDIR@;
+pub static RESOURCEFILE: &[u8] = include_bytes!(@RESOURCEFILE@);
