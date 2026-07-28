@@ -51,6 +51,7 @@ gettext-rs = {version = "0.7.7", features = ["gettext-system"]}
 html2text = "0.17.1"
 mpris-player = "0.6.3"
 image = {version =  "0.25.10", default-features = false, features = ["png", "jpeg", "webp"]}
+locale_config = "0.3.0"
 
 
 # --- OPTIMIZATION PROFILES ---

@@ -1,0 +1,7 @@
+{
+  "rust-analyzer.linkedProjects": ["Cargo.toml"],
+  "rust-analyzer.cargo.extraEnv": {
+    "CARGO_TARGET_DIR": "${workspaceFolder}/builddir/target"
+  },
+  "rust-analyzer.check.command": "check"
+}

@@ -2,6 +2,8 @@ use adw::prelude::*;
 use gettextrs::gettext;
 use relm4::prelude::*;
 
+use crate::settings::GenaralSettings;
+
 pub(crate) struct AppMenu {}
 
 impl AppMenu {
@@ -75,7 +77,7 @@ impl AppMenu {
         if let Some(active_window) = relm4::main_application().active_window() {
             let about = adw::AboutDialog::builder()
                 .application_name("XPodcasts")
-                .application_icon("com.example.xbible")
+                .application_icon("org.flame.podcasts")
                 .comments(gettext("Podcast Client for the GNOME Desktop.").as_str())
                 .version("1.0.0")
                 .developer_name("Edson Frost")
@@ -147,6 +149,7 @@ impl AppMenu {
     }
 
     pub(crate) fn show_preferences_window() {
+       // let general_settings = GenaralSettings::new();
         if let Some(active_window) = relm4::main_application().active_window() {
             let preferences_window = adw::PreferencesDialog::builder()
                 .search_enabled(true)
@@ -162,7 +165,13 @@ impl AppMenu {
             let auto_sync_row = adw::SwitchRow::builder()
                 .title("Auto sync")
                 .subtitle("Automatically update followed shows")
+                //.active(general_settings.get_libary_auto_sync())
                 .build();
+
+            // general_settings
+            //     .bind("library-auto-sync", &auto_sync_row, "active")
+            //     .bind();
+
             library_group.add(&auto_sync_row);
             general_page.add(&library_group);
 

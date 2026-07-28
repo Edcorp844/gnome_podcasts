@@ -1,3 +1,4 @@
+use gettextrs::gettext;
 use gst_play::PlayState;
 use podcasts_data::EpisodeId;
 use relm4::{ComponentController, Controller};
@@ -24,14 +25,22 @@ pub enum NavigationPage {
 
 impl NavigationPage {
     pub fn from_name(name: &str) -> Self {
-        match name {
-            "Search" => Self::Search,
-            "Home" => Self::Home,
-            "New" => Self::New,
-            "Shows" => Self::Shows,
-            "Podcast" => Self::Podcast,
-            "Downloaded" => Self::Downloads,
-            other => Self::Library(other.to_string()),
+        let localized_name = gettext(name);
+
+        if localized_name == "Search" || name == "Search" {
+            Self::Search
+        } else if localized_name == gettext("Home") || name == "Home" {
+            Self::Home
+        } else if localized_name == gettext("New") || name == "New" {
+            Self::New
+        } else if localized_name == "Shows" || name == "Shows" {
+            Self::Shows
+        } else if localized_name == "Podcast" || name == "Podcast" {
+            Self::Podcast
+        } else if localized_name == gettext("Downloaded") || name == "Downloaded" {
+            Self::Downloads
+        } else {
+            Self::Library(name.to_string())
         }
     }
 

@@ -1,4 +1,5 @@
 use adw::prelude::*;
+use gettextrs::gettext;
 use relm4::ComponentSender;
 
 use crate::{
@@ -18,17 +19,21 @@ impl AppModel {
     }
     pub(crate) fn render_sidebar_list(widgets: &AppModelWidgets, sender: &ComponentSender<Self>) {
         // Data configurations
+        let (home_binding, new_binding) = (gettext("Home"), gettext("New"));
         let pages_list_items = [
-            ("user-home-symbolic", "Home"),
-            ("view-grid-symbolic", "New"),
+            ("user-home-symbolic", home_binding.as_str()),
+            ("view-grid-symbolic", new_binding.as_str()),
         ];
 
+        let (recents_binding, shows_binding, downloads_binding) = (
+            gettext("Recently updated"),
+            gettext("Shows"),
+            gettext("Downloaded"),
+        );
         let library_list_items = [
-            ("emoji-recent-symbolic", "Recently updated"),
-            ("display-projector-symbolic", "Shows"),
-            ("folder-download-symbolic", "Downloaded"),
-          //  ("preferences-system-time-symbolic", "History"),
-           // ("view-list-symbolic", "Channels"),
+            ("emoji-recent-symbolic", recents_binding.as_str()),
+            ("display-projector-symbolic", shows_binding.as_str()),
+            ("folder-download-symbolic", downloads_binding.as_str()),
         ];
 
         // 1. Clean dynamic population using a unified helper function

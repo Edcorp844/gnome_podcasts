@@ -1,12 +1,10 @@
 # 1. Populate config.rs from config.rs.in
-version_suffix = '' # Set to '-dev' or read from root if needed
-
 global_conf = configuration_data()
 global_conf.set_quoted('APP_ID', application_id)
 global_conf.set_quoted('VERSION', xpodcasts_version + version_suffix)
 global_conf.set_quoted('LOCALEDIR', xpodcasts_localedir)
 global_conf.set_quoted('PKGDATADIR', xpodcasts_pkgdatadir)
-global_conf.set_quoted('RESOURCEFILE', xpodcasts_pkgdatadir / 'resources.gresource')
+global_conf.set_quoted('GETTEXT_PACKAGE', application_id)
 
 config_rs = configure_file(
   input: 'config.rs.in',
@@ -19,7 +17,7 @@ run_command(
   'cp',
   config_rs,
   meson.current_source_dir() / 'config.rs',
-  check: false, # Using false avoids breaking builds during re-configures if files match
+  check: false,
 )
 
 # 2. Find Cargo executable
@@ -33,7 +31,7 @@ else
 endif
 
 # 3. Custom target for Cargo build
-cargo_release = custom_target(
+cargo_build = custom_target(
   'cargo-build',
   build_by_default: true,
   build_always_stale: true,

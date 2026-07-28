@@ -38,21 +38,14 @@ xpodcasts_bindir = prefix / get_option('bindir')
 xpodcasts_localedir = prefix / get_option('localedir')
 xpodcasts_pkgdatadir = prefix / get_option('datadir') / application_id
 
-# 4. Configuration Data for src/config.rs.in
-conf = configuration_data()
-conf.set_quoted('APP_ID', application_id)
-conf.set_quoted('VERSION', xpodcasts_version + version_suffix)
-conf.set_quoted('LOCALEDIR', xpodcasts_localedir)
-conf.set_quoted('PKGDATADIR', xpodcasts_pkgdatadir)
-conf.set_quoted('RESOURCEFILE', xpodcasts_pkgdatadir / 'resources.gresource')
+# NOTE: config.rs is generated ONCE, inside src/meson.build (not here),
+# since that's the only place that needs it and duplicating the
+# configure_file() call in both places is how APP_ID/GETTEXT_PACKAGE
+# mismatches sneak in.
 
-configure_file(
-  input: 'src/config.rs.in',
-  output: 'config.rs',
-  configuration: conf,
-)
-
-# 5. Global Cargo Environment Setup
+# 4. Global Cargo Environment Setup
+# Subdirectories (data/, src/) may add further entries to this environment
+# (e.g. RESOURCE_FILE_PATH) before the cargo-build custom_target consumes it.
 cargo_env = environment()
 cargo_env.set('CARGO_TARGET_DIR', meson.project_build_root() / 'target')
 cargo_env.set('CARGO_HOME', meson.project_build_root() / 'cargo-cache')
@@ -61,9 +54,9 @@ i18n = import('i18n')
 gnome = import('gnome')
 
 # Subdirectories
+subdir('po')
 subdir('data')
 subdir('src')
-subdir('po')
 
 gnome.post_install(
   glib_compile_schemas: true,

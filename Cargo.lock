@@ -4845,6 +4845,7 @@ dependencies = [
  "image",
  "libadwaita",
  "linkify 0.11.0",
+ "locale_config",
  "log",
  "markup5ever_rcdom 0.39.0+unofficial",
  "mpris-player",

@@ -17,8 +17,8 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-mod extended_comment;
-mod id3;
+pub mod extended_comment;
+pub mod id3;
 
 use anyhow::Result;
 use gst::ClockTime;

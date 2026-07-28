@@ -1,0 +1,39 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "flatpak-builder: build+install",
+      "type": "shell",
+      "command": "flatpak-builder --user --install --force-clean builddir org.flame.podcasts.json",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "meson: setup",
+      "type": "shell",
+      "command": "meson setup builddir -Dprofile=development --wipe",
+      "problemMatcher": []
+    },
+    {
+      "label": "meson: compile (fast, no flatpak)",
+      "type": "shell",
+      "command": "meson compile -C builddir",
+      "group": "build",
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "cargo: check (fast feedback loop)",
+      "type": "cargo",
+      "command": "check",
+      "problemMatcher": ["$rustc"],
+      "group": "build"
+    },
+    {
+      "label": "cargo: test",
+      "type": "cargo",
+      "command": "test",
+      "problemMatcher": ["$rustc"],
+      "group": "test"
+    }
+  ]
+}

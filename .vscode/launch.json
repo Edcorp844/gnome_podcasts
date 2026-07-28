@@ -1,0 +1,27 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug xpodcasts (native)",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": ["build", "--bin=xpodcasts"]
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "RUST_LOG": "xpodcasts=debug,podcasts_data=debug,glib=debug",
+        "RUST_BACKTRACE": "1",
+        "LC_ALL": "ko_KR.UTF-8"
+      }
+    },
+    {
+      "name": "Debug xpodcasts (Flatpak sandbox)",
+      "type": "lldb",
+      "request": "custom",
+      "targetCreateCommands": ["target create ${workspaceFolder}/builddir/target/debug/xpodcasts"],
+      "processCreateCommands": ["process launch"]
+    }
+  ]
+}
