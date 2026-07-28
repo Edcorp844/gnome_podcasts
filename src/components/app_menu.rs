@@ -149,7 +149,7 @@ impl AppMenu {
     }
 
     pub(crate) fn show_preferences_window() {
-       // let general_settings = GenaralSettings::new();
+        let general_settings = GenaralSettings::new();
         if let Some(active_window) = relm4::main_application().active_window() {
             let preferences_window = adw::PreferencesDialog::builder()
                 .search_enabled(true)

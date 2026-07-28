@@ -3,6 +3,8 @@ use gtk::gio::{
     prelude::{SettingsExt, SettingsExtManual},
 };
 
+use crate::config;
+
 pub trait AppSetting {
     fn schema_id() -> &'static str;
 
@@ -18,7 +20,7 @@ pub struct GenaralSettings {
 
 impl AppSetting for GenaralSettings {
     fn schema_id() -> &'static str {
-        "org.flame.podcasts"
+        config::APP_ID
     }
 }
 
@@ -39,8 +41,8 @@ impl GenaralSettings {
     }
 
     //----------GETTERS--------
-     pub fn get_libary_auto_sync(&self)->bool {
-      self.settings.boolean("library-auto-sync")
+    pub fn get_libary_auto_sync(&self) -> bool {
+        self.settings.boolean("library-auto-sync")
     }
 
     // pub fn set_search_platforms(&self, value: &[&str]) {

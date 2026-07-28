@@ -41,13 +41,13 @@ cargo_build = custom_target(
   console: true,
   env: cargo_env,
   command: [
-    'sh', '-c',
-    '@0@ build --manifest-path @1@ @2@ && cp @3@/@4@ @OUTPUT@'.format(
+    'sh',
+    '-c', '@0@ build --manifest-path @1@ @2@ && cp @3@/@4@ @OUTPUT@'.format(
       cargo.full_path(),
       meson.project_source_root() / 'Cargo.toml',
       ' '.join(cargo_options),
       cargo_target_dir,
       meson.project_name(),
-    )
+    ),
   ],
 )

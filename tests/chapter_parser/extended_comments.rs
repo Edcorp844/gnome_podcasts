@@ -1,11 +1,9 @@
-#[cfg(test)]
-mod tests {
-    use std::collections::HashMap;
+use std::collections::HashMap;
 
-    use anyhow::Result;
-    use xpodcasts::chapter_parser::{Chapter, extended_comment::parse_extended_comment};
+use anyhow::Result;
+use xpodcasts::chapter_parser::{Chapter, extended_comment::parse_extended_comment};
 
-    #[test]
+#[test]
     #[rustfmt::skip]
     fn test_comment_newz() -> Result<()> {
         let comments = [
@@ -125,4 +123,3 @@ mod tests {
         }
         Ok(())
     }
-}
