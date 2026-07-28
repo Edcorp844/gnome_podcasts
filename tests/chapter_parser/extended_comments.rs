@@ -2,7 +2,6 @@
 mod tests {
     use std::collections::HashMap;
 
-    use super::*;
     use anyhow::Result;
     use xpodcasts::chapter_parser::{Chapter, extended_comment::parse_extended_comment};
 
