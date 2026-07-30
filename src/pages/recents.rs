@@ -2,19 +2,16 @@ use std::collections::HashMap;
 
 use adw::prelude::*;
 use gst_play::PlayState;
-use podcasts_data::{
-    EpisodeId, EpisodeModel, EpisodeWidgetModel,
-    dbqueries::{self, ShowFilter},
-};
+use podcasts_data::{Episode, EpisodeId, dbqueries};
 use relm4::{Component, prelude::*};
 
-use crate::components::downloaded_episode_list_item::{
-    DownloadedEpisodeListItem, DownloadedEpisodeListItemInput, DownloadedEpisodeListItemOutput,
+use crate::components::episode_list_item::{
+    EpisodeListItem, EpisodeListItemInput, EpisodeListItemOutput,
 };
 
 #[derive(Debug)]
 pub struct RecentlyUpdatedPage {
-    episodes: FactoryVecDeque<DownloadedEpisodeListItem>,
+    episodes: FactoryVecDeque<EpisodeListItem>,
     index_by_id: HashMap<EpisodeId, relm4::factory::DynamicIndex>,
     is_loading: bool,
 }
@@ -22,7 +19,7 @@ pub struct RecentlyUpdatedPage {
 #[derive(Debug, Clone)]
 pub enum RecentlyUpdatedPageInput {
     FetchDownloads,
-    GottenEpisodes(Vec<EpisodeWidgetModel>),
+    GottenEpisodes(Vec<Episode>),
     DownloadStarted(EpisodeId),
     DownloadCancled(EpisodeId),
     DownloadProgress(EpisodeId, f64),
@@ -37,7 +34,8 @@ pub enum RecentlyUpdatedPageInput {
 pub enum RecentlyUpdatedPageOutput {
     TogglePlay(EpisodeId),
     NotifyError(String),
-    RequestDeleteEpisode(EpisodeId),
+    RequestDownload(EpisodeId),
+    CancleDownload(EpisodeId),
     StartLoading,
     StopLoading,
 }
@@ -73,7 +71,7 @@ impl Component for RecentlyUpdatedPage {
                              gtk::Label {
                                 set_margin_top: 40,
                                 set_margin_horizontal: 20,
-                                set_label: "Downloads",
+                                set_label: "Recently Updated",
                                 set_halign:gtk::Align::Start,
 
                                 add_css_class: "title-1"
@@ -91,8 +89,7 @@ impl Component for RecentlyUpdatedPage {
                                 #[watch]
                                 set_visible: model.episodes.is_empty(),
 
-                                set_title: "You downloaded episodes will appear here",
-                                //set_description: Some("You downloaded episodes will appear here"),
+                                set_title: "You recently updated podcast episodes will appear here",
                                 set_icon_name: Some("media-optical-symbolic"),
 
                                 set_vexpand: true,
@@ -115,14 +112,17 @@ impl Component for RecentlyUpdatedPage {
             episodes: FactoryVecDeque::builder().launch(episodes_parent).forward(
                 sender.output_sender(),
                 |msg| match msg {
-                    DownloadedEpisodeListItemOutput::TogglePlay(id) => {
+                    EpisodeListItemOutput::TogglePlay(id) => {
                         RecentlyUpdatedPageOutput::TogglePlay(id)
                     }
-                    DownloadedEpisodeListItemOutput::RequestDeleteEpisode(episode_id) => {
-                        RecentlyUpdatedPageOutput::RequestDeleteEpisode(episode_id)
-                    }
-                    DownloadedEpisodeListItemOutput::NotifyError(error) => {
+                    EpisodeListItemOutput::NotifyError(error) => {
                         RecentlyUpdatedPageOutput::NotifyError(error)
+                    }
+                    EpisodeListItemOutput::RequestDownload(episode_id) => {
+                        RecentlyUpdatedPageOutput::RequestDownload(episode_id)
+                    }
+                    EpisodeListItemOutput::CancleDownload(episode_id) => {
+                        RecentlyUpdatedPageOutput::CancleDownload(episode_id)
                     }
                 },
             ),
@@ -144,36 +144,16 @@ impl Component for RecentlyUpdatedPage {
             RecentlyUpdatedPageInput::FetchDownloads => {
                 self.is_loading = true;
                 let _ = sender.output(RecentlyUpdatedPageOutput::StartLoading);
-                let filter = ShowFilter {
-                    any_downloaded: Some(true),
-                    completed: None,
-                    title_or_description: None,
-                    reverse_order: true,
-                };
-                match dbqueries::get_podcasts_filter(&[], &filter) {
-                    Ok(shows) => {
-                        for show in shows.iter() {
-                            let filter = dbqueries::EpisodeFilter {
-                                downloaded: Some(true),
-                                played: None,
-                                search: None,
-                                reverse_order: false,
-                            };
 
-                            match dbqueries::get_pd_episode_widgets(show, &filter) {
-                                Ok(episodes) => {
-                                    sender.input(RecentlyUpdatedPageInput::GottenEpisodes(episodes));
-                                }
-                                Err(error) => {
-                                    let _ = sender.output(RecentlyUpdatedPageOutput::NotifyError(
-                                        error.to_string(),
-                                    ));
-                                }
-                            }
-                        }
+                match dbqueries::get_episodes() {
+                    Ok(episodes) => {
+                        let new_episodes = episodes.into_iter().take(50).collect();
+
+                        sender.input(RecentlyUpdatedPageInput::GottenEpisodes(new_episodes));
                     }
                     Err(error) => {
-                        let _ = sender.output(RecentlyUpdatedPageOutput::NotifyError(error.to_string()));
+                        let _ = sender
+                            .output(RecentlyUpdatedPageOutput::NotifyError(error.to_string()));
                     }
                 }
 
@@ -199,7 +179,7 @@ impl Component for RecentlyUpdatedPage {
                 if let Some(index) = self.index_by_id.get(&episode_id) {
                     self.episodes.send(
                         index.current_index(),
-                        DownloadedEpisodeListItemInput::ChangePlayBackState(play_state),
+                        EpisodeListItemInput::ChangePlayBackState(play_state),
                     );
                 }
             }
@@ -207,13 +187,13 @@ impl Component for RecentlyUpdatedPage {
                 if let Some(index) = self.index_by_id.get(&episode_id) {
                     self.episodes.send(
                         index.current_index(),
-                        DownloadedEpisodeListItemInput::PlayBackProgress(pos, rem),
+                        EpisodeListItemInput::PlayBackProgress(pos, rem),
                     );
                 }
             }
             RecentlyUpdatedPageInput::ChangeEpisodeTo(episode_id) => {
                 self.episodes
-                    .broadcast(DownloadedEpisodeListItemInput::ChangeEpisodeTo(episode_id));
+                    .broadcast(EpisodeListItemInput::ChangeEpisodeTo(episode_id));
             }
             RecentlyUpdatedPageInput::EpisodeDeleted(episode_id) => {
                 if let Some(index) = self.index_by_id.get(&episode_id) {

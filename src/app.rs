@@ -505,14 +505,17 @@ impl Component for AppModel {
                                     RecentlyUpdatedPageOutput::NotifyError(error) => {
                                         AppModelInput::NotifyError(error)
                                     }
-                                    RecentlyUpdatedPageOutput::RequestDeleteEpisode(episode_id) => {
-                                        AppModelInput::RequestDeleteEpisode(episode_id)
-                                    }
                                     RecentlyUpdatedPageOutput::StartLoading => {
                                         AppModelInput::StartLoading
                                     }
                                     RecentlyUpdatedPageOutput::StopLoading => {
                                         AppModelInput::StopLoading
+                                    }
+                                    RecentlyUpdatedPageOutput::RequestDownload(episode_id) => {
+                                        AppModelInput::RequestDownload(episode_id)
+                                    }
+                                    RecentlyUpdatedPageOutput::CancleDownload(episode_id) => {
+                                        AppModelInput::CancleDownload(episode_id)
                                     }
                                 },
                             );
