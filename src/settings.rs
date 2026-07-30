@@ -41,8 +41,8 @@ impl GenaralSettings {
         let _ = self.settings.set_strv("search-platforms", value);
     }
 
-    pub fn set_continuos_playback(&self, value: bool) {
-        let _ = self.settings.set_boolean("continuos-playback", value);
+    pub fn set_continuous_playback(&self, value: bool) {
+        let _ = self.settings.set_boolean("continuous-playback", value);
     }
 
     pub fn set_skip_foward_seconds(&self, value: i32) {
@@ -72,8 +72,8 @@ impl GenaralSettings {
             .collect()
     }
 
-    pub fn get_continuos_playback(&self) -> bool {
-        self.settings.boolean("continuos-playback")
+    pub fn get_continuous_playback(&self) -> bool {
+        self.settings.boolean("continuous-playback")
     }
 
     pub fn get_skip_foward_seconds(&self) -> i32 {

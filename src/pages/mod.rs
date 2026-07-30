@@ -7,3 +7,4 @@ pub mod shows;
 pub mod downloads;
 pub mod player_page;
 pub mod all_episodes;
+pub mod recents;

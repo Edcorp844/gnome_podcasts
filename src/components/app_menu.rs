@@ -219,13 +219,13 @@ impl AppMenu {
                 .build();
 
             let auto_play_row = adw::SwitchRow::builder()
-                .title("Continuos Playback")
+                .title("Continuous Playback")
                 .subtitle("Continue playing after an episode ends.")
                 .build();
 
             general_settings
                 .settings
-                .bind("continuos-playback", &auto_play_row, "active")
+                .bind("continuous-playback", &auto_play_row, "active")
                 .build();
             play_back_group.add(&auto_play_row);
 

@@ -17,7 +17,7 @@
             <summary>Search queries will be sent to these platforms</summary>
         </key>
 
-        <key name="continuos-playback" type="b">
+        <key name="continuous-playback" type="b">
             <default>true</default>
             <summary>Continue playing after an episode ends</summary>
         </key>

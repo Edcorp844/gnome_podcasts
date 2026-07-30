@@ -46,7 +46,6 @@ impl PlayList {
     pub fn next(&mut self) -> Option<EpisodeId> {
         let current = self.current_index?;
         if current + 1 < self.ids.len() {
-            self.current_index = Some(current + 1);
             Some(self.ids[current + 1].clone())
         } else {
             None // Already at the end of the list
@@ -57,7 +56,6 @@ impl PlayList {
     pub fn prev(&mut self) -> Option<EpisodeId> {
         let current = self.current_index?;
         if current > 0 {
-            self.current_index = Some(current - 1);
             Some(self.ids[current - 1].clone())
         } else {
             None
@@ -89,18 +87,20 @@ impl PlayList {
         }
     }
 
-   pub fn set_current(&mut self, id: EpisodeId) {
-    println!("set_current called with {id:?}, ids: {:?}, current before: {:?}", self.ids, self.current_index);
-    if let Some(pos) = self.ids.iter().position(|x| *x == id) {
-        self.current_index = Some(pos);
-    } else {
-        self.push_back(id);
+    pub fn set_current(&mut self, id: EpisodeId) {
+        println!(
+            "set_current called with {id:?}, ids: {:?}, current before: {:?}",
+            self.ids, self.current_index
+        );
         if let Some(pos) = self.ids.iter().position(|x| *x == id) {
             self.current_index = Some(pos);
+        } else {
+            self.push_back(id);
+            if let Some(pos) = self.ids.iter().position(|x| *x == id) {
+                self.current_index = Some(pos);
+            }
         }
     }
-    println!("current after: {:?}, len: {}", self.current_index, self.ids.len());
-}
 
     pub fn len(&self) -> usize {
         self.ids.len()

@@ -118,6 +118,9 @@ impl Component for PlayerPage {
                     );
                 }
                 None => {
+                    self.player_controls
+                        .emit(PlayerControlsInput::SetTexture(None));
+                    widgets.page.inline_css("background: rgba(0,0,0,1);");
                     let _ = sender.output(PlayerPageOutput::NotifyError(format!(
                         "Player Error: Failed to Load Image texture",
                     )));
@@ -130,12 +133,17 @@ impl Component for PlayerPage {
             PlayerPageInput::SetCurrentEpisode(episode_id) => {
                 match dbqueries::get_episode_from_id(episode_id) {
                     Ok(episode) => {
+                     self.player_controls
+                        .emit(PlayerControlsInput::SetTexture(None));
+                    widgets.page.inline_css("background: rgba(0,0,0,1);");
+
                         let image_uri_opt = episode.image_uri().map(|s| s.to_string());
 
                         self.player_controls
                             .emit(PlayerControlsInput::SetCurrentEpisode(episode));
 
                         if let Some(image_uri) = image_uri_opt {
+
                             sender.oneshot_command(async move {
                                 let downloaded_texture =
                                     fetch_cached_image(&image_uri, ImageSize::from_dimesion(450))

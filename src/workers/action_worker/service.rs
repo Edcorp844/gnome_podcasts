@@ -40,6 +40,7 @@ pub enum ActionWorkerInput {
     SeekBackward,
     NextEpisode,
     PreviousEpisode,
+    EpisodeEnded,
 }
 
 #[derive(Debug, Clone)]
@@ -119,6 +120,11 @@ impl Worker for ActionWorker {
                 trace!("GStreamer position updated: {ms}ms");
                 position_sender.input(ActionWorkerInput::PositionChanged(ms));
             }
+        });
+
+        let sender_clone = sender.clone();
+        player_signals.connect_end_of_stream(move |_play| {
+            sender_clone.input(ActionWorkerInput::EpisodeEnded);
         });
 
         let error_sender = sender.clone();
@@ -416,8 +422,13 @@ impl Worker for ActionWorker {
             ActionWorkerInput::PreviousEpisode => {
                 if let Some(prev_id) = self.play_list.prev() {
                     sender.input(ActionWorkerInput::Execute(Action::TogglePlay(prev_id)));
-                } else {
-                    println!("No episode to preve: len: {}", self.play_list.len());
+                }
+            }
+            ActionWorkerInput::EpisodeEnded => {
+                if GenaralSettings::new().get_continuous_playback() {
+                    if let Some(next_id) = self.play_list.next() {
+                        sender.input(ActionWorkerInput::Execute(Action::TogglePlay(next_id)));
+                    }
                 }
             }
         }

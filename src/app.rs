@@ -8,12 +8,15 @@ use crate::components::miniplayer::MiniplayerModelInput;
 use crate::components::miniplayer::MiniplayerModelOutput;
 use crate::components::miniplayer::PlayerPageView;
 use crate::pages::downloads::DownloadsPage;
+use crate::pages::downloads::DownloadsPageOutput;
 use crate::pages::home::HomPageOutPut;
 use crate::pages::home::HomePage;
 use crate::pages::new::NewPage;
 use crate::pages::player_page::PlayerPage;
 use crate::pages::player_page::PlayerPageInput;
 use crate::pages::player_page::PlayerPageOutput;
+use crate::pages::recents::RecentlyUpdatedPage;
+use crate::pages::recents::RecentlyUpdatedPageOutput;
 use crate::pages::search::SearchPage;
 use crate::pages::search::SearchPageOutput;
 use crate::pages::shows::ShowsPage;
@@ -471,14 +474,49 @@ impl Component for AppModel {
                         }
 
                         NavigationPage::Downloads => {
-                            let page_instance = DownloadsPage::builder().launch(()).forward(sender.input_sender(), |msg| match msg {
-                                crate::pages::downloads::DownloadsPageOutput::TogglePlay(episode_id) => AppModelInput::TogglePlay(episode_id),
-                                crate::pages::downloads::DownloadsPageOutput::NotifyError(error) => AppModelInput::NotifyError(error),
-                                crate::pages::downloads::DownloadsPageOutput::RequestDeleteEpisode(episode_id) => AppModelInput::RequestDeleteEpisode(episode_id),
-                                crate::pages::downloads::DownloadsPageOutput::StartLoading => AppModelInput::StartLoading,
-                                crate::pages::downloads::DownloadsPageOutput::StopLoading => AppModelInput::StopLoading,
-                            });
+                            let page_instance = DownloadsPage::builder().launch(()).forward(
+                                sender.input_sender(),
+                                |msg| match msg {
+                                    DownloadsPageOutput::TogglePlay(episode_id) => {
+                                        AppModelInput::TogglePlay(episode_id)
+                                    }
+                                    DownloadsPageOutput::NotifyError(error) => {
+                                        AppModelInput::NotifyError(error)
+                                    }
+                                    DownloadsPageOutput::RequestDeleteEpisode(episode_id) => {
+                                        AppModelInput::RequestDeleteEpisode(episode_id)
+                                    }
+                                    DownloadsPageOutput::StartLoading => {
+                                        AppModelInput::StartLoading
+                                    }
+                                    DownloadsPageOutput::StopLoading => AppModelInput::StopLoading,
+                                },
+                            );
                             PageController::Downloads(page_instance)
+                        }
+
+                        NavigationPage::Recents => {
+                            let page_instance = RecentlyUpdatedPage::builder().launch(()).forward(
+                                sender.input_sender(),
+                                |msg| match msg {
+                                    RecentlyUpdatedPageOutput::TogglePlay(episode_id) => {
+                                        AppModelInput::TogglePlay(episode_id)
+                                    }
+                                    RecentlyUpdatedPageOutput::NotifyError(error) => {
+                                        AppModelInput::NotifyError(error)
+                                    }
+                                    RecentlyUpdatedPageOutput::RequestDeleteEpisode(episode_id) => {
+                                        AppModelInput::RequestDeleteEpisode(episode_id)
+                                    }
+                                    RecentlyUpdatedPageOutput::StartLoading => {
+                                        AppModelInput::StartLoading
+                                    }
+                                    RecentlyUpdatedPageOutput::StopLoading => {
+                                        AppModelInput::StopLoading
+                                    }
+                                },
+                            );
+                            PageController::Recents(page_instance)
                         }
                         _ => return,
                     };
