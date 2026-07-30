@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="xpodcasts">
+
+    <enum id="org.flame.podcasts.ExternalControlsMode">
+        <value nick="forward-back" value="0"/>
+        <value nick="next-previous" value="1"/>
+    </enum>
+
     <schema id="@app-id@" path="/org/flame/podcasts/">
         <key name="library-auto-sync" type="b">
             <default>true</default>
@@ -24,6 +30,11 @@
         <key name="skip-backward-seconds" type="i">
             <default>15</default>
             <summary>Number of seconds to skip backward</summary>
+        </key>
+
+        <key name="external-controls-mode" enum="org.flame.podcasts.ExternalControlsMode">
+            <default>"forward-back"</default>
+            <summary>Whether media keys skip forward/back or jump to next/previous episode</summary>
         </key>
     </schema>
 </schemalist>

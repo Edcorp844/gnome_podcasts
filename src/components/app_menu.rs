@@ -1,13 +1,13 @@
 use adw::prelude::*;
-use gettextrs::gettext;
+use gettextrs::{gettext, ngettext};
 use relm4::prelude::*;
 
-use crate::settings::GenaralSettings;
+use crate::{config, settings::GenaralSettings, util::external_controls::ExternalControlsMode};
 
-pub(crate) struct AppMenu {}
+pub struct AppMenu {}
 
 impl AppMenu {
-    pub(crate) fn register() {
+    pub fn register() {
         let app = relm4::main_application();
 
         let refresh_action = gtk::gio::SimpleAction::new("refresh", None);
@@ -79,7 +79,7 @@ impl AppMenu {
                 .application_name("XPodcasts")
                 .application_icon("org.flame.podcasts")
                 .comments(gettext("Podcast Client for the GNOME Desktop.").as_str())
-                .version("1.0.0")
+                .version(config::VERSION)
                 .developer_name("Edson Frost")
                 .website("https://github.com/Edcorp844/gnome_podcasts.git")
                 .issue_url("https://github.com/Edcorp844/gnome_podcasts/issues")
@@ -165,12 +165,12 @@ impl AppMenu {
             let auto_sync_row = adw::SwitchRow::builder()
                 .title("Auto sync")
                 .subtitle("Automatically update followed shows")
-                //.active(general_settings.get_libary_auto_sync())
                 .build();
 
-            // general_settings
-            //     .bind("library-auto-sync", &auto_sync_row, "active")
-            //     .bind();
+            general_settings
+                .settings
+                .bind("library-auto-sync", &auto_sync_row, "active")
+                .build();
 
             library_group.add(&auto_sync_row);
             general_page.add(&library_group);
@@ -181,8 +181,30 @@ impl AppMenu {
                 .build();
 
             for id in podcasts_data::discovery::ALL_PLATFORM_IDS {
-                let search_platform_row = adw::SwitchRow::builder().title(id).build();
+                let is_active = general_settings
+                    .get_search_platforms()
+                    .iter()
+                    .any(|p| p == id);
+
+                let display_name = match id {
+                    "fyyd.de" => gettext("Fyyd"),
+                    "itunes.apple.com" => gettext("Apple Podcasts"),
+                    other => other.to_string(),
+                };
+
+                let search_platform_row = adw::SwitchRow::builder()
+                    .title(display_name)
+                    .active(is_active)
+                    .build();
+
                 search_platforms_group.add(&search_platform_row);
+
+                let settings = general_settings.clone();
+                let id = id.to_string(); // still the raw id, used for storage — not translated
+
+                search_platform_row.connect_active_notify(move |row| {
+                    settings.toggle_search_platform(&id, row.is_active());
+                });
             }
             general_page.add(&search_platforms_group);
 
@@ -198,7 +220,12 @@ impl AppMenu {
 
             let auto_play_row = adw::SwitchRow::builder()
                 .title("Continuos Playback")
-                .subtitle("Conrinue playing after an episode ends.")
+                .subtitle("Continue playing after an episode ends.")
+                .build();
+
+            general_settings
+                .settings
+                .bind("continuos-playback", &auto_play_row, "active")
                 .build();
             play_back_group.add(&auto_play_row);
 
@@ -210,24 +237,59 @@ impl AppMenu {
                 .build();
 
             let skip_model = gtk::StringList::new(&[]);
+            let mut values = Vec::new();
 
             for i in 1..=8 {
                 let number = if i <= 3 { i * 5 } else { (i - 2) * 15 };
-
-                skip_model.append(&format!("{number} seconds"));
+                let template = ngettext("{} second", "{} seconds", number as u32);
+                let label = template.replace("{}", &number.to_string());
+                skip_model.append(&label);
+                values.push(number);
             }
 
+            // --- Forward ---
+            let current_value = general_settings.settings.int("skip-foward-seconds");
+            let selected_index =
+                values.iter().position(|&v| v == current_value).unwrap_or(0) as u32;
+
             let skip_forward_row = adw::ComboRow::builder()
-                .title("Forward")
+                .title(gettext("Forward"))
                 .model(&skip_model)
+                .selected(selected_index)
                 .build();
+
             skip_buttons_group.add(&skip_forward_row);
 
-            let skip_backwar_row = adw::ComboRow::builder()
-                .title("Backward")
+            let settings = general_settings.clone();
+            let forward_values = values.clone();
+            skip_forward_row.connect_selected_notify(move |row| {
+                let idx = row.selected() as usize;
+                if let Some(&value) = forward_values.get(idx) {
+                    let _ = settings.settings.set_int("skip-foward-seconds", value);
+                }
+            });
+
+            // --- Backward ---
+            let current_value = general_settings.settings.int("skip-backward-seconds");
+            let selected_index =
+                values.iter().position(|&v| v == current_value).unwrap_or(0) as u32;
+
+            let skip_backward_row = adw::ComboRow::builder()
+                .title(gettext("Backward"))
                 .model(&skip_model)
+                .selected(selected_index)
                 .build();
-            skip_buttons_group.add(&skip_backwar_row);
+
+            skip_buttons_group.add(&skip_backward_row);
+
+            let settings = general_settings.clone();
+            let backward_values = values;
+            skip_backward_row.connect_selected_notify(move |row| {
+                let idx = row.selected() as usize;
+                if let Some(&value) = backward_values.get(idx) {
+                    let _ = settings.settings.set_int("skip-backward-seconds", value);
+                }
+            });
 
             player_page.add(&skip_buttons_group);
 
@@ -236,14 +298,28 @@ impl AppMenu {
                 .description("Set what external controls like headphones should do")
                 .build();
 
-            let external_controls_model = gtk::StringList::new(&["Forward/Back", "Next/Previous"]);
+            let labels: Vec<String> = ExternalControlsMode::ALL
+                .iter()
+                .map(|m| m.display_name())
+                .collect();
+            let label_refs: Vec<&str> = labels.iter().map(String::as_str).collect();
+            let external_controls_model = gtk::StringList::new(&label_refs);
+
+            let current_mode = general_settings.get_external_controls_mode();
 
             let external_controls_row = adw::ComboRow::builder()
-                .title("Backward")
+                .title(gettext("External Controls"))
                 .model(&external_controls_model)
+                .selected(current_mode.index())
                 .build();
+
             external_controls_group.add(&external_controls_row);
 
+            let settings = general_settings.clone();
+            external_controls_row.connect_selected_notify(move |row| {
+                let mode = ExternalControlsMode::from_index(row.selected());
+                settings.set_external_controls_mode(mode);
+            });
             player_page.add(&external_controls_group);
 
             preferences_window.add(&general_page);

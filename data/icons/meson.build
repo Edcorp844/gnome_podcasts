@@ -1,9 +1,7 @@
-application_id = 'org.flame.podcasts'
-
 # --- Scalable app icon (single, named after application_id) ---
 scalable_dir = 'hicolor' / 'scalable' / 'apps'
 install_data(
-  scalable_dir / ('@0@.svg').format(application_id),
+  scalable_dir / ('@0@.svg').format('org.flame.podcasts'),
   install_dir: get_option('datadir') / 'icons' / scalable_dir
 )
 

@@ -5,7 +5,7 @@ use adw::prelude::*;
 use gst_play::PlayState;
 use podcasts_data::{
     EpisodeId, dbqueries,
-    discovery::{ALL_PLATFORM_IDS, FoundPodcast, SearchError, search},
+    discovery::{FoundPodcast, SearchError, search},
 };
 use relm4::{Component, ComponentParts, ComponentSender, prelude::*};
 
@@ -14,7 +14,7 @@ use crate::{
     components::podcast_search_results::{
         PodcastResults, PodcastResultsInput, PodcastResultsOutput,
     },
-    pages::podcast::{PodcastPage, PodcastPageOutput},
+    pages::podcast::{PodcastPage, PodcastPageOutput}, settings::GenaralSettings,
 };
 
 // 1. Define the possible pages you want to visit across your app
@@ -134,8 +134,9 @@ impl Component for SearchPage {
                 let search_text = text.clone();
                 println!("Searching: {search_text}");
                 sender.oneshot_command(async move {
-                    for id in ALL_PLATFORM_IDS {
-                        match dbqueries::set_discovery_setting(id, true) {
+                let search_platforms = GenaralSettings::new().get_search_platforms();
+                    for id in search_platforms {
+                        match dbqueries::set_discovery_setting(&id, true) {
                             Err(e) => {
                                 println!("Error settings: {}", e);
                             }

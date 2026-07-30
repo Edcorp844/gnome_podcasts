@@ -3,5 +3,6 @@
   "rust-analyzer.cargo.extraEnv": {
     "CARGO_TARGET_DIR": "${workspaceFolder}/builddir/target"
   },
-  "rust-analyzer.check.command": "check"
+  "rust-analyzer.check.command": "check",
+  "C_Cpp.default.configurationProvider": "mesonbuild.mesonbuild"
 }

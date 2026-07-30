@@ -1,42 +1,6 @@
-use crate::{app::AppModel, components::app_menu::AppMenu};
 use gettextrs::{LocaleCategory, bindtextdomain, setlocale, textdomain};
-use relm4::{RelmApp, gtk::glib};
-use std::sync::LazyLock;
-
-#[macro_use]
-extern crate log;
-
-pub mod action;
-pub mod app;
-pub mod app_navigation_ext;
-pub mod app_render_ext;
-pub mod chapter_parser;
-pub mod components;
-pub mod config;
-pub mod pages;
-pub mod settings;
-pub mod util;
-pub mod workers;
-
-#[cfg(test)]
-fn init_gtk_tests() -> anyhow::Result<()> {
-    gst::init()?;
-    gtk::init()?;
-    adw::init()?;
-    Ok(())
-}
-
-pub static RUNTIME: LazyLock<tokio::runtime::Runtime> =
-    LazyLock::new(|| tokio::runtime::Runtime::new().unwrap());
-pub static MAINCONTEXT: LazyLock<glib::MainContext> = LazyLock::new(glib::MainContext::default);
-pub static CHRONO_LOCALE: LazyLock<chrono::Locale> = LazyLock::new(|| {
-    use std::str::FromStr;
-    let system_locale = locale_config::Locale::current();
-    let time_locale = system_locale.tags_for("time").next();
-    let time_locale_str = time_locale.as_ref().map(|l| l.as_ref()).unwrap_or("C");
-    let unix_formatted = time_locale_str.replace('-', "_");
-    chrono::Locale::from_str(&unix_formatted).unwrap_or(chrono::Locale::POSIX)
-});
+use relm4::RelmApp;
+use xpodcasts::{RUNTIME, app::AppModel, components::app_menu::AppMenu, config};
 
 fn main() {
     setlocale(LocaleCategory::LcAll, "");

@@ -1,25 +1,23 @@
 use std::path::Path;
 use url::Url;
 
-use gtk::gio::File;
-use gtk::gio::prelude::FileExt;
-use podcasts_data::EpisodeCleanerModel;
-use podcasts_data::EpisodeModel;
-use podcasts_data::FEED_MANAGER;
-use podcasts_data::nextcloud_sync;
-use podcasts_data::nextcloud_sync::SyncError;
-use podcasts_data::nextcloud_sync::SyncPolicy;
-use podcasts_data::nextcloud_sync::SyncResult;
-use podcasts_data::utils::delete_local_content;
+use gtk::gio::{File, prelude::FileExt};
+use podcasts_data::{
+    EpisodeCleanerModel, EpisodeId, EpisodeModel, FEED_MANAGER, dbqueries, nextcloud_sync,
+    nextcloud_sync::{SyncError, SyncPolicy, SyncResult},
+    utils::delete_local_content,
+};
 use relm4::{ComponentSender, Worker};
 
-use podcasts_data::EpisodeId;
-use podcasts_data::dbqueries;
-
-use crate::action::Action;
-use crate::util::gst_errors::handel_gst_core_error;
-use crate::util::gst_errors::handel_gst_resource_error;
-use crate::util::gst_errors::handel_gst_stream_error;
+use crate::{
+    action::Action,
+    settings::GenaralSettings,
+    util::{
+        external_controls::ExternalControlsMode,
+        gst_errors::{handel_gst_core_error, handel_gst_resource_error, handel_gst_stream_error},
+        play_list::PlayList,
+    },
+};
 
 #[derive(Debug, Clone)]
 pub enum ActionWorkerInput {
@@ -40,6 +38,8 @@ pub enum ActionWorkerInput {
     RequestUnmute,
     SeekFoward,
     SeekBackward,
+    NextEpisode,
+    PreviousEpisode,
 }
 
 #[derive(Debug, Clone)]
@@ -79,7 +79,7 @@ pub struct ActionWorker {
     player: gst_play::Play,
     _player_signals: gst_play::PlaySignalAdapter,
     current_player_state: gst_play::PlayState,
-    current_episode: Option<EpisodeId>,
+    play_list: PlayList,
     current_duration_ms: u64,
     mpris_tx: async_channel::Sender<MprisCommand>,
 }
@@ -176,10 +176,42 @@ impl Worker for ActionWorker {
                         );
 
                         let inner_sender = loopback_sender.clone();
-                        p.connect_play_pause(move || {
-                            debug!("MPRIS Play/Pause action triggered");
-                             inner_sender.input(ActionWorkerInput::TogglePlayBack) ;
-                        });
+						p.connect_play_pause(move || {
+							debug!("MPRIS Play/Pause action triggered");
+							inner_sender.input(ActionWorkerInput::TogglePlayBack);
+						});
+
+						// Capture settings to pass into the Next handler
+						let next_sender = loopback_sender.clone();
+						p.connect_next(move || {
+							debug!("MPRIS Next action triggered");
+							let mode = GenaralSettings::new().get_external_controls_mode();
+
+							match mode {
+								ExternalControlsMode::ForwardBack => {
+									next_sender.input(ActionWorkerInput::SeekFoward);
+								}
+								ExternalControlsMode::NextPrevious => {
+									next_sender.input(ActionWorkerInput::NextEpisode); // Match your actual enum variant
+								}
+							}
+						});
+
+						// Capture settings to pass into the Previous handler
+						let prev_sender = loopback_sender.clone();
+						p.connect_previous(move || {
+							debug!("MPRIS Previous action triggered");
+							let mode = GenaralSettings::new().get_external_controls_mode();
+
+							match mode {
+								ExternalControlsMode::ForwardBack => {
+									prev_sender.input(ActionWorkerInput::SeekBackward);
+								}
+								ExternalControlsMode::NextPrevious => {
+									prev_sender.input(ActionWorkerInput::PreviousEpisode);
+								}
+							}
+						});
 
                         GlobalMpris { player: p }
                     });
@@ -240,8 +272,8 @@ impl Worker for ActionWorker {
             player,
             current_player_state: gst_play::PlayState::Stopped,
             _player_signals: player_signals,
-            current_episode: None,
             current_duration_ms: 0,
+            play_list: PlayList::new(),
             mpris_tx,
         }
     }
@@ -272,7 +304,7 @@ impl Worker for ActionWorker {
                 let _ = self
                     .mpris_tx
                     .send_blocking(MprisCommand::ChangePlaybackState(state));
-                if let Some(id) = self.current_episode {
+                if let Some(id) = self.play_list.current() {
                     let _ = sender.output(ActionWorkerOutput::StateChanged(state, id));
                 }
             }
@@ -294,7 +326,7 @@ impl Worker for ActionWorker {
                     let ratio = position_ms as f64 / self.current_duration_ms as f64;
                     if !ratio.is_nan() && !ratio.is_infinite() {
                         let fraction = ratio.clamp(0.0, 1.0);
-                        if let Some(id) = self.current_episode {
+                        if let Some(id) = self.play_list.current() {
                             let _ = sender.output(ActionWorkerOutput::PlayBackProgress(
                                 id,
                                 fraction,
@@ -330,23 +362,35 @@ impl Worker for ActionWorker {
                 let _ = sender.output(ActionWorkerOutput::VolumeValue(volume));
             }
             ActionWorkerInput::SeekFoward => {
-                if let Some(current_pos) = self.player.position() {
-                    if let Some(total_duration) = self.player.duration() {
-                        let ten_seconds_in_ns = 30 * gst::ClockTime::SECOND;
+                if let (Some(current_pos), Some(total_duration)) =
+                    (self.player.position(), self.player.duration())
+                {
+                    let forward_duration = gst::ClockTime::from_seconds(
+                        GenaralSettings::new().get_skip_foward_seconds() as u64,
+                    );
 
-                        let target_pos = (current_pos + ten_seconds_in_ns).min(total_duration);
-
-                        self.player.seek(target_pos);
-                    }
-                }
-            }
-            ActionWorkerInput::SeekBackward => {
-                if let Some(current_pos) = self.player.position() {
-                    let target_pos = current_pos.saturating_sub(15 * gst::ClockTime::SECOND);
+                    let target_pos = std::cmp::min(current_pos + forward_duration, total_duration);
 
                     self.player.seek(target_pos);
                 }
             }
+
+            ActionWorkerInput::SeekBackward => {
+                if let Some(current_pos) = self.player.position() {
+                    let backward_duration = gst::ClockTime::from_seconds(
+                        GenaralSettings::new().get_skip_backward_seconds() as u64,
+                    );
+
+                    let target_pos = if current_pos > backward_duration {
+                        current_pos - backward_duration
+                    } else {
+                        gst::ClockTime::ZERO
+                    };
+
+                    self.player.seek(target_pos);
+                }
+            }
+
             ActionWorkerInput::DeleteEpisode(episode_id) => {
                 match dbqueries::get_episode_from_id(episode_id) {
                     Ok(ep) => match delete_local_content(&mut EpisodeCleanerModel::from(ep)) {
@@ -361,6 +405,19 @@ impl Worker for ActionWorker {
                     Err(error) => {
                         let _ = sender.output(ActionWorkerOutput::NotifyError(error.to_string()));
                     }
+                }
+            }
+            ActionWorkerInput::NextEpisode => {
+                if let Some(next_id) = self.play_list.next() {
+                    sender.input(ActionWorkerInput::Execute(Action::TogglePlay(next_id)));
+                }
+            }
+
+            ActionWorkerInput::PreviousEpisode => {
+                if let Some(prev_id) = self.play_list.prev() {
+                    sender.input(ActionWorkerInput::Execute(Action::TogglePlay(prev_id)));
+                } else {
+                    println!("No episode to preve: len: {}", self.play_list.len());
                 }
             }
         }
@@ -391,10 +448,10 @@ impl ActionWorker {
             }
 
             Action::TogglePlay(id) => {
-                if self.current_episode == Some(id) {
+                if self.play_list.current() == Some(id) {
                     sender.input(ActionWorkerInput::TogglePlayBack);
                 } else {
-                    self.current_episode = Some(id);
+                    self.play_list.set_current(id);
 
                     let _ = sender.output(ActionWorkerOutput::SetCurrentEpisode(id));
                     match dbqueries::get_episode_from_id(id) {

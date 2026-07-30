@@ -6,7 +6,10 @@
       "type": "lldb",
       "request": "launch",
       "cargo": {
-        "args": ["build", "--bin=xpodcasts"]
+        "args": [
+          "build",
+          "--bin=xpodcasts"
+        ]
       },
       "args": [],
       "cwd": "${workspaceFolder}",
@@ -14,14 +17,11 @@
         "RUST_LOG": "xpodcasts=debug,podcasts_data=debug,glib=debug",
         "RUST_BACKTRACE": "1",
         "LC_ALL": "ko_KR.UTF-8"
-      }
-    },
-    {
-      "name": "Debug xpodcasts (Flatpak sandbox)",
-      "type": "lldb",
-      "request": "custom",
-      "targetCreateCommands": ["target create ${workspaceFolder}/builddir/target/debug/xpodcasts"],
-      "processCreateCommands": ["process launch"]
+      },
+      "initCommands": [
+        "process handle SIGCHLD --stop false --pass true --notify false",
+        "process handle SIGWINCH --stop false --pass true --notify false"
+      ]
     }
   ]
 }
