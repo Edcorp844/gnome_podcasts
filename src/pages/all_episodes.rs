@@ -5,7 +5,7 @@ use chrono::Datelike;
 use podcasts_data::Episode;
 use relm4::{Component, prelude::*};
 
-use crate::components::episode_year_group::GroupedEpisodes;
+use crate::components::episode_group::GroupedEpisodes;
 
 #[derive(Debug)]
 pub struct AllEpisodesPage {
@@ -90,7 +90,7 @@ impl Component for AllEpisodesPage {
 
             for (year, episodes) in grouped.iter().rev() {
                 let group = GroupedEpisodes::builder()
-                    .launch((*year, episodes.clone()))
+                    .launch((format!("{}",*year), episodes.clone()))
                     .detach();
                 widgets.group_parent.append(group.widget());
                 self.groups.push(group); // <-- keep it alive

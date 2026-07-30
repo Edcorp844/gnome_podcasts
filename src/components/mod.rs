@@ -12,4 +12,4 @@ pub mod progress_bar;
 pub mod show_card;
 pub mod volume_scale;
 pub mod player_controls;
-pub mod episode_year_group;
+pub mod episode_group;

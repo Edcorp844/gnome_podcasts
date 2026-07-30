@@ -1,19 +1,78 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use adw::prelude::*;
+use chrono::{Datelike, Duration, Local, NaiveDateTime};
 use gst_play::PlayState;
 use podcasts_data::{Episode, EpisodeId, dbqueries};
 use relm4::{Component, prelude::*};
 
-use crate::components::episode_list_item::{
-    EpisodeListItem, EpisodeListItemInput, EpisodeListItemOutput,
-};
+use crate::components::episode_group::{GroupedEpisodes, GroupedEpisodesInput};
+
+/// Sorting layout enums to order sections descending from Today down to Older histories
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum TimeBucket {
+    Today = 0,
+    Yesterday = 1,
+    ThisWeek = 2,
+    ThisMonth = 3,
+    LastMonth = 4,
+    ThisYear = 5,
+    Older = 6,
+}
+
+impl TimeBucket {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            TimeBucket::Today => "Today",
+            TimeBucket::Yesterday => "Yesterday",
+            TimeBucket::ThisWeek => "This Week",
+            TimeBucket::ThisMonth => "This Month",
+            TimeBucket::LastMonth => "Last Month",
+            TimeBucket::ThisYear => "This Year",
+            TimeBucket::Older => "Older",
+        }
+    }
+
+    /// Determines which time bucket an episode belongs to based on its NaiveDateTime
+    pub fn from_naive_datetime(dt: NaiveDateTime) -> Self {
+        let now = Local::now();
+        // Extract naive date for local timezone comparisons
+        let now_date = now.date_naive();
+        let ep_date = dt.date();
+
+        if ep_date == now_date {
+            return TimeBucket::Today;
+        }
+        if ep_date == now_date - Duration::days(1) {
+            return TimeBucket::Yesterday;
+        }
+
+        if ep_date.year() == now_date.year() {
+            if ep_date.month() == now_date.month() {
+                if now_date.signed_duration_since(ep_date) < Duration::days(7) {
+                    return TimeBucket::ThisWeek;
+                }
+                return TimeBucket::ThisMonth;
+            }
+            if ep_date.month() + 1 == now_date.month() {
+                return TimeBucket::LastMonth;
+            }
+            return TimeBucket::ThisYear;
+        }
+
+        if ep_date.year() + 1 == now_date.year() && ep_date.month() == 12 && now_date.month() == 1 {
+            return TimeBucket::LastMonth;
+        }
+
+        TimeBucket::Older
+    }
+}
 
 #[derive(Debug)]
 pub struct RecentlyUpdatedPage {
-    episodes: FactoryVecDeque<EpisodeListItem>,
-    index_by_id: HashMap<EpisodeId, relm4::factory::DynamicIndex>,
+    groups: Vec<Controller<GroupedEpisodes>>,
     is_loading: bool,
+    index_by_id: HashMap<EpisodeId, relm4::factory::DynamicIndex>,
 }
 
 #[derive(Debug, Clone)]
@@ -49,13 +108,13 @@ impl Component for RecentlyUpdatedPage {
 
     view! {
         adw::NavigationPage {
-            set_title: "Downloads Page",
+            set_title: "Recently Updated",
 
-           #[wrap(Some)]
+            #[wrap(Some)]
             set_child = &adw::ToolbarView {
 
-               #[wrap(Some)]
-                set_content= &gtk::ScrolledWindow {
+                #[wrap(Some)]
+                set_content = &gtk::ScrolledWindow {
                     set_vexpand: true,
                     set_hscrollbar_policy: gtk::PolicyType::Never,
 
@@ -67,31 +126,31 @@ impl Component for RecentlyUpdatedPage {
                             set_orientation: gtk::Orientation::Vertical,
                             set_margin_all: 12,
                             set_spacing: 6,
+							set_halign: gtk::Align::Start,
 
-                             gtk::Label {
+                            gtk::Label {
                                 set_margin_top: 40,
                                 set_margin_horizontal: 20,
                                 set_label: "Recently Updated",
-                                set_halign:gtk::Align::Start,
-
+                                set_halign: gtk::Align::Start,
+                                set_xalign: 0.0,
                                 add_css_class: "title-1"
                             },
 
-                            #[local_ref]
-                            episodes_container -> gtk::ListBox {
+                            #[name = "episodes_container"]
+                            gtk::Box {
+                                set_orientation: gtk::Orientation::Vertical,
+                                set_spacing: 16,
                                 #[watch]
-                                set_visible: !model.episodes.is_empty(),
-                                set_margin_all: 20,
-                                add_css_class: "boxed-list",
+                                set_visible: !model.groups.is_empty(),
                             },
 
-                           adw::StatusPage {
+                            adw::StatusPage {
                                 #[watch]
-                                set_visible: model.episodes.is_empty(),
+                                set_visible: model.groups.is_empty() && !model.is_loading,
 
-                                set_title: "You recently updated podcast episodes will appear here",
+                                set_title: "Your recently updated podcast episodes will appear here",
                                 set_icon_name: Some("media-optical-symbolic"),
-
                                 set_vexpand: true,
                                 set_hexpand: true,
                             },
@@ -107,100 +166,120 @@ impl Component for RecentlyUpdatedPage {
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let episodes_parent = gtk::ListBox::builder().build();
         let model = RecentlyUpdatedPage {
-            episodes: FactoryVecDeque::builder().launch(episodes_parent).forward(
-                sender.output_sender(),
-                |msg| match msg {
-                    EpisodeListItemOutput::TogglePlay(id) => {
-                        RecentlyUpdatedPageOutput::TogglePlay(id)
-                    }
-                    EpisodeListItemOutput::NotifyError(error) => {
-                        RecentlyUpdatedPageOutput::NotifyError(error)
-                    }
-                    EpisodeListItemOutput::RequestDownload(episode_id) => {
-                        RecentlyUpdatedPageOutput::RequestDownload(episode_id)
-                    }
-                    EpisodeListItemOutput::CancleDownload(episode_id) => {
-                        RecentlyUpdatedPageOutput::CancleDownload(episode_id)
-                    }
-                },
-            ),
+            groups: Vec::new(),
             is_loading: true,
             index_by_id: HashMap::new(),
         };
 
-        let episodes_container = model.episodes.widget();
-
         let widgets = view_output!();
-
         sender.input(RecentlyUpdatedPageInput::FetchDownloads);
 
         ComponentParts { model, widgets }
     }
 
-    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, _root: &Self::Root) {
+    fn update_with_view(
+        &mut self,
+        widgets: &mut Self::Widgets,
+        message: Self::Input,
+        sender: ComponentSender<Self>,
+        _root: &Self::Root,
+    ) {
         match message {
             RecentlyUpdatedPageInput::FetchDownloads => {
                 self.is_loading = true;
                 let _ = sender.output(RecentlyUpdatedPageOutput::StartLoading);
 
-                match dbqueries::get_episodes() {
+                let input_sender = sender.input_sender().clone();
+                let output_sender = sender.output_sender().clone();
+
+                std::thread::spawn(move || match dbqueries::get_episodes() {
                     Ok(episodes) => {
                         let new_episodes = episodes.into_iter().take(50).collect();
-
-                        sender.input(RecentlyUpdatedPageInput::GottenEpisodes(new_episodes));
+                        let _ = input_sender
+                            .send(RecentlyUpdatedPageInput::GottenEpisodes(new_episodes));
                     }
-                    Err(error) => {
-                        let _ = sender
-                            .output(RecentlyUpdatedPageOutput::NotifyError(error.to_string()));
+                    Err(err) => {
+                        let _ = output_sender
+                            .send(RecentlyUpdatedPageOutput::NotifyError(err.to_string()));
+                        let _ =
+                            input_sender.send(RecentlyUpdatedPageInput::GottenEpisodes(Vec::new()));
                     }
-                }
+                });
+            }
 
+            RecentlyUpdatedPageInput::GottenEpisodes(mut episodes) => {
                 self.is_loading = false;
                 let _ = sender.output(RecentlyUpdatedPageOutput::StopLoading);
-            }
-            RecentlyUpdatedPageInput::GottenEpisodes(episodes) => {
-                let mut guard = self.episodes.guard();
-                //guard.clear();
 
-                for episode in episodes.iter() {
-                    let index = guard.push_back(episode.clone());
-                    self.index_by_id.insert(episode.id(), index);
+                // Chronological sort: compare NaiveDateTimes directly
+                episodes.sort_by(|a, b| b.epoch().cmp(&a.epoch()));
+
+                let mut grouped: BTreeMap<TimeBucket, Vec<Episode>> = BTreeMap::new();
+                for episode in episodes {
+                    // Fix: Pass the NaiveDateTime directly to the updated bucket analyzer
+                    let bucket = TimeBucket::from_naive_datetime(episode.epoch());
+                    grouped.entry(bucket).or_default().push(episode);
+                }
+
+                while let Some(child) = widgets.episodes_container.first_child() {
+                    widgets.episodes_container.remove(&child);
+                }
+                self.groups.clear();
+
+                for (bucket, bucket_episodes) in grouped {
+                    let group_title = bucket.as_str().to_string();
+
+                    let group = GroupedEpisodes::builder()
+                        .launch((group_title, bucket_episodes))
+                        .detach();
+                    //.forward(sender.output_sender(), |msg| msg);
+
+                    widgets.episodes_container.append(group.widget());
+                    self.groups.push(group);
                 }
             }
-            RecentlyUpdatedPageInput::DownloadStarted(episode_id) => {
-                dbg!(episode_id);
-            }
-            RecentlyUpdatedPageInput::DownloadCancled(episode_id) => {}
-            RecentlyUpdatedPageInput::DownloadProgress(episode_id, _) => {}
-            RecentlyUpdatedPageInput::DownloadFinished(episode_id) => {}
-            RecentlyUpdatedPageInput::ChangePlayBackState(play_state, episode_id) => {
-                if let Some(index) = self.index_by_id.get(&episode_id) {
-                    self.episodes.send(
-                        index.current_index(),
-                        EpisodeListItemInput::ChangePlayBackState(play_state),
-                    );
+
+            RecentlyUpdatedPageInput::DownloadStarted(id) => {
+                for group in &self.groups {
+                    group.emit(GroupedEpisodesInput::DownloadStarted(id));
                 }
             }
-            RecentlyUpdatedPageInput::PlayBackProgress(episode_id, pos, rem) => {
-                if let Some(index) = self.index_by_id.get(&episode_id) {
-                    self.episodes.send(
-                        index.current_index(),
-                        EpisodeListItemInput::PlayBackProgress(pos, rem),
-                    );
+            RecentlyUpdatedPageInput::DownloadCancled(id) => {
+                for group in &self.groups {
+                    group.emit(GroupedEpisodesInput::DownloadCancled(id));
                 }
             }
-            RecentlyUpdatedPageInput::ChangeEpisodeTo(episode_id) => {
-                self.episodes
-                    .broadcast(EpisodeListItemInput::ChangeEpisodeTo(episode_id));
-            }
-            RecentlyUpdatedPageInput::EpisodeDeleted(episode_id) => {
-                if let Some(index) = self.index_by_id.get(&episode_id) {
-                    let mut guard = self.episodes.guard();
-                    guard.remove(index.current_index());
+            RecentlyUpdatedPageInput::DownloadProgress(id, progress) => {
+                for group in &self.groups {
+                    group.emit(GroupedEpisodesInput::DownloadProgress(id, progress));
                 }
             }
+            RecentlyUpdatedPageInput::DownloadFinished(id) => {
+                for group in &self.groups {
+                    group.emit(GroupedEpisodesInput::DownloadFinished(id));
+                }
+            }
+            RecentlyUpdatedPageInput::ChangePlayBackState(state, id) => {
+                for group in &self.groups {
+                    group.emit(GroupedEpisodesInput::ChangePlayBackState(state.clone(), id));
+                }
+            }
+            RecentlyUpdatedPageInput::PlayBackProgress(id, progress, duration) => {
+                for group in &self.groups {
+                    group.emit(GroupedEpisodesInput::PlayBackProgress(
+                        id, progress, duration,
+                    ));
+                }
+            }
+            RecentlyUpdatedPageInput::ChangeEpisodeTo(id) => {
+                for group in &self.groups {
+                    group.emit(GroupedEpisodesInput::ChangeEpisodeTo(id));
+                }
+            }
+            RecentlyUpdatedPageInput::EpisodeDeleted(id) => {}
         }
+
+        self.update_view(widgets, sender);
     }
 }
