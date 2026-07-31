@@ -503,13 +503,16 @@ impl FactoryComponent for EpisodeListItem {
                 },
             },
 
-            gtk::Box {
+            gtk::Separator {
                 set_hexpand: true,
+                add_css_class: "spacer",
+                set_halign: gtk::Align::Start,
             },
 
             gtk::Box {
                 set_halign: gtk::Align::End,
                 set_valign: gtk::Align::Center,
+                set_orientation: gtk::Orientation::Horizontal,
 
                     gtk::MenuButton {
                         set_icon_name: "view-more-symbolic",

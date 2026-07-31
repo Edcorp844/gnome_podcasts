@@ -72,6 +72,7 @@ pub enum AppModelInput {
     VolumeValue(f64),
     ShowPlayerPage(PlayerPageView),
     PlayNext(EpisodeId),
+    UpdatePlaylist(Vec<EpisodeId>, Option<usize>),
     RequestMute,
     RequestUnmute,
     RequestVolumeValue,
@@ -273,6 +274,11 @@ impl Component for AppModel {
                         action_sender
                             .clone()
                             .input(AppModelInput::EpisodeDeleted(episode_id));
+                    }
+                    ActionWorkerOutput::UpdatePlaylist(ids, pos) => {
+                        action_sender
+                            .clone()
+                            .input(AppModelInput::UpdatePlaylist(ids, pos));
                     }
                     _ => {}
                 });
@@ -698,6 +704,10 @@ impl Component for AppModel {
             AppModelInput::PlayNext(episode_id) => {
                 self.worker_controller
                     .emit(ActionWorkerInput::PlayNext(episode_id));
+            }
+            AppModelInput::UpdatePlaylist(ids, pos) => {
+                self.player_page
+                    .emit(PlayerPageInput::UpdatePlaylist(ids, pos));
             }
         }
 

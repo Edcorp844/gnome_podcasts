@@ -235,23 +235,14 @@ impl Component for ShowPage {
                                                 gtk::Button {
                                                     set_label: "Following",
                                                     add_css_class: "pill",
-                                                    inline_css: "
-                                                        background-color: rgba(255, 255, 255, 0.1); 
-                                                        color: white; 
-                                                        font-weight: 600; 
-                                                        padding: 8px 16px;
-                                                        border: none;
-                                                    ",
                                                 },
 
                                                 gtk::Button {
                                                     set_icon_name: "view-more-symbolic",
-                                                    add_css_class: "flat",
-                                                    inline_css: "
-                                                        background-color: rgba(255, 255, 255, 0.1); 
-                                                        border-radius: 50%;
-                                                        padding: 8px;
-                                                    ",
+                                                    set_css_classes: &vec!["circular"],
+                                                    set_halign: gtk::Align::Center,
+                                                    set_valign: gtk::Align::Center,
+
                                                 },
                                             }
                                         }
@@ -523,6 +514,8 @@ impl Component for ShowPage {
                     self.episodes
                         .send(index.current_index(), EpisodeListItemInput::DownloadStarted);
                 }
+                self.all_episodes_page
+                    .emit(AllEpisodesPageInput::DownloadStarted(episode_id));
             }
             ShowPageInput::DownloadProgress(episode_id, fraction) => {
                 if let Some(index) = self.index_by_id.get(&episode_id) {
@@ -531,12 +524,16 @@ impl Component for ShowPage {
                         EpisodeListItemInput::DownloadProgress(fraction),
                     );
                 }
+                self.all_episodes_page
+                    .emit(AllEpisodesPageInput::DownloadProgress(episode_id, fraction));
             }
             ShowPageInput::DownloadCancled(episode_id) => {
                 if let Some(index) = self.index_by_id.get(&episode_id) {
                     self.episodes
                         .send(index.current_index(), EpisodeListItemInput::DownloadCancled);
                 }
+                self.all_episodes_page
+                    .emit(AllEpisodesPageInput::DownloadCancled(episode_id));
             }
             ShowPageInput::DownloadFinished(episode_id) => {
                 if let Some(index) = self.index_by_id.get(&episode_id) {
@@ -545,6 +542,8 @@ impl Component for ShowPage {
                         EpisodeListItemInput::DownloadFinished,
                     );
                 }
+                self.all_episodes_page
+                    .emit(AllEpisodesPageInput::DownloadFinished(episode_id));
             }
             ShowPageInput::ChangePlayBackState(state, episode_id) => {
                 if let Some(index) = self.index_by_id.get(&episode_id) {
@@ -553,6 +552,9 @@ impl Component for ShowPage {
                         EpisodeListItemInput::ChangePlayBackState(state),
                     );
                 }
+
+                self.all_episodes_page
+                    .emit(AllEpisodesPageInput::ChangePlayBackState(state, episode_id));
 
                 if let Some(episode) = self.latest_episode {
                     if episode == episode_id {
@@ -597,6 +599,9 @@ impl Component for ShowPage {
                     );
                 }
 
+                self.all_episodes_page
+                    .emit(AllEpisodesPageInput::PlayBackProgress(episode_id, pos, rem));
+
                 if let Some(episode) = self.latest_episode {
                     if episode == episode_id {
                         self.latest_play_button
@@ -638,6 +643,9 @@ impl Component for ShowPage {
                     }
                 }
 
+                self.all_episodes_page
+                    .emit(AllEpisodesPageInput::ChangeEpisodeTo(episode_id));
+
                 self.episodes
                     .broadcast(EpisodeListItemInput::ChangeEpisodeTo(episode_id));
             }
@@ -649,6 +657,8 @@ impl Component for ShowPage {
                     self.episodes
                         .send(index.current_index(), EpisodeListItemInput::EpisodeDeleted);
                 }
+                self.all_episodes_page
+                    .emit(AllEpisodesPageInput::EpisodeDeleted(episode_id));
             }
         }
 

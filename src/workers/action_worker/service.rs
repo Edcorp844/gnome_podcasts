@@ -64,6 +64,7 @@ pub enum ActionWorkerOutput {
     RefreshEpisode(EpisodeId),
     EpisodeDeleted(EpisodeId),
     VolumeValue(f64),
+    UpdatePlaylist(Vec<EpisodeId>, Option<usize>),
 }
 
 #[derive(Debug)]
@@ -435,6 +436,8 @@ impl Worker for ActionWorker {
             ActionWorkerInput::PlayNext(episode_id) => {
                 if self.play_list.current().is_some() {
                     self.play_list.push_back(episode_id);
+                    let (ids, current_pos) = self.play_list.play_list();
+                    let _ = sender.output(ActionWorkerOutput::UpdatePlaylist(ids, current_pos));
                 } else {
                     sender.input(ActionWorkerInput::Execute(Action::TogglePlay(episode_id)));
                 }
@@ -471,6 +474,8 @@ impl ActionWorker {
                     sender.input(ActionWorkerInput::TogglePlayBack);
                 } else {
                     self.play_list.set_current(id);
+                    let (ids, current_pos) = self.play_list.play_list();
+                    let _ = sender.output(ActionWorkerOutput::UpdatePlaylist(ids, current_pos));
 
                     let _ = sender.output(ActionWorkerOutput::SetCurrentEpisode(id));
                     match dbqueries::get_episode_from_id(id) {

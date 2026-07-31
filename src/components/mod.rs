@@ -13,3 +13,5 @@ pub mod show_card;
 pub mod volume_scale;
 pub mod player_controls;
 pub mod episode_group;
+pub mod play_list;
+pub mod playlist_episode_list_item;

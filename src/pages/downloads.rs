@@ -90,11 +90,11 @@ impl Component for DownloadsPage {
                            adw::StatusPage {
                                 #[watch]
                                 set_visible: model.episodes.is_empty(),
-                                
+
                                 set_title: "You downloaded episodes will appear here",
                                 //set_description: Some("You downloaded episodes will appear here"),
-                                set_icon_name: Some("media-optical-symbolic"), 
-                                
+                                set_icon_name: Some("media-optical-symbolic"),
+
                                 set_vexpand: true,
                                 set_hexpand: true,
                             },
@@ -192,9 +192,11 @@ impl Component for DownloadsPage {
             DownloadsPageInput::DownloadStarted(episode_id) => {
                 dbg!(episode_id);
             }
-            DownloadsPageInput::DownloadCancled(episode_id) => {}
-            DownloadsPageInput::DownloadProgress(episode_id, _) => {}
-            DownloadsPageInput::DownloadFinished(episode_id) => {}
+            DownloadsPageInput::DownloadCancled(_episode_id) => {}
+            DownloadsPageInput::DownloadProgress(_episode_id, _) => {}
+            DownloadsPageInput::DownloadFinished(_episode_id) => {
+                sender.input(DownloadsPageInput::FetchDownloads)
+            }
             DownloadsPageInput::ChangePlayBackState(play_state, episode_id) => {
                 if let Some(index) = self.index_by_id.get(&episode_id) {
                     self.episodes.send(

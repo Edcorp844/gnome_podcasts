@@ -4,7 +4,10 @@ use podcasts_data::{EpisodeId, dbqueries};
 use relm4::{Component, prelude::*};
 
 use crate::{
-    components::player_controls::{PlayerControls, PlayerControlsInput, PlayerControlsOutput},
+    components::{
+        play_list::{PlayListComponent, PlayListComponentInput},
+        player_controls::{PlayerControls, PlayerControlsInput, PlayerControlsOutput},
+    },
     util::{
         cover_image::{ImageSize, fetch_cached_image},
         gradient_extractor::GradientColorExtractor,
@@ -14,6 +17,7 @@ use crate::{
 #[derive(Debug)]
 pub struct PlayerPage {
     player_controls: Controller<PlayerControls>,
+    play_list: Controller<PlayListComponent>,
 }
 
 #[derive(Debug)]
@@ -23,6 +27,7 @@ pub enum PlayerPageInput {
     SetCurrentEpisode(EpisodeId),
     UpdateProgress(f64, u64),
     VolumeValue(f64),
+    UpdatePlaylist(Vec<EpisodeId>, Option<usize>),
 }
 
 #[derive(Debug)]
@@ -70,6 +75,10 @@ impl Component for PlayerPage {
 
                     model.player_controls.widget(){
 
+                    },
+
+                    model.play_list.widget(){
+
                     }
 
                 }
@@ -93,7 +102,11 @@ impl Component for PlayerPage {
                     PlayerControlsOutput::Seekforward => PlayerPageOutput::Seekforward,
                     PlayerControlsOutput::SeekBakward => PlayerPageOutput::SeekBakward,
                 });
-        let model = PlayerPage { player_controls };
+        let play_list = PlayListComponent::builder().launch(()).detach();
+        let model = PlayerPage {
+            player_controls,
+            play_list,
+        };
 
         let widgets = view_output!();
 
@@ -133,9 +146,9 @@ impl Component for PlayerPage {
             PlayerPageInput::SetCurrentEpisode(episode_id) => {
                 match dbqueries::get_episode_from_id(episode_id) {
                     Ok(episode) => {
-                     self.player_controls
-                        .emit(PlayerControlsInput::SetTexture(None));
-                    widgets.page.inline_css("background: rgba(0,0,0,1);");
+                        self.player_controls
+                            .emit(PlayerControlsInput::SetTexture(None));
+                        widgets.page.inline_css("background: rgba(0,0,0,1);");
 
                         let image_uri_opt = episode.image_uri().map(|s| s.to_string());
 
@@ -143,7 +156,6 @@ impl Component for PlayerPage {
                             .emit(PlayerControlsInput::SetCurrentEpisode(episode));
 
                         if let Some(image_uri) = image_uri_opt {
-
                             sender.oneshot_command(async move {
                                 let downloaded_texture =
                                     fetch_cached_image(&image_uri, ImageSize::from_dimesion(450))
@@ -167,6 +179,9 @@ impl Component for PlayerPage {
                     .emit(PlayerControlsInput::UpdateProgress(pos, rem));
             }
             PlayerPageInput::VolumeValue(val) => {}
+            PlayerPageInput::UpdatePlaylist(ids, pos) => self
+                .play_list
+                .emit(PlayListComponentInput::UpdatePlaylist(ids, pos)),
         }
     }
 

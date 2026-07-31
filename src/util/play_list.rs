@@ -109,4 +109,8 @@ impl PlayList {
     pub fn is_empty(&self) -> bool {
         self.ids.is_empty()
     }
+
+    pub fn play_list(&self) -> (Vec<EpisodeId>, Option<usize>) {
+        (self.ids.clone(), self.current_index)
+    }
 }
