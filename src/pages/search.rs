@@ -14,7 +14,8 @@ use crate::{
     components::podcast_search_results::{
         PodcastResults, PodcastResultsInput, PodcastResultsOutput,
     },
-    pages::podcast::{PodcastPage, PodcastPageOutput}, settings::GenaralSettings,
+    pages::podcast::{PodcastPage, PodcastPageOutput},
+    settings::GenaralSettings,
 };
 
 // 1. Define the possible pages you want to visit across your app
@@ -66,6 +67,8 @@ pub enum SearchPageOutput {
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
     Subscribe(String),
+    PlayNext(EpisodeId),
+    RequestDeleteEpisode(EpisodeId),
 }
 
 #[derive(Debug)]
@@ -134,7 +137,7 @@ impl Component for SearchPage {
                 let search_text = text.clone();
                 println!("Searching: {search_text}");
                 sender.oneshot_command(async move {
-                let search_platforms = GenaralSettings::new().get_search_platforms();
+                    let search_platforms = GenaralSettings::new().get_search_platforms();
                     for id in search_platforms {
                         match dbqueries::set_discovery_setting(&id, true) {
                             Err(e) => {
@@ -164,6 +167,9 @@ impl Component for SearchPage {
                         PodcastPageOutput::CancleDownload(episode_id) => {
                             SearchPageOutput::CancleDownload(episode_id)
                         }
+                        PodcastPageOutput::PlayNext(episode_id) =>  SearchPageOutput::PlayNext(episode_id),
+                        PodcastPageOutput::GotoEpisode(episode_id) => todo!(),
+                        PodcastPageOutput::RequestDeleteEpisode(episode_id) =>  SearchPageOutput::RequestDeleteEpisode(episode_id),
                     },
                 );
                 let controller = PageController::Podcast(podcast_page);
@@ -203,7 +209,7 @@ impl Component for SearchPage {
                 for (_, page) in &self.active_pages {
                     page.notify_current_episode(episode_id.clone());
                 }
-            },
+            }
         }
 
         self.update(message, sender, root);

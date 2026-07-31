@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
 use adw::prelude::*;
 use chrono::{Datelike, Duration, Local, NaiveDateTime};
@@ -6,9 +6,10 @@ use gst_play::PlayState;
 use podcasts_data::{Episode, EpisodeId, dbqueries};
 use relm4::{Component, prelude::*};
 
-use crate::components::episode_group::{GroupedEpisodes, GroupedEpisodesInput};
+use crate::components::episode_group::{
+    GroupedEpisodes, GroupedEpisodesInput, GroupedEpisodesOutput,
+};
 
-/// Sorting layout enums to order sections descending from Today down to Older histories
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TimeBucket {
     Today = 0,
@@ -72,7 +73,6 @@ impl TimeBucket {
 pub struct RecentlyUpdatedPage {
     groups: Vec<Controller<GroupedEpisodes>>,
     is_loading: bool,
-    index_by_id: HashMap<EpisodeId, relm4::factory::DynamicIndex>,
 }
 
 #[derive(Debug, Clone)]
@@ -92,9 +92,11 @@ pub enum RecentlyUpdatedPageInput {
 #[derive(Debug, Clone)]
 pub enum RecentlyUpdatedPageOutput {
     TogglePlay(EpisodeId),
-    NotifyError(String),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
+    PlayNext(EpisodeId),
+    RequestDeleteEpisode(EpisodeId),
+    NotifyError(String),
     StartLoading,
     StopLoading,
 }
@@ -126,7 +128,7 @@ impl Component for RecentlyUpdatedPage {
                             set_orientation: gtk::Orientation::Vertical,
                             set_margin_all: 12,
                             set_spacing: 6,
-							set_halign: gtk::Align::Start,
+                            set_halign: gtk::Align::Start,
 
                             gtk::Label {
                                 set_margin_top: 40,
@@ -141,6 +143,7 @@ impl Component for RecentlyUpdatedPage {
                             gtk::Box {
                                 set_orientation: gtk::Orientation::Vertical,
                                 set_spacing: 16,
+                                set_margin_horizontal: 20,
                                 #[watch]
                                 set_visible: !model.groups.is_empty(),
                             },
@@ -169,7 +172,6 @@ impl Component for RecentlyUpdatedPage {
         let model = RecentlyUpdatedPage {
             groups: Vec::new(),
             is_loading: true,
-            index_by_id: HashMap::new(),
         };
 
         let widgets = view_output!();
@@ -232,8 +234,27 @@ impl Component for RecentlyUpdatedPage {
 
                     let group = GroupedEpisodes::builder()
                         .launch((group_title, bucket_episodes))
-                        .detach();
-                    //.forward(sender.output_sender(), |msg| msg);
+                        .forward(sender.output_sender(), |msg| match msg {
+                            GroupedEpisodesOutput::TogglePlay(episode_id) => {
+                                RecentlyUpdatedPageOutput::TogglePlay(episode_id)
+                            }
+                            GroupedEpisodesOutput::RequestDownload(episode_id) => {
+                                RecentlyUpdatedPageOutput::RequestDownload(episode_id)
+                            }
+                            GroupedEpisodesOutput::CancleDownload(episode_id) => {
+                                RecentlyUpdatedPageOutput::CancleDownload(episode_id)
+                            }
+                            GroupedEpisodesOutput::PlayNext(episode_id) => {
+                                RecentlyUpdatedPageOutput::PlayNext(episode_id)
+                            }
+                            GroupedEpisodesOutput::GotoEpisode(_episode_id) => todo!(),
+                            GroupedEpisodesOutput::RequestDeleteEpisode(episode_id) => {
+                                RecentlyUpdatedPageOutput::RequestDeleteEpisode(episode_id)
+                            }
+                            GroupedEpisodesOutput::NotifyError(error) => {
+                                RecentlyUpdatedPageOutput::NotifyError(error)
+                            }
+                        });
 
                     widgets.episodes_container.append(group.widget());
                     self.groups.push(group);
@@ -277,7 +298,11 @@ impl Component for RecentlyUpdatedPage {
                     group.emit(GroupedEpisodesInput::ChangeEpisodeTo(id));
                 }
             }
-            RecentlyUpdatedPageInput::EpisodeDeleted(id) => {}
+            RecentlyUpdatedPageInput::EpisodeDeleted(id) => {
+                for group in &self.groups {
+                    group.emit(GroupedEpisodesInput::EpisodeDeleted(id));
+                }
+            }
         }
 
         self.update_view(widgets, sender);

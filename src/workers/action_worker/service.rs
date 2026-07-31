@@ -29,6 +29,7 @@ pub enum ActionWorkerInput {
     DownloadEpisode(EpisodeId),
     CancelDownload(EpisodeId),
     DeleteEpisode(EpisodeId),
+    PlayNext(EpisodeId),
     SeekAudioPosition(f64),
     DurationChanged(u64),
     PositionChanged(u64),
@@ -429,6 +430,13 @@ impl Worker for ActionWorker {
                     if let Some(next_id) = self.play_list.next() {
                         sender.input(ActionWorkerInput::Execute(Action::TogglePlay(next_id)));
                     }
+                }
+            }
+            ActionWorkerInput::PlayNext(episode_id) => {
+                if self.play_list.current().is_some() {
+                    self.play_list.push_back(episode_id);
+                } else {
+                    sender.input(ActionWorkerInput::Execute(Action::TogglePlay(episode_id)));
                 }
             }
         }

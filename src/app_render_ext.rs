@@ -98,7 +98,7 @@ impl AppModel {
 
         let icon = gtk::Image::builder()
             .icon_name(icon_name)
-            .css_classes(vec!["accent"])
+            //.css_classes(vec!["accent"])
             .icon_size(gtk::IconSize::Inherit)
             .build();
         layout_box.append(&icon);

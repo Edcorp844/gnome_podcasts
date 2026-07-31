@@ -1,6 +1,8 @@
 use adw::prelude::*;
+use gettextrs::gettext;
 use gst_play::PlayState;
-use podcasts_data::{Episode, EpisodeId, dbqueries};
+use gtk::gio;
+use podcasts_data::{Episode, EpisodeId, EpisodeModel, Save, dbqueries};
 use relm4::{
     Component, ComponentController, Controller, FactorySender, RelmWidgetExt,
     factory::{DynamicIndex, FactoryComponent},
@@ -33,6 +35,7 @@ pub struct EpisodeListItem {
 #[derive(Debug, Clone)]
 pub enum EpisodeListItemInput {
     ImageDownloaded(Option<adw::gdk::Texture>),
+    MarkPlayed,
     TogglePlay,
     DownloadStarted,
     PlayBackProgress(f64, u64),
@@ -43,6 +46,7 @@ pub enum EpisodeListItemInput {
     DownloadFinished,
     ChangePlayBackState(PlayState),
     ChangeEpisodeTo(EpisodeId),
+    EpisodeDeleted,
 }
 
 #[derive(Debug)]
@@ -50,6 +54,9 @@ pub enum EpisodeListItemOutput {
     TogglePlay(EpisodeId),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
+    PlayNext(EpisodeId),
+    GotoEpisode(EpisodeId),
+    RequestDeleteEpisode(EpisodeId),
     NotifyError(String),
 }
 
@@ -121,6 +128,65 @@ impl FactoryComponent for EpisodeListItem {
             progress_indicator,
             play_button,
         }
+    }
+
+    fn init_widgets(
+        &mut self,
+        _index: &Self::Index,
+        root: Self::Root,
+        _returned_widget: &<Self::ParentWidget as relm4::factory::FactoryView>::ReturnedWidget,
+        sender: FactorySender<Self>,
+    ) -> Self::Widgets {
+        let widgets = view_output!();
+
+        // --- Register per-row actions ---
+        let action_group = gio::SimpleActionGroup::new();
+
+        let sender_clone = sender.clone();
+        let id = self.episode.id();
+        let play_next_action = gio::SimpleAction::new("play-next", None);
+        play_next_action.connect_activate(move |_, _| {
+            let _ = sender_clone.output(EpisodeListItemOutput::PlayNext(id.clone()));
+        });
+
+        let sender_clone = sender.clone();
+        let mark_played_action = gio::SimpleAction::new("mark-played", None);
+        mark_played_action.connect_activate(move |_, _| {
+            sender_clone.input(EpisodeListItemInput::MarkPlayed);
+        });
+
+        let sender_clone = sender.clone();
+        let id = self.episode.id();
+        let goto_episode_action = gio::SimpleAction::new("goto-episode", None);
+        goto_episode_action.connect_activate(move |_, _| {
+            let _ = sender_clone.output(EpisodeListItemOutput::GotoEpisode(id.clone()));
+        });
+
+        let sender_clone = sender.clone();
+        let id = self.episode.id();
+        let download_action = gio::SimpleAction::new("download", None);
+        download_action.connect_activate(move |_, _| {
+            let _ = sender_clone.output(EpisodeListItemOutput::RequestDownload(id));
+        });
+
+        let sender_clone = sender.clone();
+        let id = self.episode.id();
+        let delete_download_action = gio::SimpleAction::new("delete-download", None);
+        delete_download_action.connect_activate(move |_, _| {
+            let _ = sender_clone.output(EpisodeListItemOutput::RequestDeleteEpisode(id));
+        });
+
+        action_group.add_action(&play_next_action);
+        action_group.add_action(&mark_played_action);
+        action_group.add_action(&goto_episode_action);
+        action_group.add_action(&download_action);
+        action_group.add_action(&delete_download_action);
+
+        widgets
+            .menu_button
+            .insert_action_group("episode", Some(&action_group));
+
+        widgets
     }
 
     fn update(&mut self, message: Self::Input, sender: FactorySender<Self>) {
@@ -221,6 +287,20 @@ impl FactoryComponent for EpisodeListItem {
                     ));
                 }
             }
+            EpisodeListItemInput::MarkPlayed => {
+                self.episode
+                    .set_played(Some(chrono::Utc::now().naive_utc()));
+                match self.episode.save() {
+                    Ok(_) => {}
+                    Err(error) => {
+                        let _ =
+                            sender.output(EpisodeListItemOutput::NotifyError(error.to_string()));
+                    }
+                }
+            }
+            EpisodeListItemInput::EpisodeDeleted => {
+                self.downloaded = false;
+            }
         }
     }
 
@@ -281,7 +361,7 @@ impl FactoryComponent for EpisodeListItem {
                         set_valign: gtk::Align::Fill,
                         set_content_fit: gtk::ContentFit::Cover,
                         set_can_shrink: true,
-                        inline_css: "border-radius: 16px;", 
+                        inline_css: "border-radius: 16px;",
                     }
                 },
 
@@ -291,12 +371,28 @@ impl FactoryComponent for EpisodeListItem {
                     set_halign: gtk::Align::Start,
                     set_valign: gtk::Align::Start,
 
-                    gtk::Label {
-                        set_label: &self.episode.epoch().format("%e %b").to_string(),
-                        add_css_class: "caption",
+                     gtk::Box {
+                        set_orientation: gtk::Orientation::Horizontal,
                         set_halign: gtk::Align::Start,
-                        set_xalign: 0.0,
-                        set_wrap: true
+                        set_spacing: 16,
+
+                        gtk::Label {
+                            set_label: &self.episode.epoch().format("%e %b").to_string(),
+                            add_css_class: "caption",
+                            set_halign: gtk::Align::Start,
+                            set_xalign: 0.0,
+                            set_wrap: true
+                        },
+
+                         gtk::Label {
+                            #[watch]
+                            set_visible:  self.episode.played().is_some(),
+                            set_label: gettext("Played").as_str(),
+                            set_css_classes: &vec!["caption", "warning"],
+                            set_halign: gtk::Align::Start,
+                            set_xalign: 0.0,
+                            set_wrap: true
+                        },
                     },
 
                     gtk::Label {
@@ -341,7 +437,36 @@ impl FactoryComponent for EpisodeListItem {
                         set_halign: gtk::Align::Start,
                     },
 
-                    self.play_button.widget(),
+                    gtk::Box {
+                        set_orientation: gtk::Orientation::Horizontal,
+                        set_halign: gtk::Align::Start,
+                        set_spacing: 16,
+
+                        self.play_button.widget(),
+
+                        gtk::Box {
+                            #[watch]
+                            set_visible: self.downloading,
+
+                            self.progress_indicator.widget() {
+                                set_size_request: (34, 34),
+                                set_halign: gtk::Align::Center,
+                                set_valign: gtk::Align::Center,
+                            }
+                        },
+
+                        gtk::Box{
+                            #[watch]
+                            set_visible: self.downloaded,
+                            set_css_classes: &vec!["success"],
+                            inline_css: "border-radius: 50px; padding: 4px; border: 2px solid var(--success-color);",
+                            set_halign: gtk::Align::Center,
+                            set_valign: gtk::Align::Center,
+                            gtk::Image{
+                                set_icon_name: Some("folder-download-symbolic")
+                            }
+                        }
+                    }
                 },
             },
 
@@ -353,37 +478,43 @@ impl FactoryComponent for EpisodeListItem {
                 set_halign: gtk::Align::End,
                 set_valign: gtk::Align::Center,
 
-               gtk::Box {
-                    set_orientation: gtk::Orientation::Horizontal,
-
-                    gtk::Button {
-                        #[watch]
-                        set_visible: !self.downloading,
-                        #[watch]
-                        set_icon_name: if self.downloaded {
-                            "object-select-symbolic"
-                        } else {
-                            "download-symbolic"
-                        },
+                    gtk::MenuButton {
+                        set_icon_name: "view-more-symbolic",
                         set_css_classes: &vec!["circular"],
                         set_halign: gtk::Align::Center,
                         set_valign: gtk::Align::Center,
 
-                        connect_clicked[sender] => move |_| {
-                            sender.input(EpisodeListItemInput::RequestDownload);
-                        }
-                    },
+                        #[wrap(Some)]
+                        #[name = "menu_button"]
+                        set_popover = &gtk::PopoverMenu::from_model(Some(&{
+                            let menu = gtk::gio::Menu::new();
+                            let play_section = gtk::gio::Menu::new();
+                            let play_next_item = gtk::gio::MenuItem::new(Some(&gettext("Play Next")), Some("episode.play-next"));
+                            let mark_played_item = gtk::gio::MenuItem::new(Some(&gettext("Mark as Played")), Some("episode.mark-played"));
+                            play_section.append_item(&play_next_item);
+                            play_section.append_item(&mark_played_item);
+                            menu.append_section(None, &play_section);
 
-                    gtk::Box {
-                        #[watch]
-                        set_visible: self.downloading,
+                            let go_to_section = gtk::gio::Menu::new();
+                            let goto_episode_item = gtk::gio::MenuItem::new(Some(&gettext("Go to Episode")), Some("episode.goto-episode"));
+                            go_to_section.append_item(&goto_episode_item);
+                            menu.append_section(None, &go_to_section);
 
-                        self.progress_indicator.widget() {
-                            set_size_request: (34, 34),
-                            set_halign: gtk::Align::Center,
-                            set_valign: gtk::Align::Center,
-                        }
-                    }
+                           let download_section = gtk::gio::Menu::new();
+                            let download_episode_item = if self.downloaded {
+                                let item = gtk::gio::MenuItem::new(Some(&gettext("Delete Download")), Some("episode.delete-download"));
+                                item.set_icon(&gtk::gio::ThemedIcon::new("user-trash-symbolic"));
+                                item
+                            } else {
+                                let item = gtk::gio::MenuItem::new(Some(&gettext("Download")), Some("episode.download"));
+                                item.set_icon(&gtk::gio::ThemedIcon::new("folder-download-symbolic"));
+                                item
+                            };
+                            download_section.append_item(&download_episode_item);
+                            menu.append_section(None, &download_section);
+
+                            menu
+                        })) {}
                 }
             },
         }

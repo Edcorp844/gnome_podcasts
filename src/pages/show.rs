@@ -49,6 +49,7 @@ pub enum ShowPageInput {
     ChangePlayBackState(PlayState, EpisodeId),
     PlayBackProgress(EpisodeId, f64, u64),
     ChangeEpisodeTo(EpisodeId),
+    EpisodeDeleted(EpisodeId),
     GotoAllEpisodesPage,
 }
 
@@ -58,6 +59,8 @@ pub enum ShowPageOutput {
     NotifyError(String),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
+    PlayNext(EpisodeId),
+    RequestDeleteEpisode(EpisodeId),
 }
 
 #[derive(Debug)]
@@ -394,6 +397,14 @@ impl Component for ShowPage {
                         ShowPageOutput::CancleDownload(episode_id)
                     }
                     EpisodeListItemOutput::NotifyError(error) => ShowPageOutput::NotifyError(error),
+                    EpisodeListItemOutput::PlayNext(episode_id) => {
+                        ShowPageOutput::PlayNext(episode_id)
+                    }
+                    // EpisodeListItemOutput::GotoEpisode(episode_id) => todo!(),
+                    EpisodeListItemOutput::RequestDeleteEpisode(episode_id) => {
+                        ShowPageOutput::RequestDeleteEpisode(episode_id)
+                    }
+                    _ => ShowPageOutput::NotifyError(format!("")),
                 },
             ),
             index_by_id: HashMap::new(),
@@ -419,7 +430,7 @@ impl Component for ShowPage {
         widgets: &mut Self::Widgets,
         message: Self::Input,
         sender: ComponentSender<Self>,
-        root: &Self::Root,
+        _root: &Self::Root,
     ) {
         match message {
             ShowPageInput::GetShow(show_id) => {
@@ -610,6 +621,12 @@ impl Component for ShowPage {
             }
             ShowPageInput::GotoAllEpisodesPage => {
                 widgets.nav_view.push(self.all_episodes_page.widget());
+            }
+            ShowPageInput::EpisodeDeleted(episode_id) => {
+                if let Some(index) = self.index_by_id.get(&episode_id) {
+                    self.episodes
+                        .send(index.current_index(), EpisodeListItemInput::EpisodeDeleted);
+                }
             }
         }
 

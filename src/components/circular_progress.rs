@@ -39,7 +39,6 @@ impl Component for CircularProgress {
         };
 
         let widgets = view_output!();
-
         root.set_draw_func(move |widget, cr, width, height| {
             let fraction = *fraction_data.borrow();
 
@@ -57,11 +56,8 @@ impl Component for CircularProgress {
             cr.set_line_width(line_width);
             cr.set_line_cap(gtk::gdk::cairo::LineCap::Round);
 
-            // 1. LOOK UP SYSTEM ACCENT COLOR
-            let context = widget.style_context();
-            let accent_gdk_rgba = context
-                .lookup_color("accent_color")
-                .unwrap_or_else(|| context.color());
+            // 1. LOOK UP SYSTEM ACCENT COLOR (via libadwaita, not deprecated StyleContext)
+            let accent_gdk_rgba = adw::StyleManager::default().accent_color_rgba();
 
             // 2. DRAW BACKGROUND RING (Muted track color)
             cr.set_source_rgba(
@@ -90,30 +86,26 @@ impl Component for CircularProgress {
                 let _ = cr.stroke();
             }
 
-            // 4. DRAW PERCENTAGE TEXT IN THE CENTER (Pure Native Cairo Approach)
-            // Define font options inside the core canvas state
+            // 4. DRAW PERCENTAGE TEXT IN THE CENTER
             cr.select_font_face(
                 "Sans",
                 gtk::cairo::FontSlant::Normal,
                 gtk::cairo::FontWeight::Bold,
             );
 
-            // Set font size dynamically proportional to the widget size
             let font_size = size * 0.35;
             cr.set_font_size(font_size);
 
             let percentage_text = format!("{:.0}%", fraction * 100.0);
 
-            // Measure precise boundaries to guarantee perfect mathematical centering
             if let Ok(extents) = cr.text_extents(&percentage_text) {
-                // Calculate exact tracking position using width and heights bounding box measurements
                 let text_x = center_x - (extents.width() / 2.0) - extents.x_bearing();
                 let text_y = center_y - (extents.height() / 2.0) - extents.y_bearing();
 
                 cr.move_to(text_x, text_y);
 
-                // Inherit standard foreground text color configurations from active skin
-                let text_color = context.color();
+                // Use widget's own (non-deprecated) foreground color method
+                let text_color = widget.color();
                 cr.set_source_rgba(
                     text_color.red() as f64,
                     text_color.green() as f64,
@@ -121,7 +113,6 @@ impl Component for CircularProgress {
                     text_color.alpha() as f64,
                 );
 
-                // Render string directly via the embedded standard Cairo API layout
                 let _ = cr.show_text(&percentage_text);
             }
         });

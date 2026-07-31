@@ -71,6 +71,7 @@ pub enum AppModelInput {
     SetVolume(f64),
     VolumeValue(f64),
     ShowPlayerPage(PlayerPageView),
+    PlayNext(EpisodeId),
     RequestMute,
     RequestUnmute,
     RequestVolumeValue,
@@ -292,6 +293,10 @@ impl Component for AppModel {
                     HomPageOutPut::CancleDownload(episode_id) => {
                         AppModelInput::CancleDownload(episode_id)
                     }
+                    HomPageOutPut::PlayNext(episode_id) => AppModelInput::PlayNext(episode_id),
+                    HomPageOutPut::RequestDeleteEpisode(episode_id) => {
+                        AppModelInput::RequestDeleteEpisode(episode_id)
+                    }
                 });
 
         let mut initial_cache = HashMap::new();
@@ -420,6 +425,12 @@ impl Component for AppModel {
                                     SearchPageOutput::CancleDownload(episode_id) => {
                                         AppModelInput::CancleDownload(episode_id)
                                     }
+                                    SearchPageOutput::PlayNext(episode_id) => {
+                                        AppModelInput::PlayNext(episode_id)
+                                    }
+                                    SearchPageOutput::RequestDeleteEpisode(episode_id) => {
+                                        AppModelInput::RequestDeleteEpisode(episode_id)
+                                    }
                                 },
                             );
                             PageController::Search(page_instance)
@@ -444,6 +455,12 @@ impl Component for AppModel {
                                     HomPageOutPut::CancleDownload(episode_id) => {
                                         AppModelInput::CancleDownload(episode_id)
                                     }
+                                    HomPageOutPut::PlayNext(episode_id) => {
+                                        AppModelInput::PlayNext(episode_id)
+                                    }
+                                    HomPageOutPut::RequestDeleteEpisode(episode_id) => {
+                                        AppModelInput::RequestDeleteEpisode(episode_id)
+                                    }
                                 },
                             );
                             PageController::Home(page_instance)
@@ -467,6 +484,12 @@ impl Component for AppModel {
                                     }
                                     ShowsPageOutput::CancleDownload(episode_id) => {
                                         AppModelInput::CancleDownload(episode_id)
+                                    }
+                                    ShowsPageOutput::PlayNext(episode_id) => {
+                                        AppModelInput::PlayNext(episode_id)
+                                    }
+                                    ShowsPageOutput::RequestDeleteEpisode(episode_id) => {
+                                        AppModelInput::RequestDeleteEpisode(episode_id)
                                     }
                                 },
                             );
@@ -516,6 +539,13 @@ impl Component for AppModel {
                                     }
                                     RecentlyUpdatedPageOutput::CancleDownload(episode_id) => {
                                         AppModelInput::CancleDownload(episode_id)
+                                    }
+                                    RecentlyUpdatedPageOutput::PlayNext(episode_id) => {
+                                        AppModelInput::PlayNext(episode_id)
+                                    }
+
+                                    RecentlyUpdatedPageOutput::RequestDeleteEpisode(episode_id) => {
+                                        AppModelInput::RequestDeleteEpisode(episode_id)
                                     }
                                 },
                             );
@@ -660,8 +690,12 @@ impl Component for AppModel {
                     page.notify_episode_deleted(episode_id);
                 }
             }
-            AppModelInput::ShowPlayerPage(player_page_view) => {
+            AppModelInput::ShowPlayerPage(_player_page_view) => {
                 widgets.nav_view.push(self.player_page.widget());
+            }
+            AppModelInput::PlayNext(episode_id) => {
+                self.worker_controller
+                    .emit(ActionWorkerInput::PlayNext(episode_id));
             }
         }
 

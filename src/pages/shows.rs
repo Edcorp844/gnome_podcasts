@@ -39,6 +39,8 @@ pub enum ShowsPageOutput {
     NotifyError(String),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
+    PlayNext(EpisodeId),
+    RequestDeleteEpisode(EpisodeId),
 }
 
 #[derive(Debug)]
@@ -152,6 +154,12 @@ impl Component for ShowsPage {
                             ShowPageOutput::CancleDownload(episode_id) => {
                                 ShowsPageOutput::CancleDownload(episode_id)
                             }
+                            ShowPageOutput::PlayNext(episode_id) => {
+                                ShowsPageOutput::PlayNext(episode_id)
+                            }
+                            ShowPageOutput::RequestDeleteEpisode(episode_id) => {
+                                ShowsPageOutput::RequestDeleteEpisode(episode_id)
+                            }
                         });
 
                 widgets.nav_view.push(show_page.widget());
@@ -162,7 +170,11 @@ impl Component for ShowsPage {
                     page.emit(ShowPageInput::DownloadStarted(episode_id));
                 }
             }
-            ShowsPageInput::DownloadCancled(episode_id) => todo!(),
+            ShowsPageInput::DownloadCancled(episode_id) => {
+                for page in &self.open_show_pages {
+                    page.emit(ShowPageInput::DownloadCancled(episode_id));
+                }
+            }
             ShowsPageInput::DownloadProgress(episode_id, fraction) => {
                 for page in &self.open_show_pages {
                     page.emit(ShowPageInput::DownloadProgress(episode_id, fraction));

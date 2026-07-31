@@ -46,6 +46,9 @@ pub enum HomPageOutPut {
     NotifyError(String),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
+    PlayNext(EpisodeId),
+    //GotoEpisode(EpisodeId),
+    RequestDeleteEpisode(EpisodeId),
 }
 
 #[relm4::component(pub)]
@@ -221,6 +224,12 @@ impl Component for HomePage {
                         }
                         PodcastPageOutput::CancleDownload(episode_id) => {
                             HomPageOutPut::CancleDownload(episode_id)
+                        }
+                        PodcastPageOutput::PlayNext(episode_id) =>  HomPageOutPut::PlayNext(episode_id),
+                       // PodcastPageOutput::GotoEpisode(episode_id) =>  HomPageOutPut::GotoEpisode(episode_id),
+                        PodcastPageOutput::RequestDeleteEpisode(episode_id) =>  HomPageOutPut::RequestDeleteEpisode(episode_id),
+                        _=>{
+                            HomPageOutPut::NotifyError(format!(""))
                         }
                     },
                 );
