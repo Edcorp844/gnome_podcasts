@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use log::{error, info};
 use podcasts_data::{FEED_MANAGER, Source, dbqueries};
 use relm4::ComponentSender;
@@ -16,10 +14,8 @@ impl ActionWorker {
             let source =
                 dbqueries::get_source_from_uri(&feed).or_else(|_| Source::from_url(&feed))?;
             error_source = Some(source.clone());
-            let source_id = source.id();
             info!("Subscribing to {feed}");
             let _ = FEED_MANAGER.refresh(vec![source]).await;
-            let show = dbqueries::get_podcast_from_source_id(source_id)?;
             if let Err(e) = podcasts_data::sync::Show::store_by_uri(
                 feed.to_string(),
                 podcasts_data::sync::ShowAction::Added,

@@ -16,7 +16,7 @@ use crate::{
             EpisodePlayingState, PlayButton, PlayButtonInitData, PlayButtonInput, PlayButtonOutput,
         },
     },
-    pages::all_episodes::{AllEpisodesPage, AllEpisodesPageinput},
+    pages::all_episodes::{AllEpisodesPage, AllEpisodesPageInput, AllEpisodesPageOutput},
     util::{
         cover_image::{ImageSize, fetch_cached_image},
         episode_description_parser,
@@ -61,6 +61,8 @@ pub enum ShowPageOutput {
     CancleDownload(EpisodeId),
     PlayNext(EpisodeId),
     RequestDeleteEpisode(EpisodeId),
+    StartLoading,
+    StopLoading,
 }
 
 #[derive(Debug)]
@@ -383,7 +385,27 @@ impl Component for ShowPage {
                 PlayButtonOutput::Clicked => ShowPageInput::TogglePlayLatest,
             });
 
-        let all_episodes_page = AllEpisodesPage::builder().launch(()).detach();
+        let all_episodes_page = AllEpisodesPage::builder().launch(()).forward(
+            sender.output_sender(),
+            |msg| match msg {
+                AllEpisodesPageOutput::TogglePlay(episode_id) => {
+                    ShowPageOutput::TogglePlay(episode_id)
+                }
+                AllEpisodesPageOutput::RequestDownload(episode_id) => {
+                    ShowPageOutput::RequestDownload(episode_id)
+                }
+                AllEpisodesPageOutput::CancleDownload(episode_id) => {
+                    ShowPageOutput::CancleDownload(episode_id)
+                }
+                AllEpisodesPageOutput::PlayNext(episode_id) => ShowPageOutput::PlayNext(episode_id),
+                AllEpisodesPageOutput::RequestDeleteEpisode(episode_id) => {
+                    ShowPageOutput::RequestDeleteEpisode(episode_id)
+                }
+                AllEpisodesPageOutput::NotifyError(error) => ShowPageOutput::NotifyError(error),
+                AllEpisodesPageOutput::StartLoading => ShowPageOutput::StartLoading,
+                AllEpisodesPageOutput::StopLoading => ShowPageOutput::StopLoading,
+            },
+        );
 
         let model = Self {
             episodes: FactoryVecDeque::builder().launch(episodes_parent).forward(
@@ -461,7 +483,7 @@ impl Component for ShowPage {
                                 println!("Episodes Loaded: {:?}", episodes.len());
 
                                 self.all_episodes_page
-                                    .emit(AllEpisodesPageinput::SetEpisodes(episodes.clone()));
+                                    .emit(AllEpisodesPageInput::SetEpisodes(episodes.clone()));
 
                                 if let Some(episode) = episodes.first() {
                                     self.latest_episode = Some(episode.clone().id());

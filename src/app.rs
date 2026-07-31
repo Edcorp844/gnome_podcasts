@@ -491,6 +491,8 @@ impl Component for AppModel {
                                     ShowsPageOutput::RequestDeleteEpisode(episode_id) => {
                                         AppModelInput::RequestDeleteEpisode(episode_id)
                                     }
+                                    ShowsPageOutput::StartLoading => AppModelInput::StartLoading,
+                                    ShowsPageOutput::StopLoading => AppModelInput::StopLoading,
                                 },
                             );
                             PageController::Shows(page_instance)

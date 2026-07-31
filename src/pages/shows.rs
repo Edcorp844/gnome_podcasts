@@ -41,6 +41,8 @@ pub enum ShowsPageOutput {
     CancleDownload(EpisodeId),
     PlayNext(EpisodeId),
     RequestDeleteEpisode(EpisodeId),
+    StartLoading,
+    StopLoading,
 }
 
 #[derive(Debug)]
@@ -160,6 +162,8 @@ impl Component for ShowsPage {
                             ShowPageOutput::RequestDeleteEpisode(episode_id) => {
                                 ShowsPageOutput::RequestDeleteEpisode(episode_id)
                             }
+                            ShowPageOutput::StartLoading => ShowsPageOutput::StartLoading,
+                            ShowPageOutput::StopLoading => ShowsPageOutput::StopLoading,
                         });
 
                 widgets.nav_view.push(show_page.widget());

@@ -44,9 +44,11 @@ pub enum EpisodeListItemInput {
     DownloadCancled,
     RequestDownload,
     DownloadFinished,
+    RequestDelete,
     ChangePlayBackState(PlayState),
     ChangeEpisodeTo(EpisodeId),
     EpisodeDeleted,
+    ConfirmDelete,
 }
 
 #[derive(Debug)]
@@ -170,10 +172,9 @@ impl FactoryComponent for EpisodeListItem {
         });
 
         let sender_clone = sender.clone();
-        let id = self.episode.id();
         let delete_download_action = gio::SimpleAction::new("delete-download", None);
         delete_download_action.connect_activate(move |_, _| {
-            let _ = sender_clone.output(EpisodeListItemOutput::RequestDeleteEpisode(id));
+            sender_clone.input(EpisodeListItemInput::RequestDelete);
         });
 
         action_group.add_action(&play_next_action);
@@ -298,6 +299,38 @@ impl FactoryComponent for EpisodeListItem {
                     }
                 }
             }
+            EpisodeListItemInput::RequestDelete => {
+                let root_window = relm4::main_adw_application()
+                    .active_window()
+                    .and_downcast::<gtk::Window>();
+
+                let dialog = adw::AlertDialog::builder()
+                    .heading("Delete Downloaded Episode?")
+                    .body("This will remove the downloaded file from your device.")
+                    .default_response("cancel")
+                    .build();
+
+                dialog.add_response("cancel", "Cancel");
+                dialog.add_response("delete", "Delete");
+                dialog.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
+
+                let sender_clone = sender.clone();
+                dialog.choose(
+                    root_window.as_ref(),
+                    None::<&gtk::gio::Cancellable>,
+                    move |response| {
+                        if response == "delete" {
+                            sender_clone.input(EpisodeListItemInput::ConfirmDelete);
+                        }
+                    },
+                );
+            }
+            EpisodeListItemInput::ConfirmDelete => {
+                let _ = sender.output(EpisodeListItemOutput::RequestDeleteEpisode(
+                    self.episode.id(),
+                ));
+            }
+
             EpisodeListItemInput::EpisodeDeleted => {
                 self.downloaded = false;
             }
