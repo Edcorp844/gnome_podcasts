@@ -506,7 +506,7 @@ impl FactoryComponent for EpisodeListItem {
             gtk::Separator {
                 set_hexpand: true,
                 add_css_class: "spacer",
-                set_halign: gtk::Align::Start,
+                set_halign: gtk::Align::Fill,
             },
 
             gtk::Box {
@@ -516,6 +516,7 @@ impl FactoryComponent for EpisodeListItem {
 
                     gtk::MenuButton {
                         set_icon_name: "view-more-symbolic",
+                        set_tooltip_text: Some(&gettext("Episode Options")),
                         set_css_classes: &vec!["circular"],
                         set_halign: gtk::Align::Center,
                         set_valign: gtk::Align::Center,

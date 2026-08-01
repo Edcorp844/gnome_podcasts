@@ -34,6 +34,9 @@ pub enum ActionWorkerInput {
     DurationChanged(u64),
     PositionChanged(u64),
     SetVolume(f64),
+    SetPlayNext(EpisodeId),
+    SetPlayNow(EpisodeId),
+    RemoveFromPlayList(EpisodeId),
     GetVolume,
     RequestMute,
     RequestUnmute,
@@ -441,6 +444,62 @@ impl Worker for ActionWorker {
                 } else {
                     sender.input(ActionWorkerInput::Execute(Action::TogglePlay(episode_id)));
                 }
+            }
+            ActionWorkerInput::SetPlayNext(episode_id) => {
+                let (ids, current) = self.play_list.play_list();
+                let mut ids = ids.clone();
+
+                let Some(current) = current else {
+                    sender.input(ActionWorkerInput::PlayNext(episode_id));
+                    return;
+                };
+
+                let mut current_index = current;
+
+                if let Some(existing_pos) = ids.iter().position(|x| *x == episode_id) {
+                    ids.remove(existing_pos);
+
+                    // Adjust `current_index` if the removed item was before it.
+                    if existing_pos < current_index {
+                        current_index -= 1;
+                    }
+                    // If existing_pos == current_index, current_index still correctly
+                    // points at whatever slid into that slot (the episode right after
+                    // the one that was removed), which is fine since we're re-deriving
+                    // the starting id from ids[current_index] below anyway.
+                }
+
+                let insert_pos = (current_index + 1).min(ids.len());
+                ids.insert(insert_pos, episode_id);
+
+                // set_sequence needs the *id* of the current episode, not its index,
+                // since ids may have shifted around it.
+                if let Some(current_id) = ids.get(current_index).cloned() {
+                    self.play_list.set_sequence(ids.clone(), &current_id);
+                    let _ =
+                        sender.output(ActionWorkerOutput::UpdatePlaylist(ids, Some(current_index)));
+                }
+            }
+            ActionWorkerInput::SetPlayNow(episode_id) => {
+                let (ids, _current) = self.play_list.play_list();
+                let mut ids = ids.clone();
+
+                if !ids.contains(&episode_id) {
+                    ids.push(episode_id);
+                }
+
+                self.play_list.set_sequence(ids.clone(), &episode_id);
+
+                let new_index = ids.iter().position(|x| *x == episode_id);
+                let _ = sender.output(ActionWorkerOutput::UpdatePlaylist(ids, new_index));
+
+                sender.input(ActionWorkerInput::Execute(Action::TogglePlay(episode_id)));
+            }
+            ActionWorkerInput::RemoveFromPlayList(episode_id) => {
+                self.play_list.remove(&episode_id);
+
+                let (ids, current) = self.play_list.play_list();
+                let _ = sender.output(ActionWorkerOutput::UpdatePlaylist(ids.clone(), current));
             }
         }
     }

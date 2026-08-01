@@ -5,7 +5,7 @@ use relm4::{Component, prelude::*};
 
 use crate::{
     components::{
-        play_list::{PlayListComponent, PlayListComponentInput},
+        play_list::{PlayListComponent, PlayListComponentInput, PlayListComponentOutput},
         player_controls::{PlayerControls, PlayerControlsInput, PlayerControlsOutput},
     },
     util::{
@@ -32,6 +32,9 @@ pub enum PlayerPageInput {
 
 #[derive(Debug)]
 pub enum PlayerPageOutput {
+    SetPlayNext(EpisodeId),
+    SetPlayNow(EpisodeId),
+    RemoveFromPlayList(EpisodeId),
     NotifyError(String),
     TogglePlay,
     SeekAudioPosition(f64),
@@ -59,28 +62,36 @@ impl Component for PlayerPage {
             #[wrap(Some)]
             set_child = &adw::ToolbarView {
 
-                 add_top_bar=&adw::HeaderBar {
+                add_top_bar=&adw::HeaderBar {
                     set_show_title: false,
                     add_css_class: "flat",
                     inline_css: "background: transparent; box-shadow: none;",
-                 },
+                },
 
-               #[wrap(Some)]
-                set_content=&gtk::Box {
-                    set_orientation: gtk::Orientation::Horizontal,
-                    set_hexpand: true,
-                    set_vexpand: true,
+                #[wrap(Some)]
+                set_content = &adw::Clamp {
+                    set_maximum_size: 1500,
+                    set_tightening_threshold: 1000,
 
+                    #[wrap(Some)]
+                    set_child = &gtk::Box {
+                        set_orientation: gtk::Orientation::Horizontal,
+                        set_hexpand: true,
+                        set_vexpand: true,
+                        set_halign: gtk::Align::Center,
+                        set_valign: gtk::Align::Center,
+                        set_spacing: 32,
 
+                        model.player_controls.widget() {
+                            set_hexpand: true,
+                            set_halign: gtk::Align::End,
+                        },
 
-                    model.player_controls.widget(){
-
-                    },
-
-                    model.play_list.widget(){
-
+                        model.play_list.widget() {
+                            set_hexpand: true,
+                            set_halign: gtk::Align::Start,
+                        },
                     }
-
                 }
             }
         }
@@ -102,7 +113,21 @@ impl Component for PlayerPage {
                     PlayerControlsOutput::Seekforward => PlayerPageOutput::Seekforward,
                     PlayerControlsOutput::SeekBakward => PlayerPageOutput::SeekBakward,
                 });
-        let play_list = PlayListComponent::builder().launch(()).detach();
+        let play_list = PlayListComponent::builder().launch(()).forward(
+            sender.output_sender(),
+            |msg| match msg {
+                PlayListComponentOutput::SetPlayNext(episode_id) => {
+                    PlayerPageOutput::SetPlayNext(episode_id)
+                }
+                PlayListComponentOutput::SetPlayNow(episode_id) => {
+                    PlayerPageOutput::SetPlayNow(episode_id)
+                }
+                PlayListComponentOutput::RemoveFromPlayList(episode_id) => {
+                    PlayerPageOutput::RemoveFromPlayList(episode_id)
+                }
+                PlayListComponentOutput::NotifyError(error) => PlayerPageOutput::NotifyError(error),
+            },
+        );
         let model = PlayerPage {
             player_controls,
             play_list,
@@ -178,7 +203,7 @@ impl Component for PlayerPage {
                 self.player_controls
                     .emit(PlayerControlsInput::UpdateProgress(pos, rem));
             }
-            PlayerPageInput::VolumeValue(val) => {}
+            PlayerPageInput::VolumeValue(_val) => {}
             PlayerPageInput::UpdatePlaylist(ids, pos) => self
                 .play_list
                 .emit(PlayListComponentInput::UpdatePlaylist(ids, pos)),

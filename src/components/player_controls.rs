@@ -149,6 +149,9 @@ impl Component for PlayerControls {
         adw::Clamp {
             set_maximum_size: 450,
             set_halign: gtk::Align::Center,
+            set_hexpand: true,
+            set_vexpand: true,
+            set_margin_all: 24,
 
             gtk::Box {
                 set_orientation: gtk::Orientation::Vertical,

@@ -15,12 +15,34 @@ fn main() {
     AppMenu::register();
     let app = RelmApp::new("org.flame.podcasts");
     let provider = gtk::CssProvider::new();
+    
     let css_data = "
         @keyframes shimmer-flow {
             from { background-position: 0% 0%; }
             to { background-position: 200% 10%; }
         }
+
+        @keyframes eq-bounce {
+            0%   { transform: scaleY(0.3); }
+            50%  { transform: scaleY(1.0); }
+            100% { transform: scaleY(0.3); }
+        }
+
+        .eq-bar {
+            background-color: white;
+            min-width: 4px;
+            min-height: 24px;
+            border-radius: 2px;
+            transform-origin: bottom;
+            animation: eq-bounce 0.9s ease-in-out infinite;
+        }
+
+        .eq-bar-1 { animation-delay: 0s; }
+        .eq-bar-2 { animation-delay: 0.15s; }
+        .eq-bar-3 { animation-delay: 0.3s; }
+        .eq-bar-4 { animation-delay: 0.45s; }
     ";
+
     provider.load_from_string(css_data);
     if let Some(display) = gtk::gdk::Display::default() {
         gtk::style_context_add_provider_for_display(

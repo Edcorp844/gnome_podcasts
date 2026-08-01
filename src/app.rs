@@ -73,6 +73,9 @@ pub enum AppModelInput {
     ShowPlayerPage(PlayerPageView),
     PlayNext(EpisodeId),
     UpdatePlaylist(Vec<EpisodeId>, Option<usize>),
+    SetPlayNext(EpisodeId),
+    SetPlayNow(EpisodeId),
+    RemoveFromPlayList(EpisodeId),
     RequestMute,
     RequestUnmute,
     RequestVolumeValue,
@@ -340,6 +343,11 @@ impl Component for AppModel {
                 PlayerPageOutput::SeekAudioPosition(pos) => AppModelInput::SeekAudioPosition(pos),
                 PlayerPageOutput::Seekforward => AppModelInput::Seekforward,
                 PlayerPageOutput::SeekBakward => AppModelInput::SeekBakward,
+                PlayerPageOutput::SetPlayNext(episode_id) => AppModelInput::SetPlayNext(episode_id),
+                PlayerPageOutput::SetPlayNow(episode_id) => AppModelInput::SetPlayNow(episode_id),
+                PlayerPageOutput::RemoveFromPlayList(episode_id) => {
+                    AppModelInput::RemoveFromPlayList(episode_id)
+                }
             },
         );
 
@@ -708,6 +716,18 @@ impl Component for AppModel {
             AppModelInput::UpdatePlaylist(ids, pos) => {
                 self.player_page
                     .emit(PlayerPageInput::UpdatePlaylist(ids, pos));
+            }
+            AppModelInput::SetPlayNext(episode_id) => {
+                self.worker_controller
+                    .emit(ActionWorkerInput::SetPlayNext(episode_id));
+            }
+            AppModelInput::SetPlayNow(episode_id) => {
+                self.worker_controller
+                    .emit(ActionWorkerInput::SetPlayNow(episode_id));
+            }
+            AppModelInput::RemoveFromPlayList(episode_id) => {
+                self.worker_controller
+                    .emit(ActionWorkerInput::RemoveFromPlayList(episode_id));
             }
         }
 

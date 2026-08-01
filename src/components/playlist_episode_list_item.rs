@@ -1,5 +1,7 @@
 use adw::prelude::*;
-use podcasts_data::{Episode, dbqueries};
+use gettextrs::gettext;
+use gtk::gio;
+use podcasts_data::{Episode, EpisodeId, dbqueries};
 use relm4::factory::FactoryComponent;
 use relm4::{FactorySender, RelmWidgetExt};
 
@@ -10,6 +12,7 @@ use crate::util::episode_description_parser;
 pub struct PlayListEpisodeListItem {
     episode: Episode,
     texture: Option<adw::gdk::Texture>,
+    is_playing: bool,
 }
 
 #[derive(Debug)]
@@ -19,6 +22,9 @@ pub enum PlayListEpisodeListItemInput {
 
 #[derive(Debug)]
 pub enum PlayListEpisodeListItemOutput {
+    SetPlayNext(EpisodeId),
+    SetPlayNow(EpisodeId),
+    RemoveFromPlayList(EpisodeId),
     NotifyError(String),
 }
 
@@ -29,11 +35,11 @@ pub enum PlayListEpisodeListItemCmdInput {
 
 #[relm4::factory(pub)]
 impl FactoryComponent for PlayListEpisodeListItem {
-    type Init = Episode;
+    type Init = (Episode, bool);
     type Input = PlayListEpisodeListItemInput;
     type Output = PlayListEpisodeListItemOutput;
     type CommandOutput = PlayListEpisodeListItemCmdInput;
-    type ParentWidget = gtk::Box;
+    type ParentWidget = gtk::ListBox;
 
     view! {
          gtk::Box {
@@ -43,12 +49,12 @@ impl FactoryComponent for PlayListEpisodeListItem {
 
            gtk::Box {
                 set_orientation: gtk::Orientation::Horizontal,
-                set_halign: gtk::Align::Start, // Locks the content layout to the left
+                set_halign: gtk::Align::Start,
                 set_spacing: 16,
 
                 gtk::Overlay {
-                    set_height_request: 80,
-                    set_width_request: 80,
+                    set_height_request: 54,
+                    set_width_request: 54,
                     set_halign: gtk::Align::Start,
                     set_valign: gtk::Align::Start,
 
@@ -60,7 +66,7 @@ impl FactoryComponent for PlayListEpisodeListItem {
                         add_css_class: "frame",
                         set_halign: gtk::Align::Fill,
                         set_valign: gtk::Align::Fill,
-                        inline_css: "background-color: mix(var(--window-bg-color), var(--card-fg-color), 0.1); border-radius: 16px; box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32); ",
+                        inline_css: "background-color: mix(var(--window-bg-color), var(--card-fg-color), 0.1); border-radius: 8px; box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32); ",
 
                         gtk::Label {
                             #[watch]
@@ -85,22 +91,48 @@ impl FactoryComponent for PlayListEpisodeListItem {
                         set_valign: gtk::Align::Fill,
                         set_content_fit: gtk::ContentFit::Cover,
                         set_can_shrink: true,
-                        inline_css: "border-radius: 16px;",
-                    }
+                        inline_css: "border-radius: 8px;",
+                    },
+
+                    add_overlay = &gtk::Box {
+                        set_hexpand: true,
+                        set_vexpand: true,
+                        set_halign: gtk::Align::Fill,
+                        set_valign: gtk::Align::Fill,
+                        #[watch]
+                        set_visible: self.is_playing,
+                        add_css_class: "eq-bars",
+                        inline_css: "background-color: alpha(black, 0.25); border-radius: 8px; padding: 6px;",
+
+                        gtk::Box {
+                            set_orientation: gtk::Orientation::Horizontal,
+                            set_halign: gtk::Align::Center,
+                            set_valign: gtk::Align::Center,
+                            set_spacing: 3,
+
+                            gtk::Box { add_css_class: "eq-bar", add_css_class: "eq-bar-1" },
+                            gtk::Box { add_css_class: "eq-bar", add_css_class: "eq-bar-2" },
+                            gtk::Box { add_css_class: "eq-bar", add_css_class: "eq-bar-3" },
+                            gtk::Box { add_css_class: "eq-bar", add_css_class: "eq-bar-4" },
+                        }
+                    },
                 },
 
                 gtk::Box {
                     set_orientation: gtk::Orientation::Vertical,
-                    set_spacing: 8,
+                    set_spacing: 4,
                     set_halign: gtk::Align::Start,
                     set_valign: gtk::Align::Start,
+                    set_hexpand: true,
+                    set_width_request: 400,
 
                     gtk::Label {
                         set_label: self.episode.title(),
-                        //add_css_class: "title-4",
                         set_halign: gtk::Align::Start,
                         set_xalign: 0.0,
-                        set_wrap: false
+                        set_wrap: true,
+                        set_lines: 1,
+                        set_ellipsize: gtk::pango::EllipsizeMode::End,
                     },
 
                     gtk::Label {
@@ -124,7 +156,7 @@ impl FactoryComponent for PlayListEpisodeListItem {
                             raw_markup.replace('\n', " ").replace('\r', " ")
                         },
                         set_halign: gtk::Align::Start,
-                        set_wrap: false,
+                        set_wrap: true,
                         set_lines: 1,
                         set_xalign: 0.0,
                         set_ellipsize: gtk::pango::EllipsizeMode::End,
@@ -145,44 +177,32 @@ impl FactoryComponent for PlayListEpisodeListItem {
 
                 gtk::MenuButton {
                     set_icon_name: "view-more-symbolic",
+                    set_tooltip_text: Some(&gettext("Play List Options")),
                     set_css_classes: &vec!["circular", "flat"],
                     set_halign: gtk::Align::Center,
                     set_valign: gtk::Align::Center,
 
                     #[wrap(Some)]
-                    #[name="popover"]
-                    set_popover = &gtk::Popover {
-                        set_autohide: true,
+                        #[name = "menu_button"]
+                        set_popover = &gtk::PopoverMenu::from_model(Some(&{
+                            let menu = gtk::gio::Menu::new();
 
-                        #[wrap(Some)]
-                        set_child = &gtk::Box {
-                            set_orientation: gtk::Orientation::Vertical,
+                            let play_section = gtk::gio::Menu::new();
 
-                            gtk::Button {
-                                set_css_classes: &vec!["flat"],
-                                #[wrap(Some)]
-                                set_child = &adw::ButtonContent {
-                                    set_icon_name: "display-projector-symbolic",
-                                    set_label: "Go to show",
-                                    set_halign: gtk::Align::Start,
-                                },
-                            },
+                            let play_next_item = gtk::gio::MenuItem::new(Some(&gettext("Play Next")), Some("playlist.play-next"));
+                            let play_now_item = gtk::gio::MenuItem::new(Some(&gettext("Play Now")), Some("playlist.play-now"));
+                            play_section.append_item(&play_now_item);
+                            play_section.append_item(&play_next_item);
 
-                            gtk::Button {
-                                set_css_classes: &vec!["flat"],
-                                #[wrap(Some)]
-                                set_child = &adw::ButtonContent {
-                                    set_icon_name: "user-trash-symbolic",
-                                    set_label: "Delete Episode",
-                                    set_halign: gtk::Align::Start,
-                                },
-                                connect_clicked[sender, popover] => move |_| {
-                                    popover.popdown();
-                                    //sender.input(DownloadedEpisodeListItemInput::RequestDelete);
-                                },
-                            },
-                        },
-                    },
+                            menu.append_section(None, &play_section);
+
+                            let manage_section = gtk::gio::Menu::new();
+                            let remove_item = gtk::gio::MenuItem::new(Some(&gettext("Remove")), Some("playlist.remove"));
+                            manage_section.append_item(&remove_item);
+                            menu.append_section(None, &manage_section);
+
+                            menu
+                        })) {}
                 },
             }
         },
@@ -190,8 +210,8 @@ impl FactoryComponent for PlayListEpisodeListItem {
     }
 
     fn init_model(
-        episode: Self::Init,
-        index: &Self::Index,
+        (episode, is_playing): Self::Init,
+        _index: &Self::Index,
         sender: relm4::prelude::FactorySender<Self>,
     ) -> Self {
         match dbqueries::get_episode_from_id(episode.id()) {
@@ -214,10 +234,56 @@ impl FactoryComponent for PlayListEpisodeListItem {
         Self {
             episode,
             texture: None,
+            is_playing,
         }
     }
 
-    fn update(&mut self, message: Self::Input, sender: relm4::prelude::FactorySender<Self>) {
+    fn init_widgets(
+        &mut self,
+        _index: &Self::Index,
+        root: Self::Root,
+        _returned_widget: &<Self::ParentWidget as relm4::factory::FactoryView>::ReturnedWidget,
+        sender: FactorySender<Self>,
+    ) -> Self::Widgets {
+        let widgets = view_output!();
+
+        // --- Register per-row actions ---
+        let action_group = gio::SimpleActionGroup::new();
+
+        let sender_clone = sender.clone();
+        let id = self.episode.id();
+        let play_next_action = gio::SimpleAction::new("play-next", None);
+        play_next_action.connect_activate(move |_, _| {
+            let _ = sender_clone.output(PlayListEpisodeListItemOutput::SetPlayNext(id.clone()));
+        });
+
+        let sender_clone = sender.clone();
+        let play_now_action = gio::SimpleAction::new("play-now", None);
+        play_now_action.connect_activate(move |_, _| {
+            let _ = sender_clone.output(PlayListEpisodeListItemOutput::SetPlayNow(id.clone()));
+        });
+
+        let sender_clone = sender.clone();
+        let id = self.episode.id();
+        let remove_action = gio::SimpleAction::new("remove", None);
+        remove_action.connect_activate(move |_, _| {
+            let _ = sender_clone.output(PlayListEpisodeListItemOutput::RemoveFromPlayList(
+                id.clone(),
+            ));
+        });
+
+        action_group.add_action(&play_next_action);
+        action_group.add_action(&play_now_action);
+        action_group.add_action(&remove_action);
+
+        widgets
+            .menu_button
+            .insert_action_group("playlist", Some(&action_group));
+
+        widgets
+    }
+
+    fn update(&mut self, message: Self::Input, _sender: relm4::prelude::FactorySender<Self>) {
         match message {
             PlayListEpisodeListItemInput::ImageDownloaded(texture) => {
                 self.texture = texture;
