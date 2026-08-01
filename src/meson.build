@@ -1,7 +1,9 @@
 # 1. Populate config.rs from config.rs.in
 global_conf = configuration_data()
+
 global_conf.set_quoted('APP_ID', application_id)
 global_conf.set_quoted('VERSION', xpodcasts_version + version_suffix)
+global_conf.set_quoted('PROJECTNAME', meson.project_name())
 global_conf.set_quoted('LOCALEDIR', xpodcasts_localedir)
 global_conf.set_quoted('PKGDATADIR', xpodcasts_pkgdatadir)
 global_conf.set_quoted('GETTEXT_PACKAGE', application_id)

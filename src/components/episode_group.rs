@@ -33,7 +33,8 @@ pub enum GroupedEpisodesOutput {
     TogglePlay(EpisodeId),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
-    PlayNext(EpisodeId),
+    SetPlayNext(EpisodeId),
+    AddToPlaylist(EpisodeId),
     GotoEpisode(EpisodeId),
     RequestDeleteEpisode(EpisodeId),
     NotifyError(String),
@@ -90,8 +91,11 @@ impl Component for GroupedEpisodes {
                     EpisodeListItemOutput::CancleDownload(episode_id) => {
                         GroupedEpisodesOutput::CancleDownload(episode_id)
                     }
-                    EpisodeListItemOutput::PlayNext(episode_id) => {
-                        GroupedEpisodesOutput::PlayNext(episode_id)
+                    EpisodeListItemOutput::SetPlayNext(episode_id) => {
+                        GroupedEpisodesOutput::SetPlayNext(episode_id)
+                    }
+                    EpisodeListItemOutput::AddToPlaylist(episode_id) => {
+                        GroupedEpisodesOutput::AddToPlaylist(episode_id)
                     }
                     EpisodeListItemOutput::GotoEpisode(episode_id) => {
                         GroupedEpisodesOutput::GotoEpisode(episode_id)

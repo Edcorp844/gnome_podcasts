@@ -61,7 +61,8 @@ pub enum PodcastPageOutput {
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
     Subscribe(String),
-    PlayNext(EpisodeId),
+    SetPlayNext(EpisodeId),
+    AddToPlaylist(EpisodeId),
     GotoEpisode(EpisodeId),
     RequestDeleteEpisode(EpisodeId),
 }
@@ -111,8 +112,11 @@ impl Component for PodcastPage {
                     EpisodeListItemOutput::GotoEpisode(episode_id) => {
                         PodcastPageOutput::GotoEpisode(episode_id)
                     }
-                    EpisodeListItemOutput::PlayNext(episode_id) => {
-                        PodcastPageOutput::PlayNext(episode_id)
+                    EpisodeListItemOutput::SetPlayNext(episode_id) => {
+                        PodcastPageOutput::SetPlayNext(episode_id)
+                    }
+                    EpisodeListItemOutput::AddToPlaylist(episode_id) => {
+                        PodcastPageOutput::AddToPlaylist(episode_id)
                     }
                     EpisodeListItemOutput::RequestDeleteEpisode(episode_id) => {
                         PodcastPageOutput::RequestDeleteEpisode(episode_id)

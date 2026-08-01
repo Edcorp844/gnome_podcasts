@@ -39,7 +39,8 @@ pub enum ShowsPageOutput {
     NotifyError(String),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
-    PlayNext(EpisodeId),
+    SetPlayNext(EpisodeId),
+    AddToPlaylist(EpisodeId),
     RequestDeleteEpisode(EpisodeId),
     StartLoading,
     StopLoading,
@@ -156,8 +157,11 @@ impl Component for ShowsPage {
                             ShowPageOutput::CancleDownload(episode_id) => {
                                 ShowsPageOutput::CancleDownload(episode_id)
                             }
-                            ShowPageOutput::PlayNext(episode_id) => {
-                                ShowsPageOutput::PlayNext(episode_id)
+                            ShowPageOutput::SetPlayNext(episode_id) => {
+                                ShowsPageOutput::SetPlayNext(episode_id)
+                            }
+                             ShowPageOutput::AddToPlaylist(episode_id) => {
+                                ShowsPageOutput::AddToPlaylist(episode_id)
                             }
                             ShowPageOutput::RequestDeleteEpisode(episode_id) => {
                                 ShowsPageOutput::RequestDeleteEpisode(episode_id)

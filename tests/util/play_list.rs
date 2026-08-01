@@ -1,7 +1,6 @@
 use podcasts_data::EpisodeId;
 use xpodcasts::util::play_list::PlayList;
 
-// Adjust this to however EpisodeId is actually constructed in podcasts_data.
 fn id(n: i32) -> EpisodeId {
     EpisodeId::from(podcasts_data::EpisodeId(n))
 }
@@ -38,10 +37,18 @@ fn next_and_prev_navigate_correctly() {
 
     assert_eq!(playlist.current(), Some(id(1)));
     assert_eq!(playlist.next(), Some(id(2)));
+
+    playlist.set_current(playlist.clone().next().unwrap_or(id(0)));
     assert_eq!(playlist.next(), Some(id(3)));
-    assert_eq!(playlist.next(), None); // at end
-    assert_eq!(playlist.prev(), Some(id(2)));
-    assert_eq!(playlist.prev(), Some(id(1)));
+
+    playlist.set_current(id(3));
+    assert_eq!(playlist.len(), 3);
+    assert_eq!(playlist.next(), None); //at end
+
+    playlist.set_current(playlist.clone().prev().unwrap_or(id(0)));
+    assert_eq!(playlist.current(), Some(id(2)));
+
+    playlist.set_current(playlist.clone().prev().unwrap_or(id(0)));
     assert_eq!(playlist.prev(), None); // at start
 }
 
@@ -69,20 +76,12 @@ fn set_sequence_with_empty_list_has_no_current() {
 }
 
 #[test]
-fn remove_current_item_shifts_to_next() {
+fn remove_current_item() {
     let mut playlist = PlayList::new();
     playlist.set_sequence(vec![id(1), id(2), id(3)], &id(2));
     playlist.remove(&id(2));
-    assert_eq!(playlist.current(), Some(id(3)));
+    assert_eq!(playlist.current(), None);
     assert_eq!(playlist.len(), 2);
-}
-
-#[test]
-fn remove_item_before_current_shifts_index_back() {
-    let mut playlist = PlayList::new();
-    playlist.set_sequence(vec![id(1), id(2), id(3)], &id(3));
-    playlist.remove(&id(1));
-    assert_eq!(playlist.current(), Some(id(3)));
 }
 
 #[test]

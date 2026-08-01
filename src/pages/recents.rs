@@ -94,7 +94,8 @@ pub enum RecentlyUpdatedPageOutput {
     TogglePlay(EpisodeId),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
-    PlayNext(EpisodeId),
+    SetPlayNext(EpisodeId),
+    AddToPlaylist(EpisodeId),
     RequestDeleteEpisode(EpisodeId),
     NotifyError(String),
     StartLoading,
@@ -244,8 +245,11 @@ impl Component for RecentlyUpdatedPage {
                             GroupedEpisodesOutput::CancleDownload(episode_id) => {
                                 RecentlyUpdatedPageOutput::CancleDownload(episode_id)
                             }
-                            GroupedEpisodesOutput::PlayNext(episode_id) => {
-                                RecentlyUpdatedPageOutput::PlayNext(episode_id)
+                            GroupedEpisodesOutput::SetPlayNext(episode_id) => {
+                                RecentlyUpdatedPageOutput::SetPlayNext(episode_id)
+                            }
+                            GroupedEpisodesOutput::AddToPlaylist(episode_id) => {
+                                RecentlyUpdatedPageOutput::AddToPlaylist(episode_id)
                             }
                             GroupedEpisodesOutput::GotoEpisode(_episode_id) => todo!(),
                             GroupedEpisodesOutput::RequestDeleteEpisode(episode_id) => {

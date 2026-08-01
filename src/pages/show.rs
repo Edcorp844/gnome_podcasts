@@ -59,7 +59,8 @@ pub enum ShowPageOutput {
     NotifyError(String),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
-    PlayNext(EpisodeId),
+    SetPlayNext(EpisodeId),
+    AddToPlaylist(EpisodeId),
     RequestDeleteEpisode(EpisodeId),
     StartLoading,
     StopLoading,
@@ -388,7 +389,8 @@ impl Component for ShowPage {
                 AllEpisodesPageOutput::CancleDownload(episode_id) => {
                     ShowPageOutput::CancleDownload(episode_id)
                 }
-                AllEpisodesPageOutput::PlayNext(episode_id) => ShowPageOutput::PlayNext(episode_id),
+                AllEpisodesPageOutput::SetPlayNext(episode_id) => ShowPageOutput::SetPlayNext(episode_id),
+                 AllEpisodesPageOutput::AddToPlaylist(episode_id) => ShowPageOutput::AddToPlaylist(episode_id),
                 AllEpisodesPageOutput::RequestDeleteEpisode(episode_id) => {
                     ShowPageOutput::RequestDeleteEpisode(episode_id)
                 }
@@ -410,8 +412,11 @@ impl Component for ShowPage {
                         ShowPageOutput::CancleDownload(episode_id)
                     }
                     EpisodeListItemOutput::NotifyError(error) => ShowPageOutput::NotifyError(error),
-                    EpisodeListItemOutput::PlayNext(episode_id) => {
-                        ShowPageOutput::PlayNext(episode_id)
+                    EpisodeListItemOutput::SetPlayNext(episode_id) => {
+                        ShowPageOutput::SetPlayNext(episode_id)
+                    }
+                    EpisodeListItemOutput::AddToPlaylist(episode_id) => {
+                        ShowPageOutput::AddToPlaylist(episode_id)
                     }
                     // EpisodeListItemOutput::GotoEpisode(episode_id) => todo!(),
                     EpisodeListItemOutput::RequestDeleteEpisode(episode_id) => {

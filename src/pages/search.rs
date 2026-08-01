@@ -67,7 +67,8 @@ pub enum SearchPageOutput {
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
     Subscribe(String),
-    PlayNext(EpisodeId),
+    SetPlayNext(EpisodeId),
+    AddToPlaylist(EpisodeId),
     RequestDeleteEpisode(EpisodeId),
 }
 
@@ -167,9 +168,16 @@ impl Component for SearchPage {
                         PodcastPageOutput::CancleDownload(episode_id) => {
                             SearchPageOutput::CancleDownload(episode_id)
                         }
-                        PodcastPageOutput::PlayNext(episode_id) =>  SearchPageOutput::PlayNext(episode_id),
+                        PodcastPageOutput::SetPlayNext(episode_id) => {
+                            SearchPageOutput::SetPlayNext(episode_id)
+                        }
+                        PodcastPageOutput::AddToPlaylist(episode_id) => {
+                            SearchPageOutput::AddToPlaylist(episode_id)
+                        }
                         PodcastPageOutput::GotoEpisode(episode_id) => todo!(),
-                        PodcastPageOutput::RequestDeleteEpisode(episode_id) =>  SearchPageOutput::RequestDeleteEpisode(episode_id),
+                        PodcastPageOutput::RequestDeleteEpisode(episode_id) => {
+                            SearchPageOutput::RequestDeleteEpisode(episode_id)
+                        }
                     },
                 );
                 let controller = PageController::Podcast(podcast_page);

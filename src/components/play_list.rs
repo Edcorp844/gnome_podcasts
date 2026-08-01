@@ -83,7 +83,7 @@ impl Component for PlayListComponent {
                         PlayListComponentOutput::SetPlayNext(episode_id)
                     }
                     PlayListEpisodeListItemOutput::SetPlayNow(episode_id) => {
-                        PlayListComponentOutput::SetPlayNext(episode_id)
+                        PlayListComponentOutput::SetPlayNow(episode_id)
                     }
                     PlayListEpisodeListItemOutput::RemoveFromPlayList(episode_id) => {
                         PlayListComponentOutput::RemoveFromPlayList(episode_id)

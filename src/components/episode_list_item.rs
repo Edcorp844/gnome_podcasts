@@ -56,7 +56,8 @@ pub enum EpisodeListItemOutput {
     TogglePlay(EpisodeId),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
-    PlayNext(EpisodeId),
+    SetPlayNext(EpisodeId),
+    AddToPlaylist(EpisodeId),
     GotoEpisode(EpisodeId),
     RequestDeleteEpisode(EpisodeId),
     NotifyError(String),
@@ -148,7 +149,14 @@ impl FactoryComponent for EpisodeListItem {
         let id = self.episode.id();
         let play_next_action = gio::SimpleAction::new("play-next", None);
         play_next_action.connect_activate(move |_, _| {
-            let _ = sender_clone.output(EpisodeListItemOutput::PlayNext(id.clone()));
+            let _ = sender_clone.output(EpisodeListItemOutput::SetPlayNext(id.clone()));
+        });
+
+        let sender_clone = sender.clone();
+        let id = self.episode.id();
+        let add_to_playlist_action = gio::SimpleAction::new("add-to-playlist", None);
+        add_to_playlist_action.connect_activate(move |_, _| {
+            let _ = sender_clone.output(EpisodeListItemOutput::AddToPlaylist(id.clone()));
         });
 
         let sender_clone = sender.clone();
@@ -178,6 +186,7 @@ impl FactoryComponent for EpisodeListItem {
         });
 
         action_group.add_action(&play_next_action);
+        action_group.add_action(&add_to_playlist_action);
         action_group.add_action(&mark_played_action);
         action_group.add_action(&goto_episode_action);
         action_group.add_action(&download_action);
@@ -532,20 +541,23 @@ impl FactoryComponent for EpisodeListItem {
                             play_section.append_item(&mark_played_item);
                             menu.append_section(None, &play_section);
 
+
+                            let playlist_section = gtk::gio::Menu::new();
+                            let add_to_playlist_item = gtk::gio::MenuItem::new(Some(&gettext("Add to Playlist")), Some("episode.add-to-playlist"));
+                            playlist_section.append_item(&add_to_playlist_item);
+                            menu.append_section(None, &playlist_section);
+
                             let go_to_section = gtk::gio::Menu::new();
                             let goto_episode_item = gtk::gio::MenuItem::new(Some(&gettext("Go to Episode")), Some("episode.goto-episode"));
                             go_to_section.append_item(&goto_episode_item);
                             menu.append_section(None, &go_to_section);
 
-                           let download_section = gtk::gio::Menu::new();
+                            let download_section = gtk::gio::Menu::new();
                             let download_episode_item = if self.downloaded {
-                                let item = gtk::gio::MenuItem::new(Some(&gettext("Delete Download")), Some("episode.delete-download"));
-                                item.set_icon(&gtk::gio::ThemedIcon::new("user-trash-symbolic"));
-                                item
+                                gtk::gio::MenuItem::new(Some(&gettext("Delete Download")), Some("episode.delete-download"))
+
                             } else {
-                                let item = gtk::gio::MenuItem::new(Some(&gettext("Download")), Some("episode.download"));
-                                item.set_icon(&gtk::gio::ThemedIcon::new("folder-download-symbolic"));
-                                item
+                                gtk::gio::MenuItem::new(Some(&gettext("Download")), Some("episode.download"))
                             };
                             download_section.append_item(&download_episode_item);
                             menu.append_section(None, &download_section);

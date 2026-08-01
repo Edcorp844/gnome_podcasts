@@ -33,7 +33,8 @@ pub enum AllEpisodesPageOutput {
     TogglePlay(EpisodeId),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
-    PlayNext(EpisodeId),
+    SetPlayNext(EpisodeId),
+    AddToPlaylist(EpisodeId),
     RequestDeleteEpisode(EpisodeId),
     NotifyError(String),
     StartLoading,
@@ -124,8 +125,11 @@ impl Component for AllEpisodesPage {
                             GroupedEpisodesOutput::CancleDownload(episode_id) => {
                                 AllEpisodesPageOutput::CancleDownload(episode_id)
                             }
-                            GroupedEpisodesOutput::PlayNext(episode_id) => {
-                                AllEpisodesPageOutput::PlayNext(episode_id)
+                            GroupedEpisodesOutput::SetPlayNext(episode_id) => {
+                                AllEpisodesPageOutput::SetPlayNext(episode_id)
+                            }
+                            GroupedEpisodesOutput::AddToPlaylist(episode_id) => {
+                                AllEpisodesPageOutput::AddToPlaylist(episode_id)
                             }
                             GroupedEpisodesOutput::GotoEpisode(_episode_id) => todo!(),
                             GroupedEpisodesOutput::RequestDeleteEpisode(episode_id) => {

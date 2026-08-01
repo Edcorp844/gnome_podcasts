@@ -46,7 +46,8 @@ pub enum HomPageOutPut {
     NotifyError(String),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
-    PlayNext(EpisodeId),
+    SetPlayNext(EpisodeId),
+    AddToPlaylist(EpisodeId),
     //GotoEpisode(EpisodeId),
     RequestDeleteEpisode(EpisodeId),
 }
@@ -225,8 +226,8 @@ impl Component for HomePage {
                         PodcastPageOutput::CancleDownload(episode_id) => {
                             HomPageOutPut::CancleDownload(episode_id)
                         }
-                        PodcastPageOutput::PlayNext(episode_id) =>  HomPageOutPut::PlayNext(episode_id),
-                       // PodcastPageOutput::GotoEpisode(episode_id) =>  HomPageOutPut::GotoEpisode(episode_id),
+                        PodcastPageOutput::SetPlayNext(episode_id) =>  HomPageOutPut::SetPlayNext(episode_id),
+                       PodcastPageOutput::AddToPlaylist(episode_id) =>  HomPageOutPut::AddToPlaylist(episode_id),
                         PodcastPageOutput::RequestDeleteEpisode(episode_id) =>  HomPageOutPut::RequestDeleteEpisode(episode_id),
                         _=>{
                             HomPageOutPut::NotifyError(format!(""))

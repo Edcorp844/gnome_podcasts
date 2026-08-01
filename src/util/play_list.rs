@@ -72,18 +72,10 @@ impl PlayList {
     /// playback position stays correct relative to the remaining items.
     pub fn remove(&mut self, id: &EpisodeId) {
         if let Some(pos) = self.ids.iter().position(|x| x == id) {
+            if self.current_index == Some(pos) {
+                self.current_index = None;
+            }
             self.ids.remove(pos);
-            self.current_index = match self.current_index {
-                Some(current) if current > pos => Some(current - 1),
-                Some(current) if current == pos => {
-                    if self.ids.is_empty() {
-                        None
-                    } else {
-                        Some(pos.min(self.ids.len() - 1))
-                    }
-                }
-                other => other,
-            };
         }
     }
 

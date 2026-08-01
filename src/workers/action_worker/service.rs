@@ -29,11 +29,11 @@ pub enum ActionWorkerInput {
     DownloadEpisode(EpisodeId),
     CancelDownload(EpisodeId),
     DeleteEpisode(EpisodeId),
-    PlayNext(EpisodeId),
     SeekAudioPosition(f64),
     DurationChanged(u64),
     PositionChanged(u64),
     SetVolume(f64),
+    AddToPlaylist(EpisodeId),
     SetPlayNext(EpisodeId),
     SetPlayNow(EpisodeId),
     RemoveFromPlayList(EpisodeId),
@@ -81,13 +81,13 @@ pub enum MprisCommand {
 }
 
 pub struct ActionWorker {
-    syncing: bool,
-    player: gst_play::Play,
-    _player_signals: gst_play::PlaySignalAdapter,
-    current_player_state: gst_play::PlayState,
-    play_list: PlayList,
-    current_duration_ms: u64,
-    mpris_tx: async_channel::Sender<MprisCommand>,
+    pub(crate) syncing: bool,
+    pub(crate) player: gst_play::Play,
+    pub(crate) _player_signals: gst_play::PlaySignalAdapter,
+    pub(crate) current_player_state: gst_play::PlayState,
+    pub(crate) play_list: PlayList,
+    pub(crate) current_duration_ms: u64,
+    pub(crate) mpris_tx: async_channel::Sender<MprisCommand>,
 }
 impl Worker for ActionWorker {
     type Init = ();
@@ -436,7 +436,7 @@ impl Worker for ActionWorker {
                     }
                 }
             }
-            ActionWorkerInput::PlayNext(episode_id) => {
+            ActionWorkerInput::AddToPlaylist(episode_id) => {
                 if self.play_list.current().is_some() {
                     self.play_list.push_back(episode_id);
                     let (ids, current_pos) = self.play_list.play_list();
@@ -450,7 +450,7 @@ impl Worker for ActionWorker {
                 let mut ids = ids.clone();
 
                 let Some(current) = current else {
-                    sender.input(ActionWorkerInput::PlayNext(episode_id));
+                    sender.input(ActionWorkerInput::AddToPlaylist(episode_id));
                     return;
                 };
 
@@ -481,25 +481,20 @@ impl Worker for ActionWorker {
                 }
             }
             ActionWorkerInput::SetPlayNow(episode_id) => {
-                let (ids, _current) = self.play_list.play_list();
-                let mut ids = ids.clone();
-
-                if !ids.contains(&episode_id) {
-                    ids.push(episode_id);
-                }
-
-                self.play_list.set_sequence(ids.clone(), &episode_id);
-
-                let new_index = ids.iter().position(|x| *x == episode_id);
-                let _ = sender.output(ActionWorkerOutput::UpdatePlaylist(ids, new_index));
-
                 sender.input(ActionWorkerInput::Execute(Action::TogglePlay(episode_id)));
             }
             ActionWorkerInput::RemoveFromPlayList(episode_id) => {
+                if let Some(current) = self.play_list.current() {
+                    if current == episode_id {
+                        if let Some(next_id) = self.play_list.next() {
+                            sender.input(ActionWorkerInput::Execute(Action::TogglePlay(next_id)));
+                        } else {
+                            //.input(ActionWorkerInput::TogglePlayBack);
+                            print!("current {:?}: now {:?}", current, episode_id)
+                        }
+                    }
+                }
                 self.play_list.remove(&episode_id);
-
-                let (ids, current) = self.play_list.play_list();
-                let _ = sender.output(ActionWorkerOutput::UpdatePlaylist(ids.clone(), current));
             }
         }
     }

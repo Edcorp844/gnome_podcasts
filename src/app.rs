@@ -1,4 +1,3 @@
-use crate::action::Action;
 use crate::app_navigation_ext::NavigationPage;
 use crate::app_navigation_ext::PageController;
 use crate::components::main_menu_button::MainMenuButton;
@@ -25,6 +24,12 @@ use crate::pages::shows::ShowsPageOutput;
 use crate::workers::action_worker::service::ActionWorker;
 use crate::workers::action_worker::service::ActionWorkerInput;
 use crate::workers::action_worker::service::ActionWorkerOutput;
+use crate::workers::database_worker::worker::DatabaseWoker;
+use crate::workers::database_worker::worker::DatabaseWokerInput;
+use crate::workers::database_worker::worker::DatabaseWokerOutput;
+use crate::workers::gstremer_worker::worker::GStreamerWorker;
+use crate::workers::gstremer_worker::worker::GStreamerWorkerInput;
+use crate::workers::gstremer_worker::worker::GStreamerWorkerOutput;
 use gst_play::PlayState;
 use podcasts_data::EpisodeId;
 use relm4::ComponentParts;
@@ -40,6 +45,8 @@ pub struct AppModel {
     current_page_key: String,
     miniplayer: Controller<MiniPlayerModel>,
     worker_controller: Controller<ActionWorker>,
+    player: Controller<GStreamerWorker>,
+    database: Controller<DatabaseWoker>,
     is_loading: bool,
 }
 
@@ -71,7 +78,7 @@ pub enum AppModelInput {
     SetVolume(f64),
     VolumeValue(f64),
     ShowPlayerPage(PlayerPageView),
-    PlayNext(EpisodeId),
+    AddToPlaylist(EpisodeId),
     UpdatePlaylist(Vec<EpisodeId>, Option<usize>),
     SetPlayNext(EpisodeId),
     SetPlayNow(EpisodeId),
@@ -302,7 +309,13 @@ impl Component for AppModel {
                     HomPageOutPut::CancleDownload(episode_id) => {
                         AppModelInput::CancleDownload(episode_id)
                     }
-                    HomPageOutPut::PlayNext(episode_id) => AppModelInput::PlayNext(episode_id),
+
+                    HomPageOutPut::SetPlayNext(episode_id) => {
+                        AppModelInput::SetPlayNext(episode_id)
+                    }
+                    HomPageOutPut::AddToPlaylist(episode_id) => {
+                        AppModelInput::AddToPlaylist(episode_id)
+                    }
                     HomPageOutPut::RequestDeleteEpisode(episode_id) => {
                         AppModelInput::RequestDeleteEpisode(episode_id)
                     }
@@ -351,6 +364,51 @@ impl Component for AppModel {
             },
         );
 
+        let player =
+            GStreamerWorker::builder()
+                .launch(())
+                .forward(sender.input_sender(), |message| match message {
+                    GStreamerWorkerOutput::PlayBackProgress(episode_id, pos, rem) => {
+                        AppModelInput::PlayBackProgress(episode_id, pos, rem)
+                    }
+                    GStreamerWorkerOutput::NotifyError(error) => AppModelInput::NotifyError(error),
+                    GStreamerWorkerOutput::StateChanged(play_state, episode_id) => {
+                        AppModelInput::ChangePlayBackState(play_state, episode_id)
+                    }
+                    GStreamerWorkerOutput::SetCurrentEpisode(episode_id) => {
+                        AppModelInput::SetCurrentEpisode(episode_id)
+                    }
+                    GStreamerWorkerOutput::VolumeValue(vol) => AppModelInput::VolumeValue(vol),
+                    GStreamerWorkerOutput::UpdatePlaylist(episode_ids, current) => {
+                        AppModelInput::UpdatePlaylist(episode_ids, current)
+                    }
+                    GStreamerWorkerOutput::Muted => todo!(),
+                    GStreamerWorkerOutput::UnMuted => todo!(),
+                });
+
+        let database =
+            DatabaseWoker::builder()
+                .launch(())
+                .forward(sender.input_sender(), |message| match message {
+                    DatabaseWokerOutput::NotifyError(error) => AppModelInput::NotifyError(error),
+                    DatabaseWokerOutput::DownloadStarted(episode_id) => {
+                        AppModelInput::DownloadStarted(episode_id)
+                    }
+                    DatabaseWokerOutput::DownloadProgress {
+                        episode_id,
+                        fraction,
+                    } => AppModelInput::DownloadProgress(episode_id, fraction),
+                    DatabaseWokerOutput::DownloadFinished(episode_id) => {
+                        AppModelInput::DownloadFinished(episode_id)
+                    }
+                    DatabaseWokerOutput::DownloadCancelled(episode_id) => {
+                        AppModelInput::DownloadCancled(episode_id)
+                    }
+                    DatabaseWokerOutput::EpisodeDeleted(episode_id) => {
+                        AppModelInput::EpisodeDeleted(episode_id)
+                    }
+                });
+
         let model = AppModel {
             is_sidebar_visible: true,
             main_menu_button,
@@ -360,6 +418,8 @@ impl Component for AppModel {
             miniplayer,
             worker_controller,
             is_loading: false,
+            player,
+            database,
         };
 
         // Generates the correct modern auto-derived struct layout type
@@ -439,8 +499,11 @@ impl Component for AppModel {
                                     SearchPageOutput::CancleDownload(episode_id) => {
                                         AppModelInput::CancleDownload(episode_id)
                                     }
-                                    SearchPageOutput::PlayNext(episode_id) => {
-                                        AppModelInput::PlayNext(episode_id)
+                                    SearchPageOutput::SetPlayNext(episode_id) => {
+                                        AppModelInput::SetPlayNext(episode_id)
+                                    }
+                                    SearchPageOutput::AddToPlaylist(episode_id) => {
+                                        AppModelInput::AddToPlaylist(episode_id)
                                     }
                                     SearchPageOutput::RequestDeleteEpisode(episode_id) => {
                                         AppModelInput::RequestDeleteEpisode(episode_id)
@@ -469,8 +532,11 @@ impl Component for AppModel {
                                     HomPageOutPut::CancleDownload(episode_id) => {
                                         AppModelInput::CancleDownload(episode_id)
                                     }
-                                    HomPageOutPut::PlayNext(episode_id) => {
-                                        AppModelInput::PlayNext(episode_id)
+                                    HomPageOutPut::SetPlayNext(episode_id) => {
+                                        AppModelInput::SetPlayNext(episode_id)
+                                    }
+                                    HomPageOutPut::AddToPlaylist(episode_id) => {
+                                        AppModelInput::AddToPlaylist(episode_id)
                                     }
                                     HomPageOutPut::RequestDeleteEpisode(episode_id) => {
                                         AppModelInput::RequestDeleteEpisode(episode_id)
@@ -499,8 +565,11 @@ impl Component for AppModel {
                                     ShowsPageOutput::CancleDownload(episode_id) => {
                                         AppModelInput::CancleDownload(episode_id)
                                     }
-                                    ShowsPageOutput::PlayNext(episode_id) => {
-                                        AppModelInput::PlayNext(episode_id)
+                                    ShowsPageOutput::SetPlayNext(episode_id) => {
+                                        AppModelInput::SetPlayNext(episode_id)
+                                    }
+                                    ShowsPageOutput::AddToPlaylist(episode_id) => {
+                                        AppModelInput::AddToPlaylist(episode_id)
                                     }
                                     ShowsPageOutput::RequestDeleteEpisode(episode_id) => {
                                         AppModelInput::RequestDeleteEpisode(episode_id)
@@ -556,8 +625,11 @@ impl Component for AppModel {
                                     RecentlyUpdatedPageOutput::CancleDownload(episode_id) => {
                                         AppModelInput::CancleDownload(episode_id)
                                     }
-                                    RecentlyUpdatedPageOutput::PlayNext(episode_id) => {
-                                        AppModelInput::PlayNext(episode_id)
+                                    RecentlyUpdatedPageOutput::SetPlayNext(episode_id) => {
+                                        AppModelInput::SetPlayNext(episode_id)
+                                    }
+                                    RecentlyUpdatedPageOutput::AddToPlaylist(episode_id) => {
+                                        AppModelInput::AddToPlaylist(episode_id)
                                     }
 
                                     RecentlyUpdatedPageOutput::RequestDeleteEpisode(episode_id) => {
@@ -594,10 +666,9 @@ impl Component for AppModel {
                 self.worker_controller
                     .emit(ActionWorkerInput::Subscirbe(feed));
             }
-            AppModelInput::TogglePlay(id) => {
-                println!("Streaming: {:?}", id);
-                self.worker_controller
-                    .emit(ActionWorkerInput::Execute(Action::TogglePlay(id)));
+            AppModelInput::TogglePlay(episode_id) => {
+                self.player
+                    .emit(GStreamerWorkerInput::PlayEpisode(episode_id));
             }
             AppModelInput::ChangePlayBackState(state, episode_id) => {
                 self.miniplayer
@@ -619,8 +690,7 @@ impl Component for AppModel {
                 }
             }
             AppModelInput::TogglePlayBack => {
-                self.worker_controller
-                    .emit(ActionWorkerInput::TogglePlayBack);
+                self.player.emit(GStreamerWorkerInput::TogglePlayBack);
             }
             AppModelInput::RefreshShowsPage => {
                 sender.input(AppModelInput::StopLoading);
@@ -633,12 +703,12 @@ impl Component for AppModel {
 
             AppModelInput::None => {}
             AppModelInput::RequestDownload(episode_id) => {
-                self.worker_controller
-                    .emit(ActionWorkerInput::DownloadEpisode(episode_id));
+                self.database
+                    .emit(DatabaseWokerInput::DownloadEpisode(episode_id));
             }
             AppModelInput::CancleDownload(episode_id) => {
-                self.worker_controller
-                    .emit(ActionWorkerInput::CancelDownload(episode_id));
+                self.database
+                    .emit(DatabaseWokerInput::CancelDownload(episode_id));
             }
             AppModelInput::DownloadStarted(episode_id) => {
                 for (_, page) in &self.pages_cache {
@@ -669,22 +739,20 @@ impl Component for AppModel {
                 }
             }
             AppModelInput::SeekAudioPosition(fraction) => {
-                self.worker_controller
-                    .emit(ActionWorkerInput::SeekAudioPosition(fraction));
+                self.player
+                    .emit(GStreamerWorkerInput::SeekAudioPosition(fraction));
             }
             AppModelInput::SetVolume(fraction) => {
-                self.worker_controller
-                    .emit(ActionWorkerInput::SetVolume(fraction));
+                self.player.emit(GStreamerWorkerInput::SetVolume(fraction));
             }
             AppModelInput::RequestMute => {
-                self.worker_controller.emit(ActionWorkerInput::RequestMute);
+                self.player.emit(GStreamerWorkerInput::RequestMute);
             }
             AppModelInput::RequestUnmute => {
-                self.worker_controller
-                    .emit(ActionWorkerInput::RequestUnmute);
+                self.player.emit(GStreamerWorkerInput::RequestUnmute);
             }
             AppModelInput::RequestVolumeValue => {
-                self.worker_controller.emit(ActionWorkerInput::GetVolume);
+                self.player.emit(GStreamerWorkerInput::GetVolume);
             }
             AppModelInput::VolumeValue(val) => {
                 self.miniplayer.emit(MiniplayerModelInput::VolumeValue(val));
@@ -692,14 +760,14 @@ impl Component for AppModel {
                 self.player_page.emit(PlayerPageInput::VolumeValue(val));
             }
             AppModelInput::Seekforward => {
-                self.worker_controller.emit(ActionWorkerInput::SeekFoward);
+                self.player.emit(GStreamerWorkerInput::SeekFoward);
             }
             AppModelInput::SeekBakward => {
-                self.worker_controller.emit(ActionWorkerInput::SeekBackward);
+                self.player.emit(GStreamerWorkerInput::SeekBackward);
             }
             AppModelInput::RequestDeleteEpisode(episode_id) => {
-                self.worker_controller
-                    .emit(ActionWorkerInput::DeleteEpisode(episode_id));
+                self.database
+                    .emit(DatabaseWokerInput::DeleteEpisode(episode_id));
             }
             AppModelInput::EpisodeDeleted(episode_id) => {
                 for (_, page) in &self.pages_cache {
@@ -709,25 +777,25 @@ impl Component for AppModel {
             AppModelInput::ShowPlayerPage(_player_page_view) => {
                 widgets.nav_view.push(self.player_page.widget());
             }
-            AppModelInput::PlayNext(episode_id) => {
-                self.worker_controller
-                    .emit(ActionWorkerInput::PlayNext(episode_id));
+            AppModelInput::AddToPlaylist(episode_id) => {
+                self.player
+                    .emit(GStreamerWorkerInput::AddToPlaylist(episode_id));
             }
             AppModelInput::UpdatePlaylist(ids, pos) => {
                 self.player_page
                     .emit(PlayerPageInput::UpdatePlaylist(ids, pos));
             }
             AppModelInput::SetPlayNext(episode_id) => {
-                self.worker_controller
-                    .emit(ActionWorkerInput::SetPlayNext(episode_id));
+                self.player
+                    .emit(GStreamerWorkerInput::SetPlayNext(episode_id));
             }
             AppModelInput::SetPlayNow(episode_id) => {
-                self.worker_controller
-                    .emit(ActionWorkerInput::SetPlayNow(episode_id));
+                self.player
+                    .emit(GStreamerWorkerInput::SetPlayNow(episode_id));
             }
             AppModelInput::RemoveFromPlayList(episode_id) => {
-                self.worker_controller
-                    .emit(ActionWorkerInput::RemoveFromPlayList(episode_id));
+                self.player
+                    .emit(GStreamerWorkerInput::RemoveFromPlayList(episode_id));
             }
         }
 

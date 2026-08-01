@@ -189,8 +189,8 @@ impl FactoryComponent for PlayListEpisodeListItem {
 
                             let play_section = gtk::gio::Menu::new();
 
-                            let play_next_item = gtk::gio::MenuItem::new(Some(&gettext("Play Next")), Some("playlist.play-next"));
-                            let play_now_item = gtk::gio::MenuItem::new(Some(&gettext("Play Now")), Some("playlist.play-now"));
+                            let play_next_item = gtk::gio::MenuItem::new(Some(&gettext("Play Next")), if !self.is_playing{Some("playlist.play-next")} else{ None});
+                            let play_now_item = gtk::gio::MenuItem::new(Some(&gettext("Play Now")), if !self.is_playing{Some("playlist.play-now")} else{ None});
                             play_section.append_item(&play_now_item);
                             play_section.append_item(&play_next_item);
 

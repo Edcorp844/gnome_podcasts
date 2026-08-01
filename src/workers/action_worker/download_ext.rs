@@ -78,9 +78,11 @@ impl ActionWorker {
             Ok(ep) => ep,
             Err(e) => {
                 sender
-                    .output(ActionWorkerOutput::ErrorNotification(format!(
-                        "Download failed: {e}"
-                    )))
+                    .output(ActionWorkerOutput::ErrorNotification(
+		                format!(
+		                    "Download failed: {e}"
+		                ))
+                    )
                     .ok();
                 return;
             }
