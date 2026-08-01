@@ -5,10 +5,12 @@ use podcasts_data::discovery::{ALL_PLATFORM_IDS, FoundPodcast, SearchError, sear
 use podcasts_data::{EpisodeId, dbqueries};
 use relm4::adw::prelude::*;
 use relm4::prelude::*;
+use uuid::Uuid;
 
 use crate::app_navigation_ext::PageController;
 use crate::components::found_podcast_ui::{FoundCardOutput, FoundPodcastsCard};
 use crate::pages::podcast::{PodcastPage, PodcastPageOutput};
+use crate::workers::action_worker::worker::ActionResult;
 
 #[derive(Debug)]
 pub struct HomePage {
@@ -24,6 +26,7 @@ pub enum HomePageCommand {
 
 #[derive(Debug)]
 pub enum HomePageInput {
+    ActionFinished(Uuid, ActionResult),
     FetchPodcasts,
     PodcastsLoaded(Result<Vec<FoundPodcast>, SearchError>),
     Subscribe(String),
@@ -205,7 +208,10 @@ impl Component for HomePage {
                     }
                     Err(e) => {
                         println!("Error: {}", e);
-                        let _ = sender.output(HomPageOutPut::NotifyError(format!("Podcast Search Error: {}", e.to_string())));
+                        let _ = sender.output(HomPageOutPut::NotifyError(format!(
+                            "Podcast Search Error: {}",
+                            e.to_string()
+                        )));
                     }
                 }
                 self.is_loading = false;
@@ -226,12 +232,16 @@ impl Component for HomePage {
                         PodcastPageOutput::CancleDownload(episode_id) => {
                             HomPageOutPut::CancleDownload(episode_id)
                         }
-                        PodcastPageOutput::SetPlayNext(episode_id) =>  HomPageOutPut::SetPlayNext(episode_id),
-                       PodcastPageOutput::AddToPlaylist(episode_id) =>  HomPageOutPut::AddToPlaylist(episode_id),
-                        PodcastPageOutput::RequestDeleteEpisode(episode_id) =>  HomPageOutPut::RequestDeleteEpisode(episode_id),
-                        _=>{
-                            HomPageOutPut::NotifyError(format!(""))
+                        PodcastPageOutput::SetPlayNext(episode_id) => {
+                            HomPageOutPut::SetPlayNext(episode_id)
                         }
+                        PodcastPageOutput::AddToPlaylist(episode_id) => {
+                            HomPageOutPut::AddToPlaylist(episode_id)
+                        }
+                        PodcastPageOutput::RequestDeleteEpisode(episode_id) => {
+                            HomPageOutPut::RequestDeleteEpisode(episode_id)
+                        }
+                        _ => HomPageOutPut::NotifyError(format!("")),
                     },
                 );
                 let controller = PageController::Podcast(podcast_page);
@@ -276,9 +286,12 @@ impl Component for HomePage {
                     page.notify_current_episode(episode_id);
                 }
             }
+            HomePageInput::ActionFinished(uuid, result) => {
+                for (_, page) in &self.active_pages {
+                    page.notify_action_finished(uuid, result.clone());
+                }
+            }
         }
-
-        // self.update(message, sender, root);
     }
 
     fn update_cmd(

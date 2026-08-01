@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use adw::prelude::*;
 use gst_play::PlayState;
 use podcasts_data::{
@@ -6,22 +8,25 @@ use podcasts_data::{
     errors::DataError,
 };
 use relm4::{Component, ComponentParts, ComponentSender, prelude::*};
+use uuid::Uuid;
 
 use crate::{
     components::show_card::{ShowCard, ShowCardOutput},
     pages::show::{ShowPage, ShowPageInput, ShowPageOutput},
+    workers::action_worker::worker::{Action, ActionResult},
 };
 
 #[derive(Debug)]
 pub struct ShowsPage {
     shows: FactoryVecDeque<ShowCard>,
     open_show_pages: Vec<Controller<ShowPage>>,
-    is_loading: bool,
+    task_id: Uuid,
 }
 
 #[derive(Debug)]
 pub enum ShowsPageInput {
     FetchShows,
+    ActionFinished(Uuid, ActionResult),
     ShowsLoaded(Result<Vec<Show>, DataError>),
     GotoShow(ShowId),
     DownloadStarted(EpisodeId),
@@ -42,8 +47,7 @@ pub enum ShowsPageOutput {
     SetPlayNext(EpisodeId),
     AddToPlaylist(EpisodeId),
     RequestDeleteEpisode(EpisodeId),
-    StartLoading,
-    StopLoading,
+    Execute(Uuid, Action),
 }
 
 #[derive(Debug)]
@@ -60,7 +64,7 @@ impl Component for ShowsPage {
 
     fn init(
         _worker_sender: Self::Init,
-        _root: Self::Root,
+        root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let grid = gtk::FlowBox::builder()
@@ -68,6 +72,7 @@ impl Component for ShowsPage {
             .column_spacing(20)
             .row_spacing(40)
             .homogeneous(true)
+            .valign(gtk::Align::Start)
             .build();
 
         // Attach your dynamic width column calculating callback hook
@@ -95,14 +100,14 @@ impl Component for ShowsPage {
                     ShowCardOutput::GotoShow(show) => ShowsPageInput::GotoShow(show),
                 }),
             open_show_pages: Vec::new(),
-            is_loading: true,
+            task_id: uuid::Uuid::new_v4(),
         };
 
         let show_grid = model.shows.widget();
 
         let widgets = view_output!();
 
-        sender.input(ShowsPageInput::FetchShows);
+        let _ = sender.output(ShowsPageOutput::Execute(model.task_id, Action::FetchShows));
 
         ComponentParts { model, widgets }
     }
@@ -126,21 +131,18 @@ impl Component for ShowsPage {
                 sender.input(ShowsPageInput::ShowsLoaded(data));
             }
 
-            ShowsPageInput::ShowsLoaded(shows) => {
-                match shows {
-                    Ok(data) => {
-                        let mut guard = self.shows.guard();
-                        guard.clear();
-                        for show in data {
-                            guard.push_back(show);
-                        }
-                    }
-                    Err(error) => {
-                        let _ = sender.output(ShowsPageOutput::NotifyError(error.to_string()));
+            ShowsPageInput::ShowsLoaded(shows) => match shows {
+                Ok(data) => {
+                    let mut guard = self.shows.guard();
+                    guard.clear();
+                    for show in data {
+                        guard.push_back(show);
                     }
                 }
-                self.is_loading = false;
-            }
+                Err(error) => {
+                    let _ = sender.output(ShowsPageOutput::NotifyError(error.to_string()));
+                }
+            },
 
             ShowsPageInput::GotoShow(id) => {
                 let show_page =
@@ -160,14 +162,15 @@ impl Component for ShowsPage {
                             ShowPageOutput::SetPlayNext(episode_id) => {
                                 ShowsPageOutput::SetPlayNext(episode_id)
                             }
-                             ShowPageOutput::AddToPlaylist(episode_id) => {
+                            ShowPageOutput::AddToPlaylist(episode_id) => {
                                 ShowsPageOutput::AddToPlaylist(episode_id)
                             }
                             ShowPageOutput::RequestDeleteEpisode(episode_id) => {
                                 ShowsPageOutput::RequestDeleteEpisode(episode_id)
                             }
-                            ShowPageOutput::StartLoading => ShowsPageOutput::StartLoading,
-                            ShowPageOutput::StopLoading => ShowsPageOutput::StopLoading,
+                            ShowPageOutput::Execute(uuid, action) => {
+                                ShowsPageOutput::Execute(uuid, action)
+                            }
                         });
 
                 widgets.nav_view.push(show_page.widget());
@@ -206,6 +209,19 @@ impl Component for ShowsPage {
             ShowsPageInput::ChangeEpisodeTo(episode_id) => {
                 for page in &self.open_show_pages {
                     page.emit(ShowPageInput::ChangeEpisodeTo(episode_id));
+                }
+            }
+            ShowsPageInput::ActionFinished(id, result) => {
+                if id == self.task_id {
+                    if let Ok(shows_arc) = result.downcast::<Result<Vec<Show>, DataError>>() {
+                        if let Ok(shows) = Arc::try_unwrap(shows_arc) {
+                            sender.input(ShowsPageInput::ShowsLoaded(shows));
+                        }
+                    }
+                } else {
+                    for page in &self.open_show_pages {
+                        page.emit(ShowPageInput::ActionFinished(id, result.clone()));
+                    }
                 }
             }
         }
@@ -250,8 +266,6 @@ impl Component for ShowsPage {
                                         #[local_ref]
                                         show_grid -> gtk::FlowBox {
                                             set_margin_all: 20,
-                                            #[watch]
-                                            set_visible: !model.is_loading,
                                         }
                                     }
                                 }

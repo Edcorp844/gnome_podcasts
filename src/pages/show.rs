@@ -1,13 +1,14 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use adw::prelude::*;
 use gst_play::PlayState;
 use podcasts_data::{
-    EpisodeId, Show, ShowId,
+    Episode, EpisodeId, Show, ShowId,
     dbqueries::{self},
     errors::DataError,
 };
 use relm4::{Component, ComponentParts, ComponentSender, prelude::*};
+use uuid::Uuid;
 
 use crate::{
     components::{
@@ -21,6 +22,7 @@ use crate::{
         cover_image::{ImageSize, fetch_cached_image},
         episode_description_parser,
     },
+    workers::action_worker::worker::{Action, ActionResult},
 };
 
 #[derive(Debug)]
@@ -32,12 +34,13 @@ pub struct ShowPage {
     index_by_id: HashMap<EpisodeId, relm4::factory::DynamicIndex>,
     episode_count: usize,
     show_image_texture: Option<adw::gdk::Texture>,
-    load_error: Option<String>,
     all_episodes_page: Controller<AllEpisodesPage>,
+    task_id: Uuid,
 }
 
 #[derive(Debug)]
 pub enum ShowPageInput {
+    ActionFinished(Uuid, ActionResult),
     GetShow(ShowId),
     ShowGotten(Result<Show, DataError>),
     ImageDownloaded(Option<adw::gdk::Texture>),
@@ -50,11 +53,13 @@ pub enum ShowPageInput {
     PlayBackProgress(EpisodeId, f64, u64),
     ChangeEpisodeTo(EpisodeId),
     EpisodeDeleted(EpisodeId),
+    LoadEpisodes(Vec<Episode>),
     GotoAllEpisodesPage,
 }
 
 #[derive(Debug)]
 pub enum ShowPageOutput {
+    Execute(Uuid, Action),
     TogglePlay(EpisodeId),
     NotifyError(String),
     RequestDownload(EpisodeId),
@@ -62,8 +67,6 @@ pub enum ShowPageOutput {
     SetPlayNext(EpisodeId),
     AddToPlaylist(EpisodeId),
     RequestDeleteEpisode(EpisodeId),
-    StartLoading,
-    StopLoading,
 }
 
 #[derive(Debug)]
@@ -389,14 +392,16 @@ impl Component for ShowPage {
                 AllEpisodesPageOutput::CancleDownload(episode_id) => {
                     ShowPageOutput::CancleDownload(episode_id)
                 }
-                AllEpisodesPageOutput::SetPlayNext(episode_id) => ShowPageOutput::SetPlayNext(episode_id),
-                 AllEpisodesPageOutput::AddToPlaylist(episode_id) => ShowPageOutput::AddToPlaylist(episode_id),
+                AllEpisodesPageOutput::SetPlayNext(episode_id) => {
+                    ShowPageOutput::SetPlayNext(episode_id)
+                }
+                AllEpisodesPageOutput::AddToPlaylist(episode_id) => {
+                    ShowPageOutput::AddToPlaylist(episode_id)
+                }
                 AllEpisodesPageOutput::RequestDeleteEpisode(episode_id) => {
                     ShowPageOutput::RequestDeleteEpisode(episode_id)
                 }
                 AllEpisodesPageOutput::NotifyError(error) => ShowPageOutput::NotifyError(error),
-                AllEpisodesPageOutput::StartLoading => ShowPageOutput::StartLoading,
-                AllEpisodesPageOutput::StopLoading => ShowPageOutput::StopLoading,
             },
         );
 
@@ -422,7 +427,9 @@ impl Component for ShowPage {
                     EpisodeListItemOutput::RequestDeleteEpisode(episode_id) => {
                         ShowPageOutput::RequestDeleteEpisode(episode_id)
                     }
-                    _ => ShowPageOutput::NotifyError(format!("")),
+                    EpisodeListItemOutput::GotoEpisode(_episode_id) => {
+                        ShowPageOutput::NotifyError(format!(""))
+                    }
                 },
             ),
             index_by_id: HashMap::new(),
@@ -430,15 +437,19 @@ impl Component for ShowPage {
             latest_play_button,
             show: None,
             show_image_texture: None,
-            load_error: None,
             latest_episode: None,
             all_episodes_page,
+            task_id: Uuid::new_v4(),
         };
 
         let episodes_container = model.episodes.widget();
 
         let widgets = view_output!();
 
+        let _ = sender.output(ShowPageOutput::Execute(
+            model.task_id,
+            Action::FetchShowEpisodes(show_id),
+        ));
         sender.input(ShowPageInput::GetShow(show_id));
         ComponentParts { model, widgets }
     }
@@ -458,8 +469,6 @@ impl Component for ShowPage {
             ShowPageInput::ShowGotten(show_result) => match show_result {
                 Ok(show) => {
                     self.show = Some(show);
-                    self.load_error = None;
-
                     if let Some(show) = &self.show {
                         if let Some(image_url_ref) = show.image_uri() {
                             let image_url = image_url_ref.to_string();
@@ -472,40 +481,8 @@ impl Component for ShowPage {
                             });
                         }
                     }
-
-                    if let Some(show) = &self.show {
-                        match dbqueries::get_pd_episodes(show) {
-                            Ok(episodes) => {
-                                println!("Episodes Loaded: {:?}", episodes.len());
-
-                                self.all_episodes_page
-                                    .emit(AllEpisodesPageInput::SetEpisodes(episodes.clone()));
-
-                                if let Some(episode) = episodes.first() {
-                                    self.latest_episode = Some(episode.clone().id());
-                                };
-
-                                let mut guard = self.episodes.guard();
-                                guard.clear();
-
-                                for episode in episodes.iter().take(10) {
-                                    let index = guard.push_back(episode.clone());
-
-                                    self.index_by_id.insert(episode.id(), index);
-                                }
-                                self.episode_count = episodes.len();
-                            }
-                            Err(error) => {
-                                eprintln!("Error Loading Episodes: {}", error);
-                                let _ = sender.output(ShowPageOutput::NotifyError(format!(
-                                    "Failed to load show episodes: {error}"
-                                )));
-                            }
-                        }
-                    }
                 }
                 Err(error) => {
-                    self.load_error = Some(format!("Failed to load show: {error}"));
                     let _ = sender.output(ShowPageOutput::NotifyError(format!(
                         "Failed to load show: {error}"
                     )));
@@ -664,6 +641,29 @@ impl Component for ShowPage {
                 }
                 self.all_episodes_page
                     .emit(AllEpisodesPageInput::EpisodeDeleted(episode_id));
+            }
+            ShowPageInput::ActionFinished(uuid, result) => {
+                if uuid == self.task_id {
+                    if let Ok(episodes_arc) = result.downcast::<Vec<Episode>>() {
+                        if let Ok(episodes) = Arc::try_unwrap(episodes_arc) {
+                            sender.input(ShowPageInput::LoadEpisodes(episodes));
+                        }
+                    }
+                }
+            }
+            ShowPageInput::LoadEpisodes(episodes) => {
+                if let Some(episode) = episodes.first() {
+                    self.latest_episode = Some(episode.clone().id());
+                }
+                let mut guard = self.episodes.guard();
+                guard.clear();
+
+                for episode in episodes.iter().take(10) {
+                    let index = guard.push_back(episode.clone());
+
+                    self.index_by_id.insert(episode.id(), index);
+                }
+                self.episode_count = episodes.len();
             }
         }
 

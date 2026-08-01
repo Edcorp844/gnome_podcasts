@@ -52,6 +52,7 @@ html2text = "0.17.1"
 mpris-player = "0.6.3"
 image = {version =  "0.25.10", default-features = false, features = ["png", "jpeg", "webp"]}
 locale_config = "0.3.0"
+uuid = { version = "1.24.0", features = ["v4"] }
 
 
 # --- OPTIMIZATION PROFILES ---

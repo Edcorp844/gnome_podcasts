@@ -1,3 +1,4 @@
-pub mod service;
-pub mod subscribe_ext;
-pub mod download_ext;
+pub(crate) mod download_ext;
+pub(crate) mod service;
+pub(crate) mod subscribe_ext;
+pub(crate) mod worker;

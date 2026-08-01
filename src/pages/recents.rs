@@ -1,13 +1,15 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, sync::Arc};
 
 use adw::prelude::*;
 use chrono::{Datelike, Duration, Local, NaiveDateTime};
 use gst_play::PlayState;
 use podcasts_data::{Episode, EpisodeId, dbqueries};
 use relm4::{Component, prelude::*};
+use uuid::Uuid;
 
-use crate::components::episode_group::{
-    GroupedEpisodes, GroupedEpisodesInput, GroupedEpisodesOutput,
+use crate::{
+    components::episode_group::{GroupedEpisodes, GroupedEpisodesInput, GroupedEpisodesOutput},
+    workers::action_worker::worker::{Action, ActionResult},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -72,13 +74,13 @@ impl TimeBucket {
 #[derive(Debug)]
 pub struct RecentlyUpdatedPage {
     groups: Vec<Controller<GroupedEpisodes>>,
-    is_loading: bool,
+    task_id: Uuid,
 }
 
 #[derive(Debug, Clone)]
 pub enum RecentlyUpdatedPageInput {
-    FetchDownloads,
-    GottenEpisodes(Vec<Episode>),
+    ActionFinished(Uuid, ActionResult),
+    GottenEpisodes(BTreeMap<TimeBucket, Vec<Episode>>),
     DownloadStarted(EpisodeId),
     DownloadCancled(EpisodeId),
     DownloadProgress(EpisodeId, f64),
@@ -91,6 +93,7 @@ pub enum RecentlyUpdatedPageInput {
 
 #[derive(Debug, Clone)]
 pub enum RecentlyUpdatedPageOutput {
+    ExcuteAction(Uuid, Action),
     TogglePlay(EpisodeId),
     RequestDownload(EpisodeId),
     CancleDownload(EpisodeId),
@@ -98,8 +101,6 @@ pub enum RecentlyUpdatedPageOutput {
     AddToPlaylist(EpisodeId),
     RequestDeleteEpisode(EpisodeId),
     NotifyError(String),
-    StartLoading,
-    StopLoading,
 }
 
 #[relm4::component(pub)]
@@ -151,7 +152,7 @@ impl Component for RecentlyUpdatedPage {
 
                             adw::StatusPage {
                                 #[watch]
-                                set_visible: model.groups.is_empty() && !model.is_loading,
+                                set_visible: false,
 
                                 set_title: "Your recently updated podcast episodes will appear here",
                                 set_icon_name: Some("media-optical-symbolic"),
@@ -172,11 +173,14 @@ impl Component for RecentlyUpdatedPage {
     ) -> ComponentParts<Self> {
         let model = RecentlyUpdatedPage {
             groups: Vec::new(),
-            is_loading: true,
+            task_id: Uuid::new_v4(),
         };
 
         let widgets = view_output!();
-        sender.input(RecentlyUpdatedPageInput::FetchDownloads);
+        sender.output(RecentlyUpdatedPageOutput::ExcuteAction(
+            model.task_id,
+            Action::FetchRecents,
+        ));
 
         ComponentParts { model, widgets }
     }
@@ -189,42 +193,7 @@ impl Component for RecentlyUpdatedPage {
         _root: &Self::Root,
     ) {
         match message {
-            RecentlyUpdatedPageInput::FetchDownloads => {
-                self.is_loading = true;
-                let _ = sender.output(RecentlyUpdatedPageOutput::StartLoading);
-
-                let input_sender = sender.input_sender().clone();
-                let output_sender = sender.output_sender().clone();
-
-                std::thread::spawn(move || match dbqueries::get_episodes() {
-                    Ok(episodes) => {
-                        let new_episodes = episodes.into_iter().take(50).collect();
-                        let _ = input_sender
-                            .send(RecentlyUpdatedPageInput::GottenEpisodes(new_episodes));
-                    }
-                    Err(err) => {
-                        let _ = output_sender
-                            .send(RecentlyUpdatedPageOutput::NotifyError(err.to_string()));
-                        let _ =
-                            input_sender.send(RecentlyUpdatedPageInput::GottenEpisodes(Vec::new()));
-                    }
-                });
-            }
-
-            RecentlyUpdatedPageInput::GottenEpisodes(mut episodes) => {
-                self.is_loading = false;
-                let _ = sender.output(RecentlyUpdatedPageOutput::StopLoading);
-
-                // Chronological sort: compare NaiveDateTimes directly
-                episodes.sort_by(|a, b| b.epoch().cmp(&a.epoch()));
-
-                let mut grouped: BTreeMap<TimeBucket, Vec<Episode>> = BTreeMap::new();
-                for episode in episodes {
-                    // Fix: Pass the NaiveDateTime directly to the updated bucket analyzer
-                    let bucket = TimeBucket::from_naive_datetime(episode.epoch());
-                    grouped.entry(bucket).or_default().push(episode);
-                }
-
+            RecentlyUpdatedPageInput::GottenEpisodes(grouped) => {
                 while let Some(child) = widgets.episodes_container.first_child() {
                     widgets.episodes_container.remove(&child);
                 }
@@ -305,6 +274,16 @@ impl Component for RecentlyUpdatedPage {
             RecentlyUpdatedPageInput::EpisodeDeleted(id) => {
                 for group in &self.groups {
                     group.emit(GroupedEpisodesInput::EpisodeDeleted(id));
+                }
+            }
+            RecentlyUpdatedPageInput::ActionFinished(uuid, result) => {
+                if uuid == self.task_id {
+                    if let Ok(grouped_arc) = result.downcast::<BTreeMap<TimeBucket, Vec<Episode>>>()
+                    {
+                        if let Ok(grouped) = Arc::try_unwrap(grouped_arc) {
+                            sender.input(RecentlyUpdatedPageInput::GottenEpisodes(grouped));
+                        }
+                    }
                 }
             }
         }

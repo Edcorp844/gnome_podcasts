@@ -37,8 +37,6 @@ pub enum AllEpisodesPageOutput {
     AddToPlaylist(EpisodeId),
     RequestDeleteEpisode(EpisodeId),
     NotifyError(String),
-    StartLoading,
-    StopLoading,
 }
 
 #[relm4::component(pub)]

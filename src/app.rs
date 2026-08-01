@@ -2,6 +2,7 @@ use crate::app_navigation_ext::NavigationPage;
 use crate::app_navigation_ext::PageController;
 use crate::components::main_menu_button::MainMenuButton;
 use crate::components::miniplayer::MiniPlayerModel;
+use crate::workers::action_worker::worker::Action;
 
 use crate::components::miniplayer::MiniplayerModelInput;
 use crate::components::miniplayer::MiniplayerModelOutput;
@@ -21,9 +22,10 @@ use crate::pages::search::SearchPageOutput;
 use crate::pages::shows::ShowsPage;
 use crate::pages::shows::ShowsPageInput;
 use crate::pages::shows::ShowsPageOutput;
-use crate::workers::action_worker::service::ActionWorker;
-use crate::workers::action_worker::service::ActionWorkerInput;
-use crate::workers::action_worker::service::ActionWorkerOutput;
+use crate::workers::action_worker::worker::ActionResult;
+use crate::workers::action_worker::worker::ActionWorker;
+use crate::workers::action_worker::worker::ActionWorkerInput;
+use crate::workers::action_worker::worker::ActionWorkerOutput;
 use crate::workers::database_worker::worker::DatabaseWoker;
 use crate::workers::database_worker::worker::DatabaseWokerInput;
 use crate::workers::database_worker::worker::DatabaseWokerOutput;
@@ -32,10 +34,15 @@ use crate::workers::gstremer_worker::worker::GStreamerWorkerInput;
 use crate::workers::gstremer_worker::worker::GStreamerWorkerOutput;
 use gst_play::PlayState;
 use podcasts_data::EpisodeId;
+use podcasts_data::Show;
+use podcasts_data::errors::DataError;
 use relm4::ComponentParts;
 use relm4::adw::prelude::*;
 use relm4::prelude::*;
 use std::collections::HashMap;
+use std::result;
+use std::sync::Arc;
+use uuid::Uuid;
 
 pub struct AppModel {
     is_sidebar_visible: bool,
@@ -52,6 +59,8 @@ pub struct AppModel {
 
 #[derive(Debug)]
 pub enum AppModelInput {
+    ExecuteAction(Uuid, Action),
+    ActionFinished(Uuid, ActionResult),
     ToggleSidebar,
     StartLoading,
     StopLoading,
@@ -209,6 +218,7 @@ impl Component for AppModel {
                                     model.miniplayer.widget(),
                                     gtk::Separator {
                                         add_css_class: "tahoe-shimmer-line",
+                                        inline_css: "min-height: 2px; border: none; background: linear-gradient(90deg, rgba(0, 122, 255, 0) 0%, #007AFF 25%, #AF52DE 50%, #FF2D55 75%, rgba(255, 45, 85, 0) 100% ); background-size: 200% 100%; animation: shimmer-flow 1.5s infinite linear;",
                                         #[watch]
                                         set_visible: model.is_loading,
                                         set_halign: gtk::Align::Fill,
@@ -234,63 +244,17 @@ impl Component for AppModel {
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let action_sender = sender.clone();
         let worker_controller =
             ActionWorker::builder()
                 .launch(())
-                .connect_receiver(move |_parent_sender, output| match output {
-                    ActionWorkerOutput::NotifyError(error) => {
-                        action_sender
-                            .clone()
-                            .input(AppModelInput::NotifyError(error));
+                .forward(sender.input_sender(), move |message| match message {
+                    ActionWorkerOutput::NotifyError(error) => AppModelInput::NotifyError(error),
+                    ActionWorkerOutput::RefreshAllPages => AppModelInput::None,
+                    ActionWorkerOutput::ActionStarted(id) => AppModelInput::StartLoading,
+                    ActionWorkerOutput::ActionsCompleted => AppModelInput::StopLoading,
+                    ActionWorkerOutput::ActionCompleted(id, result) => {
+                        AppModelInput::ActionFinished(id, result)
                     }
-                    ActionWorkerOutput::StateChanged(state, episode_id) => {
-                        action_sender
-                            .clone()
-                            .input(AppModelInput::ChangePlayBackState(state, episode_id));
-                    }
-                    ActionWorkerOutput::SetCurrentEpisode(id) => {
-                        action_sender
-                            .clone()
-                            .input(AppModelInput::SetCurrentEpisode(id));
-                    }
-                    ActionWorkerOutput::RefreshAllViews => {
-                        action_sender.clone().input(AppModelInput::RefreshShowsPage);
-                    }
-                    ActionWorkerOutput::DownloadFinished(episode_id) => {
-                        action_sender
-                            .clone()
-                            .input(AppModelInput::DownloadFinished(episode_id));
-                    }
-                    ActionWorkerOutput::DownloadCancelled(episode_id) => {
-                        action_sender
-                            .clone()
-                            .input(AppModelInput::DownloadCancled(episode_id));
-                    }
-                    ActionWorkerOutput::DownloadProgress { id, fraction } => {
-                        action_sender
-                            .clone()
-                            .input(AppModelInput::DownloadProgress(id, fraction));
-                    }
-                    ActionWorkerOutput::PlayBackProgress(id, pos, remaining) => {
-                        action_sender
-                            .clone()
-                            .input(AppModelInput::PlayBackProgress(id, pos, remaining));
-                    }
-                    ActionWorkerOutput::VolumeValue(val) => {
-                        action_sender.clone().input(AppModelInput::VolumeValue(val));
-                    }
-                    ActionWorkerOutput::EpisodeDeleted(episode_id) => {
-                        action_sender
-                            .clone()
-                            .input(AppModelInput::EpisodeDeleted(episode_id));
-                    }
-                    ActionWorkerOutput::UpdatePlaylist(ids, pos) => {
-                        action_sender
-                            .clone()
-                            .input(AppModelInput::UpdatePlaylist(ids, pos));
-                    }
-                    _ => {}
                 });
 
         let main_menu_button = MainMenuButton::builder().launch(()).detach();
@@ -481,11 +445,7 @@ impl Component for AppModel {
                                         AppModelInput::Subscribe(feed)
                                     }
                                     SearchPageOutput::UpdateISSearching(state) => {
-                                        if state {
-                                            AppModelInput::StartLoading
-                                        } else {
-                                            AppModelInput::StopLoading
-                                        }
+                                        AppModelInput::None
                                     }
                                     SearchPageOutput::TogglePlay(episode) => {
                                         AppModelInput::TogglePlay(episode)
@@ -574,8 +534,9 @@ impl Component for AppModel {
                                     ShowsPageOutput::RequestDeleteEpisode(episode_id) => {
                                         AppModelInput::RequestDeleteEpisode(episode_id)
                                     }
-                                    ShowsPageOutput::StartLoading => AppModelInput::StartLoading,
-                                    ShowsPageOutput::StopLoading => AppModelInput::StopLoading,
+                                    ShowsPageOutput::Execute(uuid, action) => {
+                                        AppModelInput::ExecuteAction(uuid, action)
+                                    }
                                 },
                             );
                             PageController::Shows(page_instance)
@@ -594,10 +555,6 @@ impl Component for AppModel {
                                     DownloadsPageOutput::RequestDeleteEpisode(episode_id) => {
                                         AppModelInput::RequestDeleteEpisode(episode_id)
                                     }
-                                    DownloadsPageOutput::StartLoading => {
-                                        AppModelInput::StartLoading
-                                    }
-                                    DownloadsPageOutput::StopLoading => AppModelInput::StopLoading,
                                 },
                             );
                             PageController::Downloads(page_instance)
@@ -612,12 +569,6 @@ impl Component for AppModel {
                                     }
                                     RecentlyUpdatedPageOutput::NotifyError(error) => {
                                         AppModelInput::NotifyError(error)
-                                    }
-                                    RecentlyUpdatedPageOutput::StartLoading => {
-                                        AppModelInput::StartLoading
-                                    }
-                                    RecentlyUpdatedPageOutput::StopLoading => {
-                                        AppModelInput::StopLoading
                                     }
                                     RecentlyUpdatedPageOutput::RequestDownload(episode_id) => {
                                         AppModelInput::RequestDownload(episode_id)
@@ -634,6 +585,9 @@ impl Component for AppModel {
 
                                     RecentlyUpdatedPageOutput::RequestDeleteEpisode(episode_id) => {
                                         AppModelInput::RequestDeleteEpisode(episode_id)
+                                    }
+                                    RecentlyUpdatedPageOutput::ExcuteAction(uuid, action) => {
+                                        AppModelInput::ExecuteAction(uuid, action)
                                     }
                                 },
                             );
@@ -662,9 +616,9 @@ impl Component for AppModel {
                 widgets.toast_overlay.add_toast(toast);
             }
             AppModelInput::Subscribe(feed) => {
-                sender.input(AppModelInput::StartLoading);
+                let id = uuid::Uuid::new_v4();
                 self.worker_controller
-                    .emit(ActionWorkerInput::Subscirbe(feed));
+                    .emit(ActionWorkerInput::Execute(id, Action::Subscribe(feed)));
             }
             AppModelInput::TogglePlay(episode_id) => {
                 self.player
@@ -693,7 +647,6 @@ impl Component for AppModel {
                 self.player.emit(GStreamerWorkerInput::TogglePlayBack);
             }
             AppModelInput::RefreshShowsPage => {
-                sender.input(AppModelInput::StopLoading);
                 if let Some(PageController::Shows(shows_controller)) =
                     self.pages_cache.get(&self.current_page_key)
                 {
@@ -796,6 +749,15 @@ impl Component for AppModel {
             AppModelInput::RemoveFromPlayList(episode_id) => {
                 self.player
                     .emit(GStreamerWorkerInput::RemoveFromPlayList(episode_id));
+            }
+            AppModelInput::ExecuteAction(uuid, action) => {
+                self.worker_controller
+                    .emit(ActionWorkerInput::Execute(uuid, action));
+            }
+            AppModelInput::ActionFinished(uuid, result) => {
+                for (_, page) in &self.pages_cache {
+                    page.notify_action_finished(uuid, result.clone());
+                }
             }
         }
 

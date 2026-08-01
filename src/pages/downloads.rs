@@ -7,9 +7,13 @@ use podcasts_data::{
     dbqueries::{self, ShowFilter},
 };
 use relm4::{Component, prelude::*};
+use uuid::Uuid;
 
-use crate::components::downloaded_episode_list_item::{
-    DownloadedEpisodeListItem, DownloadedEpisodeListItemInput, DownloadedEpisodeListItemOutput,
+use crate::{
+    components::downloaded_episode_list_item::{
+        DownloadedEpisodeListItem, DownloadedEpisodeListItemInput, DownloadedEpisodeListItemOutput,
+    },
+    workers::action_worker::worker::ActionResult,
 };
 
 #[derive(Debug)]
@@ -21,6 +25,7 @@ pub struct DownloadsPage {
 
 #[derive(Debug, Clone)]
 pub enum DownloadsPageInput {
+    ActionFinished(Uuid, ActionResult),
     FetchDownloads,
     GottenEpisodes(Vec<EpisodeWidgetModel>),
     DownloadStarted(EpisodeId),
@@ -38,8 +43,6 @@ pub enum DownloadsPageOutput {
     TogglePlay(EpisodeId),
     NotifyError(String),
     RequestDeleteEpisode(EpisodeId),
-    StartLoading,
-    StopLoading,
 }
 
 #[relm4::component(pub)]
@@ -143,7 +146,6 @@ impl Component for DownloadsPage {
         match message {
             DownloadsPageInput::FetchDownloads => {
                 self.is_loading = true;
-                let _ = sender.output(DownloadsPageOutput::StartLoading);
                 let filter = ShowFilter {
                     any_downloaded: Some(true),
                     completed: None,
@@ -178,7 +180,6 @@ impl Component for DownloadsPage {
                 }
 
                 self.is_loading = false;
-                let _ = sender.output(DownloadsPageOutput::StopLoading);
             }
             DownloadsPageInput::GottenEpisodes(episodes) => {
                 let mut guard = self.episodes.guard();
@@ -223,6 +224,7 @@ impl Component for DownloadsPage {
                     guard.remove(index.current_index());
                 }
             }
+            DownloadsPageInput::ActionFinished(uuid, result) => {}
         }
     }
 }

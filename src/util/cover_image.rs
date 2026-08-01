@@ -1,11 +1,10 @@
-use std::collections::HashMap;
 use adw::glib::prelude::*;
+use std::collections::HashMap;
 
 thread_local! {
     static IMAGE_MEM_CACHE: std::cell::RefCell<HashMap<String, adw::gdk::Texture>> = std::cell::RefCell::new(HashMap::new());
 }
 
-// 1. UPDATED STRUCT: Fields wrapped in Option so dimensions can be omitted individually
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ImageSize {
     pub width: Option<i32>,
@@ -25,7 +24,7 @@ impl ImageSize {
     }
 }
 
-// 2. DEFAULT IMPLEMENTATION: Returns original sizing bounds when entirely unspecified
+//DEFAULT IMPLEMENTATION: Returns original sizing bounds when entirely unspecified
 impl Default for ImageSize {
     fn default() -> Self {
         Self {
@@ -105,11 +104,9 @@ fn decode_bytes_to_texture(bytes: &[u8], size: ImageSize) -> Option<adw::gdk::Te
 
     let img = match (size.width, size.height) {
         (None, None) => img,
-        (Some(w), Some(h)) => img.resize_exact(
-            w as u32,
-            h as u32,
-            image::imageops::FilterType::Lanczos3,
-        ),
+        (Some(w), Some(h)) => {
+            img.resize_exact(w as u32, h as u32, image::imageops::FilterType::Lanczos3)
+        }
         (Some(w), None) => {
             let ratio = w as f64 / img.width() as f64;
             let h = (img.height() as f64 * ratio).round() as u32;

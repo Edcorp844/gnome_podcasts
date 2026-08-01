@@ -8,6 +8,7 @@ use podcasts_data::{
     discovery::{FoundPodcast, SearchError, search},
 };
 use relm4::{Component, ComponentParts, ComponentSender, prelude::*};
+use uuid::Uuid;
 
 use crate::{
     app_navigation_ext::PageController,
@@ -16,6 +17,7 @@ use crate::{
     },
     pages::podcast::{PodcastPage, PodcastPageOutput},
     settings::GenaralSettings,
+    workers::action_worker::worker::ActionResult,
 };
 
 // 1. Define the possible pages you want to visit across your app
@@ -42,6 +44,7 @@ pub struct SearchPage {
 
 #[derive(Debug)]
 pub enum SearchPageInput {
+    ActionFinished(Uuid, ActionResult),
     PushPage(String),
     OpenPodcast(FoundPodcast),
     PopPage,
@@ -216,6 +219,11 @@ impl Component for SearchPage {
             SearchPageInput::ChangeEpisodeTo(episode_id) => {
                 for (_, page) in &self.active_pages {
                     page.notify_current_episode(episode_id.clone());
+                }
+            }
+            SearchPageInput::ActionFinished(uuid, result) => {
+                for (_, page) in &self.active_pages {
+                    page.notify_action_finished(uuid.clone(), result.clone());
                 }
             }
         }

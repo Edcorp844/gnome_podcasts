@@ -2,15 +2,19 @@ use gettextrs::gettext;
 use gst_play::PlayState;
 use podcasts_data::EpisodeId;
 use relm4::{ComponentController, Controller};
+use uuid::Uuid;
 
-use crate::pages::{
-    downloads::{DownloadsPage, DownloadsPageInput},
-    home::{HomePage, HomePageInput},
-    new::{NewPage, NewPageInput},
-    podcast::{PodcastPage, PodcastPageInput},
-    recents::{RecentlyUpdatedPage, RecentlyUpdatedPageInput},
-    search::{SearchPage, SearchPageInput},
-    shows::{ShowsPage, ShowsPageInput},
+use crate::{
+    pages::{
+        downloads::{DownloadsPage, DownloadsPageInput},
+        home::{HomePage, HomePageInput},
+        new::{NewPage, NewPageInput},
+        podcast::{PodcastPage, PodcastPageInput},
+        recents::{RecentlyUpdatedPage, RecentlyUpdatedPageInput},
+        search::{SearchPage, SearchPageInput},
+        shows::{ShowsPage, ShowsPageInput},
+    },
+    workers::action_worker::worker::ActionResult,
 };
 
 #[derive(Debug)]
@@ -20,7 +24,6 @@ pub enum NavigationPage {
     New,
     Shows,
     Recents,
-    Library(String),
     Podcast,
     Downloads,
 }
@@ -44,7 +47,7 @@ impl NavigationPage {
         } else if localized_name == gettext("Recently updated") || name == "Recently updated" {
             Self::Recents
         } else {
-            Self::Library(name.to_string())
+            Self::Home
         }
     }
 
@@ -57,7 +60,6 @@ impl NavigationPage {
             Self::Podcast => "Podcast".to_string(),
             Self::Downloads => "Downloaded".to_string(),
             Self::Recents => "Recently updated".to_string(),
-            Self::Library(sub) => format!("Library_{}", sub),
         }
     }
 }
@@ -72,7 +74,6 @@ pub enum PageController {
     Podcast(Controller<PodcastPage>),
     Downloads(Controller<DownloadsPage>),
     Recents(Controller<RecentlyUpdatedPage>),
-    //Library(Controller<LibraryPage>),
 }
 
 impl PageController {
@@ -288,6 +289,32 @@ impl PageController {
                 c.emit(DownloadsPageInput::EpisodeDeleted(episode_id));
             }
             _ => {}
+        }
+    }
+
+    pub(crate) fn notify_action_finished(&self, id: Uuid, result: ActionResult) {
+        match self {
+            Self::Search(c) => {
+                c.emit(SearchPageInput::ActionFinished(id, result));
+            }
+            Self::Home(c) => {
+                c.emit(HomePageInput::ActionFinished(id, result));
+            }
+            Self::New(c) => {
+                c.emit(NewPageInput::ActionFinished(id, result));
+            }
+            Self::Shows(c) => {
+                c.emit(ShowsPageInput::ActionFinished(id, result));
+            }
+            Self::Podcast(c) => {
+                c.emit(PodcastPageInput::ActionFinished(id, result));
+            }
+            Self::Downloads(c) => {
+                c.emit(DownloadsPageInput::ActionFinished(id, result));
+            }
+            Self::Recents(c) => {
+                c.emit(RecentlyUpdatedPageInput::ActionFinished(id, result));
+            }
         }
     }
 }

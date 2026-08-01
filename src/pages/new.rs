@@ -6,8 +6,9 @@ use podcasts_data::{
     errors::DataError,
 };
 use relm4::{Component, ComponentParts, ComponentSender, prelude::*};
+use uuid::Uuid;
 
-use crate::components::show_card::ShowCard;
+use crate::{components::show_card::ShowCard, workers::action_worker::worker::ActionResult};
 
 #[derive(Debug)]
 pub struct NewPage {
@@ -17,6 +18,7 @@ pub struct NewPage {
 
 #[derive(Debug)]
 pub enum NewPageInput {
+    ActionFinished(Uuid, ActionResult),
     FetchShows,
     ShowsLoaded(Result<Vec<Show>, DataError>),
     DownloadStarted(EpisodeId),
@@ -124,6 +126,7 @@ impl Component for NewPage {
             NewPageInput::ChangePlayBackState(play_state, episode_id) => {}
             NewPageInput::PlayBackProgress(episode_id, pos, rem) => {}
             NewPageInput::ChangeEpisodeTo(episode_id) => {}
+            NewPageInput::ActionFinished(uuid, any) => {}
         }
     }
 

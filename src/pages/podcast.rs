@@ -7,6 +7,7 @@ use podcasts_data::{
     Episode, EpisodeId, FEED_MANAGER, Show, Source, dbqueries, discovery::FoundPodcast,
 };
 use relm4::{Component, prelude::*};
+use uuid::Uuid;
 
 use crate::{
     components::{
@@ -14,11 +15,10 @@ use crate::{
         play_button::{
             EpisodePlayingState, PlayButton, PlayButtonInitData, PlayButtonInput, PlayButtonOutput,
         },
-    },
-    util::{
+    }, util::{
         cover_image::{ImageSize, fetch_cached_image},
         episode_description_parser,
-    },
+    }, workers::action_worker::worker::ActionResult,
 };
 
 #[derive(Debug)]
@@ -37,6 +37,7 @@ pub struct PodcastPage {
 
 #[derive(Debug)]
 pub enum PodcastPageInput {
+    ActionFinished(Uuid, ActionResult),
     ImageDownloaded(Option<Texture>),
     SetLoadingEpisodes(bool),
     GetEpisodes,
@@ -319,6 +320,9 @@ impl Component for PodcastPage {
                 self.episodes
                     .broadcast(EpisodeListItemInput::ChangeEpisodeTo(episode_id));
             }
+            PodcastPageInput::ActionFinished(uuid, any) => {
+                
+            },
         }
 
         self.update_view(widgets, sender);
