@@ -380,30 +380,33 @@ impl Component for ShowPage {
                 PlayButtonOutput::Clicked => ShowPageInput::TogglePlayLatest,
             });
 
-        let all_episodes_page = AllEpisodesPage::builder().launch(()).forward(
-            sender.output_sender(),
-            |msg| match msg {
-                AllEpisodesPageOutput::TogglePlay(episode_id) => {
-                    ShowPageOutput::TogglePlay(episode_id)
-                }
-                AllEpisodesPageOutput::RequestDownload(episode_id) => {
-                    ShowPageOutput::RequestDownload(episode_id)
-                }
-                AllEpisodesPageOutput::CancleDownload(episode_id) => {
-                    ShowPageOutput::CancleDownload(episode_id)
-                }
-                AllEpisodesPageOutput::SetPlayNext(episode_id) => {
-                    ShowPageOutput::SetPlayNext(episode_id)
-                }
-                AllEpisodesPageOutput::AddToPlaylist(episode_id) => {
-                    ShowPageOutput::AddToPlaylist(episode_id)
-                }
-                AllEpisodesPageOutput::RequestDeleteEpisode(episode_id) => {
-                    ShowPageOutput::RequestDeleteEpisode(episode_id)
-                }
-                AllEpisodesPageOutput::NotifyError(error) => ShowPageOutput::NotifyError(error),
-            },
-        );
+        let all_episodes_page =
+            AllEpisodesPage::builder()
+                .launch(show_id)
+                .forward(sender.output_sender(), |msg| match msg {
+                    AllEpisodesPageOutput::TogglePlay(episode_id) => {
+                        ShowPageOutput::TogglePlay(episode_id)
+                    }
+                    AllEpisodesPageOutput::RequestDownload(episode_id) => {
+                        ShowPageOutput::RequestDownload(episode_id)
+                    }
+                    AllEpisodesPageOutput::CancleDownload(episode_id) => {
+                        ShowPageOutput::CancleDownload(episode_id)
+                    }
+                    AllEpisodesPageOutput::SetPlayNext(episode_id) => {
+                        ShowPageOutput::SetPlayNext(episode_id)
+                    }
+                    AllEpisodesPageOutput::AddToPlaylist(episode_id) => {
+                        ShowPageOutput::AddToPlaylist(episode_id)
+                    }
+                    AllEpisodesPageOutput::RequestDeleteEpisode(episode_id) => {
+                        ShowPageOutput::RequestDeleteEpisode(episode_id)
+                    }
+                    AllEpisodesPageOutput::NotifyError(error) => ShowPageOutput::NotifyError(error),
+                    AllEpisodesPageOutput::ExecuteAction(uuid, action) => {
+                        ShowPageOutput::Execute(uuid, action)
+                    }
+                });
 
         let model = Self {
             episodes: FactoryVecDeque::builder().launch(episodes_parent).forward(
